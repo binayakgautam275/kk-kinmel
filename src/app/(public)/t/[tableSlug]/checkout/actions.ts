@@ -159,6 +159,15 @@ export async function placeOrder(
         return { error: 'Order failed to place. Please try again or ask a waiter.' }
     }
 
+    // Apply dynamic pricing rules then deduct ingredient stock (best-effort — don't fail the order)
+    const orderId = (data as { order_id?: string })?.order_id
+    if (orderId) {
+        await Promise.allSettled([
+            supabase.rpc('apply_pricing_rules_to_order', { p_order_id: orderId }),
+            supabase.rpc('deduct_ingredients_for_order',  { p_order_id: orderId }),
+        ])
+    }
+
     // Purge the cart/menu page caches for this session
     revalidatePath(`/t/${restaurantSlug}`)
 
@@ -302,6 +311,12 @@ async function placeOrderFallback(
     if (totalsUpdateError) {
         console.error('Fallback order totals update failed:', totalsUpdateError)
     }
+
+    // Apply pricing rules + deduct ingredients (best-effort)
+    await Promise.allSettled([
+        supabase.rpc('apply_pricing_rules_to_order', { p_order_id: orderId }),
+        supabase.rpc('deduct_ingredients_for_order',  { p_order_id: orderId }),
+    ])
 
     return {
         orderId,

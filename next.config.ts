@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 import withPWAInit from 'next-pwa'
+import { withSentryConfig } from '@sentry/nextjs'
 
 const withPWA = withPWAInit({
   dest: 'public',
@@ -101,5 +102,17 @@ const nextConfig: NextConfig = {
   turbopack: {},
 }
 
-// Cast nextConfig to any to bypass the outdated @types/next-pwa definition mismatch
-export default withPWA(nextConfig as any)
+const pwaConfig = withPWA(nextConfig as any)
+
+// withSentryConfig uploads source maps at build time when SENTRY_AUTH_TOKEN is set.
+// Skipped silently in dev/when token is absent.
+export default withSentryConfig(pwaConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  disableLogger: true,
+  automaticVercelMonitors: true,
+})
