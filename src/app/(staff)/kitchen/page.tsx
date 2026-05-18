@@ -1,8 +1,9 @@
 import { getCurrentUser } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
-import OrderQueue from '@/components/kitchen/OrderQueue'
+import OrderQueue, { type KitchenOrder } from '@/components/kitchen/OrderQueue'
 import TakeoutQueue from '@/components/kitchen/TakeoutQueue'
 import { getRestaurantFeatures } from '@/lib/features'
+import type { TakeoutOrder } from '@/types/database'
 
 export const revalidate = 0 // Never cache the kitchen page securely
 
@@ -44,15 +45,13 @@ export default async function KitchenPage() {
     return (
         <div className="h-full space-y-6 p-4 overflow-y-auto">
             <OrderQueue
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                initialOrders={activeOrders as unknown as any[]}
+                initialOrders={(activeOrders || []) as unknown as KitchenOrder[]}
                 restaurantId={restaurantId}
             />
             {/* TakeoutQueue — only shown if takeout is enabled */}
             {features?.takeoutEnabled && (
                 <TakeoutQueue
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    initialOrders={(takeoutOrders || []) as any[]}
+                    initialOrders={(takeoutOrders || []) as unknown as TakeoutOrder[]}
                     restaurantId={restaurantId}
                 />
             )}

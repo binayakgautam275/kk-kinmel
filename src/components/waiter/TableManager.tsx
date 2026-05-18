@@ -23,7 +23,7 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
     useEffect(() => {
         // Listen for session changes and update state reactively (no page reload)
         const channel = supabase
-            .channel('waiter_sessions')
+            .channel(`waiter-sessions-${restaurantId}`)
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'sessions', filter: `restaurant_id=eq.${restaurantId}` },

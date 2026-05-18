@@ -54,7 +54,7 @@ export default function PaymentVerificationPanel({
 
     useEffect(() => {
         const channel = supabase
-            .channel('admin-payment-verifications')
+            .channel(`admin-payment-verifications-${restaurantId}`)
             .on('postgres_changes', {
                 event: 'INSERT',
                 schema: 'public',

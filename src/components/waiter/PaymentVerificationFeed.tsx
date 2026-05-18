@@ -45,7 +45,7 @@ export default function PaymentVerificationFeed({
     // Realtime subscription for new payment claims
     useEffect(() => {
         const channel = supabase
-            .channel('payment-verifications')
+            .channel(`payment-verifications-${restaurantId}`)
             .on(
                 'postgres_changes',
                 {

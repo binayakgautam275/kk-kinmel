@@ -8,7 +8,7 @@ import { Clock, ChefHat, CheckSquare } from 'lucide-react'
 import type { OrderStatus, Order, OrderItem, OrderItemModifier, MenuItem, Session, Table } from '@/types/database'
 import { updateOrderStatus } from '@/app/(staff)/kitchen/actions'
 
-type KitchenOrder = Order & {
+export type KitchenOrder = Order & {
     sessions?: Session & { tables?: Partial<Table> }
     order_items?: (OrderItem & {
         menu_items?: Partial<MenuItem>
@@ -33,7 +33,7 @@ export default function OrderQueue({ initialOrders, restaurantId }: { initialOrd
 
     useEffect(() => {
         const channel = supabase
-            .channel('kitchen_queue')
+            .channel(`kitchen-queue-${restaurantId}`)
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },

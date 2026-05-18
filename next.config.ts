@@ -6,8 +6,51 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
-  // You can specify more PWA options here if needed. 
-  // Custom runtime caching can be passed inside here.
+  runtimeCaching: [
+    // Static Next.js assets — cache first, long TTL
+    {
+      urlPattern: /^\/_next\/static\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'next-static',
+        expiration: { maxEntries: 200, maxAgeSeconds: 86400 },
+      },
+    },
+    // Supabase Storage images — cache first, 24h TTL
+    {
+      urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/.*/i,
+      handler: 'CacheFirst',
+      options: {
+        cacheName: 'supabase-images',
+        expiration: { maxEntries: 100, maxAgeSeconds: 86400 },
+      },
+    },
+    // Kitchen & waiter pages — network only (must never show stale order state)
+    {
+      urlPattern: /^\/(kitchen|waiter)(\/|$)/i,
+      handler: 'NetworkOnly',
+    },
+    // Menu & order status pages — network first with 10s timeout, fallback to cache
+    {
+      urlPattern: /^\/t\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'customer-pages',
+        networkTimeoutSeconds: 10,
+        expiration: { maxEntries: 50, maxAgeSeconds: 3600 },
+      },
+    },
+    // Admin pages — network first, short cache window
+    {
+      urlPattern: /^\/admin\/.*/i,
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'admin-pages',
+        networkTimeoutSeconds: 10,
+        expiration: { maxEntries: 30, maxAgeSeconds: 300 },
+      },
+    },
+  ],
 })
 
 const nextConfig: NextConfig = {

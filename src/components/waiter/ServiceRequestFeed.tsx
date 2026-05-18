@@ -50,7 +50,7 @@ export default function ServiceRequestFeed({
 
     useEffect(() => {
         const channel = supabase
-            .channel('service_requests')
+            .channel(`service-requests-${restaurantId}`)
             .on(
                 'postgres_changes',
                 {

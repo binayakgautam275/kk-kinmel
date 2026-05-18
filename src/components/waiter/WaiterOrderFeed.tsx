@@ -37,7 +37,7 @@ export default function WaiterOrderFeed({
 
     useEffect(() => {
         const channel = supabase
-            .channel('waiter_orders')
+            .channel(`waiter-orders-${restaurantId}`)
             .on(
                 'postgres_changes',
                 {

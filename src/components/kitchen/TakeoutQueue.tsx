@@ -70,7 +70,7 @@ export default function TakeoutQueue({ restaurantId, initialOrders }: TakeoutQue
         const supabase = createClient()
 
         const channel = supabase
-            .channel('takeout-queue')
+            .channel(`takeout-queue-${restaurantId}`)
             .on(
                 'postgres_changes',
                 {

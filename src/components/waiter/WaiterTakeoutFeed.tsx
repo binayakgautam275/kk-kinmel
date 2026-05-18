@@ -22,7 +22,7 @@ export default function WaiterTakeoutFeed({ initialOrders, restaurantId }: Props
         const supabase = createClient()
 
         const channel = supabase
-            .channel('waiter-takeout-feed')
+            .channel(`waiter-takeout-feed-${restaurantId}`)
             .on(
                 'postgres_changes',
                 {

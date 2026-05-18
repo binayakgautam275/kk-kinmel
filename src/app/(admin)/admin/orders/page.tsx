@@ -5,6 +5,16 @@ import { ShoppingBag } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
+type AdminOrder = {
+    id: string
+    status: string
+    total_amount: number | null
+    placed_at: string
+    customer_note: string | null
+    sessions: { tables: { label: string } | null } | null
+    order_items: { id: string; quantity: number; menu_items: { name: string } | null }[]
+}
+
 export default async function AdminOrdersPage() {
     const { restaurantId } = await getCurrentUser()
 
@@ -20,7 +30,7 @@ export default async function AdminOrdersPage() {
         `)
         .eq('restaurant_id', restaurantId)
         .order('placed_at', { ascending: false })
-        .limit(100)
+        .limit(100) as { data: AdminOrder[] | null }
 
     const statusColors: Record<string, string> = {
         pending: 'bg-amber-100 text-amber-700 border-amber-200',
@@ -59,11 +69,10 @@ export default async function AdminOrdersPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
-                            {/* eslint-disable @typescript-eslint/no-explicit-any */}
-                            {orders?.map((order: any) => {
+                            {orders?.map((order) => {
                                 const tableLabel = order.sessions?.tables?.label || '—'
                                 const itemCount = order.order_items?.length || 0
-                                const itemNames = order.order_items?.map((i: any) => `${i.quantity}x ${i.menu_items?.name}`).join(', ') || '—'
+                                const itemNames = order.order_items?.map((i) => `${i.quantity}x ${i.menu_items?.name}`).join(', ') || '—'
 
                                 return (
                                     <tr key={order.id} className="hover:bg-gray-50/50 transition">
@@ -83,7 +92,7 @@ export default async function AdminOrdersPage() {
                                             {new Date(order.placed_at).toLocaleDateString()} {new Date(order.placed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </td>
                                         <td className="px-6 py-4 text-right font-bold text-gray-900">
-                                            {formatCurrency(order.total_amount)}
+                                            {formatCurrency(order.total_amount ?? 0)}
                                         </td>
                                     </tr>
                                 )
@@ -97,10 +106,9 @@ export default async function AdminOrdersPage() {
 
                 {/* Mobile Card List */}
                 <div className="md:hidden divide-y divide-gray-100">
-                    {/* eslint-disable @typescript-eslint/no-explicit-any */}
-                    {orders?.map((order: any) => {
+                    {orders?.map((order) => {
                         const tableLabel = order.sessions?.tables?.label || '—'
-                        const itemNames = order.order_items?.map((i: any) => `${i.quantity}x ${i.menu_items?.name}`).join(', ') || ''
+                        const itemNames = order.order_items?.map((i) => `${i.quantity}x ${i.menu_items?.name}`).join(', ') || ''
 
                         return (
                             <div key={order.id} className="p-4 space-y-2">
@@ -112,7 +120,7 @@ export default async function AdminOrdersPage() {
                                 </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-gray-500">Table {tableLabel}</span>
-                                    <span className="font-bold text-gray-900">{formatCurrency(order.total_amount)}</span>
+                                    <span className="font-bold text-gray-900">{formatCurrency(order.total_amount ?? 0)}</span>
                                 </div>
                                 {itemNames && (
                                     <p className="text-xs text-gray-400 truncate">{itemNames}</p>
