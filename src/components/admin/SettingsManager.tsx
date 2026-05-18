@@ -52,6 +52,7 @@ export default function SettingsManager({
         vatEnabled: false,
         phoneOtpEnabled: false,
         bsDateEnabled: false,
+        feedbackEnabled: true,
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isSavingFeatures, setIsSavingFeatures] = useState(false)

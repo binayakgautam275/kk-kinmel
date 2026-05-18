@@ -29,6 +29,7 @@ export default async function AnalyticsPage() {
         { data: completedOrders },
         { count: totalSessionsLimit },
         { data: prevCompletedOrders },
+        { data: recentFeedback },
     ] = await Promise.all([
         // Active orders (pending -> preparing)
         supabase
@@ -60,6 +61,14 @@ export default async function AnalyticsPage() {
             .eq('status', 'delivered')
             .gte('placed_at', prevWeekStart.toISOString())
             .lt('placed_at', lastWeek.toISOString()),
+
+        // Feedback: last 30 days
+        supabase
+            .from('feedback')
+            .select('rating, comment, created_at')
+            .eq('restaurant_id', restaurantId)
+            .order('created_at', { ascending: false })
+            .limit(50),
     ])
 
     // Aggregate calculations
@@ -82,6 +91,16 @@ export default async function AnalyticsPage() {
     const revTrend = calcTrend(totalRevenue7d, prevRevenue7d)
     const orderTrend = calcTrend(orderCount7d, prevOrderCount7d)
     const aovTrend = calcTrend(avgOrderValue, prevAvgOrderValue)
+
+    // Feedback stats
+    const avgRating = recentFeedback && recentFeedback.length > 0
+        ? recentFeedback.reduce((sum, f) => sum + f.rating, 0) / recentFeedback.length
+        : null
+    const ratingCounts = [1, 2, 3, 4, 5].map(r => ({
+        star: r,
+        count: recentFeedback?.filter(f => f.rating === r).length ?? 0,
+    }))
+    const topComments = recentFeedback?.filter(f => f.comment).slice(0, 5) ?? []
 
     // Build 7-day daily buckets for the chart
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -185,6 +204,67 @@ export default async function AnalyticsPage() {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Customer Feedback */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
+                    <h2 className="text-base font-bold text-gray-900">Customer Feedback</h2>
+                    {avgRating !== null && (
+                        <span className="text-sm text-amber-600 font-semibold">
+                            ★ {avgRating.toFixed(1)} avg · {recentFeedback?.length} reviews
+                        </span>
+                    )}
+                </div>
+
+                {avgRating === null ? (
+                    <div className="p-8 text-center text-gray-400 text-sm">No feedback collected yet.</div>
+                ) : (
+                    <div className="p-6 grid md:grid-cols-2 gap-6">
+                        {/* Rating distribution */}
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Rating Distribution</p>
+                            <div className="space-y-2">
+                                {ratingCounts.slice().reverse().map(({ star, count }) => {
+                                    const total = recentFeedback?.length ?? 1
+                                    const pct = total > 0 ? Math.round((count / total) * 100) : 0
+                                    return (
+                                        <div key={star} className="flex items-center gap-2 text-sm">
+                                            <span className="w-4 text-right text-gray-600 font-medium">{star}</span>
+                                            <span className="text-amber-400">★</span>
+                                            <div className="flex-1 bg-gray-100 rounded-full h-2">
+                                                <div
+                                                    className="bg-amber-400 h-2 rounded-full transition-all"
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                            </div>
+                                            <span className="w-8 text-right text-gray-500">{count}</span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Recent comments */}
+                        <div>
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Recent Comments</p>
+                            {topComments.length === 0 ? (
+                                <p className="text-sm text-gray-400">No comments yet.</p>
+                            ) : (
+                                <ul className="space-y-3">
+                                    {topComments.map((f, i) => (
+                                        <li key={i} className="text-sm border-l-2 border-amber-300 pl-3">
+                                            <p className="text-gray-700">{f.comment}</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                {'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)} · {new Date(f.created_at).toLocaleDateString()}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

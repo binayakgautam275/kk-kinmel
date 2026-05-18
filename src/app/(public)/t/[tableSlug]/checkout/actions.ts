@@ -8,6 +8,7 @@ import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 import { validateInput, OrderItemSchema } from '@/lib/validation'
 import { z } from 'zod'
+import { sendOrderConfirmationSms, sendLoyaltyPointsSms } from '@/lib/sms'
 
 type PlaceOrderItemPayload = {
     menu_item_id: string
@@ -160,18 +161,6 @@ export async function placeOrder(
     }
 
     // Apply dynamic pricing rules then deduct ingredient stock (best-effort — don't fail the order)
-    const orderId = (data as { order_id?: string })?.order_id
-    if (orderId) {
-        await Promise.allSettled([
-            supabase.rpc('apply_pricing_rules_to_order', { p_order_id: orderId }),
-            supabase.rpc('deduct_ingredients_for_order',  { p_order_id: orderId }),
-        ])
-    }
-
-    // Purge the cart/menu page caches for this session
-    revalidatePath(`/t/${restaurantSlug}`)
-
-    // data is now JSONB: { order_id, subtotal, discount, tax, total, points_earned }
     const result = data as {
         order_id: string
         subtotal: number
@@ -180,6 +169,54 @@ export async function placeOrder(
         total: number
         points_earned: number
     }
+
+    if (result.order_id) {
+        await Promise.allSettled([
+            supabase.rpc('apply_pricing_rules_to_order', { p_order_id: result.order_id }),
+            supabase.rpc('deduct_ingredients_for_order',  { p_order_id: result.order_id }),
+        ])
+
+        // SMS notifications — best-effort, never block the order
+        if (loyaltyMemberId) {
+            const { data: member } = await supabase
+                .from('loyalty_members')
+                .select('phone, restaurant_id')
+                .eq('id', loyaltyMemberId)
+                .single()
+
+            if (member?.phone) {
+                const { data: restaurant } = await supabase
+                    .from('restaurants')
+                    .select('name')
+                    .eq('id', member.restaurant_id)
+                    .single()
+
+                const restaurantName = (restaurant as { name?: string } | null)?.name ?? 'The Restaurant'
+
+                void Promise.allSettled([
+                    sendOrderConfirmationSms(member.phone, result.order_id, restaurantName),
+                    result.points_earned > 0
+                        ? supabase
+                            .from('loyalty_members')
+                            .select('points_balance')
+                            .eq('id', loyaltyMemberId)
+                            .single()
+                            .then(({ data: lm }) =>
+                                sendLoyaltyPointsSms(
+                                    member.phone!,
+                                    result.points_earned,
+                                    (lm as { points_balance?: number } | null)?.points_balance ?? result.points_earned,
+                                    restaurantName
+                                )
+                            )
+                        : Promise.resolve(),
+                ])
+            }
+        }
+    }
+
+    // Purge the cart/menu page caches for this session
+    revalidatePath(`/t/${restaurantSlug}`)
 
     return {
         orderId: result.order_id,

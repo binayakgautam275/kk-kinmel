@@ -4,6 +4,7 @@ import OrderTracker from '@/components/customer/OrderTracker'
 import InvoiceBanner from '@/components/customer/InvoiceBanner'
 import OrderPaymentSection from '@/components/customer/OrderPaymentSection'
 import OrderSplitBillSection from '@/components/customer/OrderSplitBillSection'
+import FeedbackPrompt from '@/components/customer/FeedbackPrompt'
 import Link from 'next/link'
 import { getRestaurantFeatures } from '@/lib/features'
 
@@ -64,6 +65,11 @@ export default async function OrderPage(props: {
 
             <main className="max-w-xl mx-auto px-4 mt-6">
                 <OrderTracker orderId={params.orderId} initialOrder={order} />
+
+                {/* Feedback prompt — shown once order is delivered and feature is enabled */}
+                {order.status === 'delivered' && features?.feedbackEnabled && (
+                    <FeedbackPrompt orderId={params.orderId} />
+                )}
 
                 {/* Pay Now Section — always shown when order isn't paid yet */}
                 {order.restaurant_id && order.payment_status !== 'paid' && (

@@ -106,6 +106,7 @@ function normalizeSlug(value: string) {
 function buildDefaultFeaturesV2(tier: 'free' | 'basic' | 'pro' | 'enterprise') {
     return {
         ...TIER_FEATURES[tier],
+        feedbackEnabled: true,
         defaultTaxRate: 13,
         currency: 'NPR',
         currencySymbol: 'Rs.',

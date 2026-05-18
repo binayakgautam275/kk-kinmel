@@ -22,6 +22,7 @@ const defaultFeatures: Features = {
     vatEnabled: false,
     phoneOtpEnabled: false,
     bsDateEnabled: false,
+        feedbackEnabled: true,
 }
 
 const FeatureContext = createContext<Features>(defaultFeatures)

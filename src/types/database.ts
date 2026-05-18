@@ -235,6 +235,7 @@ export interface Settings {
         dynamicPricingEnabled: boolean
         ingredientTrackingEnabled: boolean
         staffShiftsEnabled: boolean
+        feedbackEnabled: boolean
         defaultTaxRate: number
         currency: string
         currencySymbol: string
