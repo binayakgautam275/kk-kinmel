@@ -223,17 +223,11 @@ export async function createTenantWithOwner(input: CreateTenantInput) {
     let authUserId: string | null = null
     let restaurantId: string | null = null
 
-    const [{ data: existingRestaurant }, { data: existingOwnerData }] = await Promise.all([
-        supabase.from('restaurants').select('id').eq('slug', restaurantSlug).maybeSingle(),
-        supabase.auth.admin.getUserByEmail(ownerEmail),
-    ])
+    const { data: existingRestaurant } = await supabase
+        .from('restaurants').select('id').eq('slug', restaurantSlug).maybeSingle()
 
     if (existingRestaurant) {
         return { error: 'That restaurant slug is already in use.' }
-    }
-
-    if (existingOwnerData?.user) {
-        return { error: 'That owner email already has an account.' }
     }
 
     try {
@@ -247,6 +241,10 @@ export async function createTenantWithOwner(input: CreateTenantInput) {
         })
 
         if (createAuthError || !createdAuthUser.user) {
+            if (createAuthError?.message?.toLowerCase().includes('already registered') ||
+                createAuthError?.message?.toLowerCase().includes('already been registered')) {
+                return { error: 'That owner email already has an account.' }
+            }
             return { error: createAuthError?.message || 'Failed to create owner auth account.' }
         }
 
@@ -266,7 +264,7 @@ export async function createTenantWithOwner(input: CreateTenantInput) {
                 max_staff: limits.max_staff,
                 max_menu_items: limits.max_menu_items,
             })
-            .select('id, name, slug, is_active, is_suspended, subscription_tier, max_staff, max_menu_items, created_at')
+            .select('id, name, slug, is_active, is_suspended, subscription_tier, subscription_status, subscription_expires_at, max_staff, max_menu_items, created_at')
             .single()
 
         if (restaurantError || !restaurant) {
@@ -335,12 +333,12 @@ export async function createTenantWithOwner(input: CreateTenantInput) {
     }
 }
 
-export async function sendPasswordResetEmail(userId: string, ownerEmail: string) {
+export async function sendPasswordResetEmail(_userId: string, ownerEmail: string) {
     await requireRole('super_admin')
 
     const supabase = await createAdminClient()
 
-    const { data, error } = await supabase.auth.admin.generateLink({
+    const { error } = await supabase.auth.admin.generateLink({
         type: 'recovery',
         email: ownerEmail,
         options: {
@@ -369,13 +367,6 @@ export async function updateOwnerContact(
 
     const supabase = await createAdminClient()
 
-    if (updates.email) {
-        const { data: existingUser } = await supabase.auth.admin.getUserByEmail(updates.email.toLowerCase())
-        if (existingUser?.user && existingUser.user.id !== userId) {
-            return { error: 'That email is already registered to another user.' }
-        }
-    }
-
     const updatePayload: Record<string, string | null> = {}
     if (updates.email) updatePayload.email = updates.email.trim().toLowerCase()
     if (updates.phone !== undefined) updatePayload.phone = updates.phone?.trim() || null
@@ -388,6 +379,57 @@ export async function updateOwnerContact(
 
     revalidatePath('/admin/super-admin')
     return { success: true }
+}
+
+export async function recordSubscriptionPayment(
+    restaurantId: string,
+    amount: number,
+    paymentMethod: string,
+    referenceCode: string,
+    notes: string
+) {
+    const currentUser = await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    // Insert payment record
+    const { error: paymentError } = await supabase
+        .from('subscription_payments')
+        .insert({
+            restaurant_id: restaurantId,
+            amount,
+            payment_method: paymentMethod,
+            reference_code: referenceCode || null,
+            notes: notes || null,
+            recorded_by: currentUser.id,
+        })
+
+    if (paymentError) return { error: paymentError.message }
+
+    // Extend subscription by 30 days from today (or from current expiry if in the future)
+    const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('subscription_expires_at')
+        .eq('id', restaurantId)
+        .single()
+
+    const base = restaurant?.subscription_expires_at
+        ? new Date(Math.max(new Date(restaurant.subscription_expires_at).getTime(), Date.now()))
+        : new Date()
+    const newExpiry = new Date(base)
+    newExpiry.setDate(newExpiry.getDate() + 30)
+
+    const { error: updateError } = await supabase
+        .from('restaurants')
+        .update({
+            subscription_expires_at: newExpiry.toISOString(),
+            subscription_status: 'active',
+        })
+        .eq('id', restaurantId)
+
+    if (updateError) return { error: updateError.message }
+
+    revalidatePath('/admin/super-admin')
+    return { success: true, newExpiry: newExpiry.toISOString() }
 }
 
 export async function getSaasMetrics() {

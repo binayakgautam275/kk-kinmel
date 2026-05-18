@@ -8,11 +8,11 @@ export default async function TablesManagementPage() {
     const { restaurantId } = await getCurrentUser()
     const adminSupabase = await createAdminClient()
 
-    // Fetch all tables
     const { data: tables } = await adminSupabase
         .from('tables')
         .select('*')
         .eq('restaurant_id', restaurantId)
+        .eq('is_active', true)
         .order('label', { ascending: true })
 
     // Also get the base URL for generating the full QR link

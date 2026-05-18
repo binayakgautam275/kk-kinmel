@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, ShoppingBag, Crown, Ban, CheckCircle, Loader2, ChevronDown, Plus, X, Store, UserRound, Mail, KeyRound, Phone, MapPin, Check } from 'lucide-react'
-import { createTenantWithOwner, suspendRestaurant, updateSubscriptionTier, sendPasswordResetEmail, updateOwnerContact } from './actions'
+import { Building2, ShoppingBag, Crown, Ban, CheckCircle, Loader2, ChevronDown, Plus, X, Store, UserRound, Mail, KeyRound, Phone, MapPin, Check, CreditCard, AlertTriangle } from 'lucide-react'
+import { createTenantWithOwner, suspendRestaurant, updateSubscriptionTier, sendPasswordResetEmail, updateOwnerContact, recordSubscriptionPayment } from './actions'
 import { toast } from 'react-hot-toast'
 
 interface Restaurant {
@@ -13,6 +13,8 @@ interface Restaurant {
     is_active: boolean
     is_suspended: boolean
     subscription_tier: string
+    subscription_status: string
+    subscription_expires_at: string | null
     max_staff: number
     max_menu_items: number
     created_at: string
@@ -58,6 +60,9 @@ export default function SuperAdminDashboard({
         phone: undefined,
     })
     const [isUpdatingOwner, setIsUpdatingOwner] = useState(false)
+    const [paymentModal, setPaymentModal] = useState<{ isOpen: boolean; restaurant: Restaurant | null }>({ isOpen: false, restaurant: null })
+    const [paymentForm, setPaymentForm] = useState({ amount: '', method: 'cash', reference: '', notes: '' })
+    const [isRecordingPayment, setIsRecordingPayment] = useState(false)
     const [createForm, setCreateForm] = useState({
         restaurantName: '',
         restaurantSlug: '',
@@ -222,6 +227,33 @@ export default function SuperAdminDashboard({
         setIsUpdatingOwner(false)
     }
 
+    const handleRecordPayment = async () => {
+        if (!paymentModal.restaurant || !paymentForm.amount) return
+        setIsRecordingPayment(true)
+        const res = await recordSubscriptionPayment(
+            paymentModal.restaurant.id,
+            parseFloat(paymentForm.amount),
+            paymentForm.method,
+            paymentForm.reference,
+            paymentForm.notes
+        )
+        if (res.success) {
+            toast.success('Payment recorded. Subscription extended by 30 days.')
+            setPaymentModal({ isOpen: false, restaurant: null })
+            setPaymentForm({ amount: '', method: 'cash', reference: '', notes: '' })
+        } else {
+            toast.error(res.error || 'Failed to record payment')
+        }
+        setIsRecordingPayment(false)
+    }
+
+    // Restaurants expiring within 7 days
+    const expiringSoon = items.filter(r => {
+        if (!r.subscription_expires_at) return false
+        const diff = new Date(r.subscription_expires_at).getTime() - Date.now()
+        return diff > 0 && diff < 7 * 24 * 3600 * 1000
+    })
+
     return (
         <div className="space-y-8">
             {/* SaaS Control Panel Header */}
@@ -283,6 +315,23 @@ export default function SuperAdminDashboard({
                 </div>
             </div>
 
+            {/* Expiring Soon Banner */}
+            {expiringSoon.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                    <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                        <p className="font-semibold text-amber-800">Subscriptions expiring soon</p>
+                        <ul className="mt-1 text-sm text-amber-700 space-y-0.5">
+                            {expiringSoon.map(r => (
+                                <li key={r.id}>
+                                    <strong>{r.name}</strong> — expires {r.subscription_expires_at ? new Date(r.subscription_expires_at).toLocaleDateString('en-IN') : 'unknown'}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )}
+
             {/* Restaurant List */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -328,6 +377,19 @@ export default function SuperAdminDashboard({
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0">
+                                {/* Record Payment Button */}
+                                <button
+                                    onClick={() => {
+                                        setPaymentModal({ isOpen: true, restaurant })
+                                        setPaymentForm({ amount: '', method: 'cash', reference: '', notes: '' })
+                                    }}
+                                    disabled={loading === restaurant.id}
+                                    className="px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50 transition"
+                                    title="Record subscription payment"
+                                >
+                                    <CreditCard size={14} />
+                                </button>
+
                                 {/* Manage Owner Button */}
                                 <button
                                     onClick={() => {
@@ -642,6 +704,87 @@ export default function SuperAdminDashboard({
                                     {isCreatingTenant ? 'Creating...' : 'Create Client'}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Record Payment Modal */}
+            {paymentModal.isOpen && paymentModal.restaurant && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+                        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">Record Subscription Payment</h2>
+                                <p className="text-sm text-gray-500 mt-0.5">{paymentModal.restaurant.name}</p>
+                            </div>
+                            <button onClick={() => setPaymentModal({ isOpen: false, restaurant: null })} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Amount (Rs.)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="e.g. 1999"
+                                    value={paymentForm.amount}
+                                    onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                                <select
+                                    value={paymentForm.method}
+                                    onChange={e => setPaymentForm(p => ({ ...p, method: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                >
+                                    <option value="cash">Cash</option>
+                                    <option value="esewa">eSewa</option>
+                                    <option value="khalti">Khalti</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="fonepay">FonePay</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Reference / Transaction ID</label>
+                                <input
+                                    type="text"
+                                    placeholder="Optional — transaction code"
+                                    value={paymentForm.reference}
+                                    onChange={e => setPaymentForm(p => ({ ...p, reference: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                <input
+                                    type="text"
+                                    placeholder="Optional"
+                                    value={paymentForm.notes}
+                                    onChange={e => setPaymentForm(p => ({ ...p, notes: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                />
+                            </div>
+                        </div>
+                        <div className="p-6 border-t border-gray-100 flex gap-3">
+                            <button
+                                onClick={() => setPaymentModal({ isOpen: false, restaurant: null })}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleRecordPayment}
+                                disabled={isRecordingPayment || !paymentForm.amount}
+                                className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-50 transition flex items-center justify-center gap-2"
+                            >
+                                {isRecordingPayment ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                Record & Extend
+                            </button>
                         </div>
                     </div>
                 </div>

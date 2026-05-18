@@ -576,6 +576,7 @@ export interface PaymentVerification {
     staff_rejected: boolean
     rejection_reason: string | null
     reference_code: string | null
+    screenshot_url: string | null
     created_at: string
 }
 

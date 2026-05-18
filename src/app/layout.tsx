@@ -23,7 +23,7 @@ export const metadata = {
   description: 'Mobile-first restaurant ordering system',
   manifest: '/manifest.json',
   icons: {
-    icon: '/icons/kkhane.png',
+    icon: '/icons/kkkhane.png',
     apple: '/icons/icon-192x192.png',
   },
 }

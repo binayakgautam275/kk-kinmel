@@ -96,16 +96,7 @@ export async function POST(req: NextRequest) {
             )
         }
 
-        // Check if email already exists (O(1) lookup)
-        const { data: existingAuth } = await supabase.auth.admin.getUserByEmail(email.toLowerCase())
-        if (existingAuth?.user) {
-            return NextResponse.json(
-                { error: 'Email already registered' },
-                { status: 409 }
-            )
-        }
-
-        // Create auth user
+        // Create auth user — createUser returns a specific error if email already exists
         const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
             email: email.toLowerCase(),
             password,
@@ -114,9 +105,11 @@ export async function POST(req: NextRequest) {
         })
 
         if (authError || !authUser) {
+            const isEmailTaken = authError?.message?.toLowerCase().includes('already registered') ||
+                authError?.message?.toLowerCase().includes('already been registered')
             return NextResponse.json(
-                { error: authError?.message || 'Failed to create auth user' },
-                { status: 400 }
+                { error: isEmailTaken ? 'Email already registered' : (authError?.message || 'Failed to create auth user') },
+                { status: isEmailTaken ? 409 : 400 }
             )
         }
 

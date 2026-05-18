@@ -538,7 +538,7 @@ export default async function Home() {
                         <div>
                             <h4 className="text-sm font-semibold text-white mb-4">Contact</h4>
                             <ul className="space-y-2.5 text-sm text-gray-400">
-                                <li>hello@kkhane.com</li>
+                                <li>hello@kkkhane.com</li>
                                 <li>Kathmandu, Nepal</li>
                             </ul>
                         </div>
@@ -743,7 +743,7 @@ function PricingCard({ tier, price, period, description, features, cta, highligh
                 ))}
             </ul>
             <a
-                href={tier === 'Enterprise' ? 'mailto:hello@kkhane.com' : '/signup'}
+                href={tier === 'Enterprise' ? 'mailto:hello@kkkhane.com' : '/signup'}
                 className={`block text-center py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                     highlighted
                         ? 'bg-[var(--color-primary)] text-white hover:opacity-90'

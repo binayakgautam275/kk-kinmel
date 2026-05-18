@@ -31,7 +31,7 @@ export default function ReportsViewer({ initialReports, restaurantId }: {
     }
 
     function fmt(n: number) {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+        return `Rs. ${new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)}`
     }
 
     return (

@@ -43,18 +43,12 @@ export async function updateTableAction(id: string, updates: Record<string, unkn
 export async function deleteTableAction(id: string) {
     const supabase = await createAdminClient()
 
-    // Deleting a table might fail if there are foreign key constraints (like past sessions)
-    // In a fully robust app, we'd soft-delete (is_active = false) or cascade delete
-    // We'll stick to a hard delete attempt first, and soft delete if requested
     const { error } = await supabase
         .from('tables')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id)
 
-    if (error) {
-        if (error.code === '23503') return { error: 'Cannot delete: Table has active or past sessions.' }
-        return { error: error.message }
-    }
+    if (error) return { error: error.message }
 
     revalidatePath('/admin/tables')
     return { success: true }

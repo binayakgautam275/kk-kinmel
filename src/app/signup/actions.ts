@@ -1,6 +1,6 @@
 'use server'
 
-import { createAdminClient, createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { validateInput, PublicSignupSchema } from '@/lib/validation'
 import { checkRateLimit } from '@/lib/ratelimit'
 import { sendOnboardingEmail } from '@/lib/email'
@@ -91,20 +91,17 @@ export async function signupRestaurant(input: unknown): Promise<SignupResult> {
     const supabase = await createAdminClient()
     const limits = TIER_LIMITS[tier]
 
-    // Check slug and email uniqueness (O(1) each)
-    const [{ data: existingSlug }, { data: existingEmail }] = await Promise.all([
-        supabase.from('restaurants').select('id').eq('slug', restaurantSlug).maybeSingle(),
-        supabase.auth.admin.getUserByEmail(ownerEmail),
-    ])
+    // Check slug uniqueness
+    const { data: existingSlug } = await supabase
+        .from('restaurants').select('id').eq('slug', restaurantSlug).maybeSingle()
 
     if (existingSlug) return { error: 'That restaurant URL slug is already taken. Please choose another.', field: 'restaurantSlug' }
-    if (existingEmail?.user) return { error: 'That email is already registered. Try logging in instead.', field: 'ownerEmail' }
 
     let authUserId: string | null = null
     let restaurantId: string | null = null
 
     try {
-        // 1. Create auth user
+        // 1. Create auth user — returns specific error if email already exists
         const { data: createdUser, error: authError } = await supabase.auth.admin.createUser({
             email: ownerEmail,
             password: ownerPassword,
@@ -112,7 +109,12 @@ export async function signupRestaurant(input: unknown): Promise<SignupResult> {
             user_metadata: { full_name: ownerFullName },
         })
         if (authError || !createdUser.user) {
-            return { error: authError?.message || 'Failed to create account. Please try again.' }
+            const isEmailTaken = authError?.message?.toLowerCase().includes('already registered') ||
+                authError?.message?.toLowerCase().includes('already been registered')
+            return {
+                error: isEmailTaken ? 'That email is already registered. Try logging in instead.' : (authError?.message || 'Failed to create account. Please try again.'),
+                field: isEmailTaken ? 'ownerEmail' : undefined,
+            }
         }
         authUserId = createdUser.user.id
 

@@ -2,6 +2,7 @@ import { createServerClient } from '@/lib/supabase/server'
 import { formatCurrency } from '@/lib/utils'
 import { TrendingUp, Users, ShoppingBag, Clock } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
+import Link from 'next/link'
 
 export const revalidate = 0
 
@@ -19,6 +20,9 @@ export default async function AdminDashboardPage() {
         { data: activeSessions },
         { data: recentOrders },
         { data: todayDeliveredOrders },
+        { count: menuCategoryCount },
+        { count: menuItemCount },
+        { count: tableCount },
     ] = await Promise.all([
         supabase
             .from('orders')
@@ -43,6 +47,9 @@ export default async function AdminDashboardPage() {
             .eq('restaurant_id', restaurantId)
             .gte('placed_at', today.toISOString())
             .eq('status', 'delivered'),
+        supabase.from('menu_categories').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
+        supabase.from('menu_items').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
+        supabase.from('tables').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).eq('is_active', true),
     ])
 
     // Actual revenue from all of today's non-cancelled orders
@@ -50,12 +57,41 @@ export default async function AdminDashboardPage() {
         (acc, order) => acc + (order.total_amount || 0), 0
     ) || 0
 
+    // Onboarding checklist: show until all 3 steps are done
+    const onboardingSteps = [
+        { done: (menuCategoryCount || 0) > 0, label: 'Add your first menu category', href: '/admin/menu' },
+        { done: (menuItemCount || 0) > 0, label: 'Add your first menu item', href: '/admin/menu' },
+        { done: (tableCount || 0) > 0, label: 'Create a table and generate a QR code', href: '/admin/tables' },
+    ]
+    const showChecklist = onboardingSteps.some(s => !s.done)
+
     return (
         <div className="space-y-4 md:space-y-6">
             <div className="bg-white p-4 md:p-6 rounded-xl border border-gray-200 shadow-sm">
                 <h1 className="text-xl md:text-2xl font-bold text-gray-900">Today&apos;s Overview</h1>
                 <p className="text-gray-500 mt-1 text-sm md:text-base">Real-time performance metrics.</p>
             </div>
+
+            {/* Onboarding Checklist — shown until setup is complete */}
+            {showChecklist && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                    <h2 className="font-bold text-blue-900 text-base mb-3">🚀 Get your restaurant ready</h2>
+                    <ul className="space-y-2.5">
+                        {onboardingSteps.map((step, i) => (
+                            <li key={i} className="flex items-center gap-3">
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${step.done ? 'bg-emerald-500 text-white' : 'bg-white border-2 border-blue-300 text-blue-500'}`}>
+                                    {step.done ? '✓' : i + 1}
+                                </span>
+                                {step.done ? (
+                                    <span className="text-sm text-emerald-700 line-through">{step.label}</span>
+                                ) : (
+                                    <Link href={step.href} className="text-sm text-blue-800 font-medium hover:underline">{step.label} →</Link>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
 
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">

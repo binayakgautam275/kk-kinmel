@@ -11,6 +11,8 @@ interface Restaurant {
     is_active: boolean
     is_suspended: boolean
     subscription_tier: string
+    subscription_status: string
+    subscription_expires_at: string | null
     max_staff: number
     max_menu_items: number
     created_at: string

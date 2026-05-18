@@ -58,7 +58,7 @@ export async function proxy(request: NextRequest) {
     const isProtected = protectedPrefixes.some((prefix) => pathname.startsWith(prefix))
 
     if (isProtected) {
-        const { user, supabaseResponse } = await updateSession(request)
+        const { user, supabaseResponse, supabase } = await updateSession(request)
 
         if (!user) {
             const loginUrl = new URL('/login', request.url)
@@ -66,37 +66,78 @@ export async function proxy(request: NextRequest) {
             return NextResponse.redirect(loginUrl)
         }
 
-        // Use the SERVICE_ROLE_KEY to bypass RLS for role lookups
-        // This is safe because proxy runs on the server only
-        const adminSupabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!,
-            {
-                cookies: {
-                    getAll() { return request.cookies.getAll() },
-                    setAll() { /* no-op for admin client in proxy */ },
-                },
-            }
-        )
+        // Decode JWT claims (app_role, restaurant_id) without a DB roundtrip.
+        // getSession() reads the already-validated cookie — no network call.
+        const { data: { session } } = await supabase.auth.getSession()
+        let userRole: string | undefined
+        let jwtRestaurantId: string | undefined
 
-        const { data: userData } = await adminSupabase
-            .from('users')
-            .select('role_id, roles(name)')
-            .eq('id', user.id)
-            .single()
+        if (session?.access_token) {
+            try {
+                const payload = JSON.parse(
+                    Buffer.from(session.access_token.split('.')[1], 'base64url').toString('utf-8')
+                )
+                userRole = payload.app_role
+                jwtRestaurantId = payload.restaurant_id
+            } catch { /* fall through to DB fallback */ }
+        }
 
-        const userRole = (userData?.roles as unknown as { name: string } | null)?.name
-
-        if (userRole) {
-            // Check role-based access
-            for (const [routePrefix, allowedRoles] of Object.entries(ROLE_ACCESS)) {
-                if (pathname.startsWith(routePrefix) && !allowedRoles.includes(userRole)) {
-                    return NextResponse.redirect(new URL('/unauthorized', request.url))
+        // Fallback: JWT decode failed — query DB for role
+        if (!userRole) {
+            const adminSupabase = createServerClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY!,
+                {
+                    cookies: {
+                        getAll() { return request.cookies.getAll() },
+                        setAll() { /* no-op */ },
+                    },
                 }
-            }
-        } else {
-            // No role found — can't access protected routes
+            )
+            const { data: userData } = await adminSupabase
+                .from('users')
+                .select('restaurant_id, roles(name)')
+                .eq('id', user.id)
+                .single()
+            userRole = (userData?.roles as unknown as { name: string } | null)?.name
+            jwtRestaurantId = userData?.restaurant_id ?? undefined
+        }
+
+        // Check suspension only for admin non-super-admin routes (lightweight pk lookup)
+        let isSuspended = false
+        if (pathname.startsWith('/admin') && userRole !== 'super_admin' && jwtRestaurantId) {
+            const adminSupabase = createServerClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY!,
+                {
+                    cookies: {
+                        getAll() { return request.cookies.getAll() },
+                        setAll() { /* no-op */ },
+                    },
+                }
+            )
+            const { data: restaurant } = await adminSupabase
+                .from('restaurants')
+                .select('is_suspended')
+                .eq('id', jwtRestaurantId)
+                .single()
+            isSuspended = restaurant?.is_suspended ?? false
+        }
+
+        if (!userRole) {
             return NextResponse.redirect(new URL('/unauthorized', request.url))
+        }
+
+        // Block suspended restaurants from admin access (kitchen/waiter still allowed)
+        if (isSuspended && pathname.startsWith('/admin') && userRole !== 'super_admin') {
+            return NextResponse.redirect(new URL('/suspended', request.url))
+        }
+
+        // Check role-based access
+        for (const [routePrefix, allowedRoles] of Object.entries(ROLE_ACCESS)) {
+            if (pathname.startsWith(routePrefix) && !allowedRoles.includes(userRole)) {
+                return NextResponse.redirect(new URL('/unauthorized', request.url))
+            }
         }
 
         return supabaseResponse
