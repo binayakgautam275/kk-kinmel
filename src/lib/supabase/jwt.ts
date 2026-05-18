@@ -24,14 +24,15 @@ export async function getJwtClaims(): Promise<JwtClaims | null> {
     try {
         // Decode the JWT payload (middle segment)
         const payload = JSON.parse(
-            atob(session.access_token.split('.')[1])
+            Buffer.from(session.access_token.split('.')[1], 'base64').toString('utf-8')
         )
         return {
             app_role: payload.app_role ?? undefined,
             restaurant_id: payload.restaurant_id ?? undefined,
             session_token: payload.session_token ?? undefined,
         }
-    } catch {
+    } catch (error) {
+        console.error('Failed to decode JWT claims:', error)
         return null
     }
 }

@@ -23,7 +23,7 @@ export interface Role {
 
 export type SubscriptionTier = 'free' | 'basic' | 'pro' | 'enterprise'
 export type SubscriptionStatus = 'active' | 'past_due' | 'suspended' | 'cancelled'
-export type PaymentMethod = 'qr_scan' | 'esewa' | 'khalti' | 'fonepay' | 'cash' | 'card' | 'stripe'
+export type PaymentMethod = 'qr_scan' | 'esewa' | 'khalti' | 'fonepay' | 'cash' | 'card'
 
 export interface Restaurant {
     id: string
@@ -631,4 +631,88 @@ export interface PlanLimitResult {
     max?: number
     tier?: string
     reason: string
+}
+// ============================================================
+// Restaurant Homepage Configuration
+// ============================================================
+export type HomepageTemplate = 'modern' | 'elegant' | 'vibrant' | 'minimal' | 'classic'
+
+export interface HomepageConfig {
+    id?: string
+    restaurant_id: string
+    template: HomepageTemplate
+    
+    // Hero Section
+    hero_title: string
+    hero_subtitle: string
+    hero_image_url: string | null
+    hero_video_url: string | null
+    hero_cta_text: string
+    
+    // Theme Customization
+    theme_primary: string
+    theme_secondary: string
+    theme_accent: string
+    
+    // Content Sections (JSONB)
+    about?: {
+        enabled: boolean
+        title: string
+        description: string
+        image_url: string
+    }
+    features?: Array<{
+        title: string
+        description: string
+    }>
+    cta?: {
+        enabled: boolean
+        headline: string
+        description: string
+        button_text: string
+    }
+    footer?: {
+        enabled: boolean
+        copyright: string
+        social_links: Array<{
+            platform: string
+            url: string
+        }>
+    }
+    
+    // Metadata
+    created_at?: string
+    updated_at?: string
+}
+
+export const HOMEPAGE_TEMPLATES: Record<HomepageTemplate, {
+    name: string
+    description: string
+    icon: string
+}> = {
+    modern: {
+        name: 'Modern',
+        description: 'Clean, minimal design with bold typography',
+        icon: '✨'
+    },
+    elegant: {
+        name: 'Elegant',
+        description: 'Sophisticated design with premium feel',
+        icon: '👑'
+    },
+    vibrant: {
+        name: 'Vibrant',
+        description: 'Colorful and energetic design',
+        icon: '🎨'
+    },
+    minimal: {
+        name: 'Minimal',
+        description: 'Simplistic, distraction-free design',
+        icon: '◻️'
+    },
+    classic: {
+        name: 'Classic',
+        description: 'Traditional, timeless restaurant style',
+        icon: '🏛️'
+    }
 }

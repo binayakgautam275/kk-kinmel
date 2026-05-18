@@ -1,11 +1,8 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import MenuSection from '@/components/customer/MenuSection'
-import CartSummary from '@/components/customer/CartSummary'
-import ServiceRequestPanel from '@/components/customer/ServiceRequestPanel'
 import { getRestaurantFeatures } from '@/lib/features'
-import VideoLogo from '@/components/shared/VideoLogo'
 import type { MenuItem } from '@/types/database'
+import TablePageClient from './TablePageClient'
 
 export const revalidate = 60 // ISR: Revalidate at most every 60 seconds
 
@@ -31,7 +28,6 @@ export default async function CustomerMenuPage(props: {
     if (!tableData) return notFound()
 
     const restaurantId = tableData.restaurant_id
-    const restaurantName = (tableData.restaurants as unknown as { name: string })?.name || 'Smart Restaurant'
 
     // Track the session UUID (needed for FK references like service_requests.session_id)
     let sessionUUID: string | undefined
@@ -104,57 +100,22 @@ export default async function CustomerMenuPage(props: {
     })) as MenuItem[]
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            {/* Header */}
-            <header className="bg-white px-4 py-6 shadow-sm sticky top-0 z-20">
-                <div className="flex justify-between items-center max-w-2xl mx-auto">
-                    <div>
-                        <h1 className="text-2xl font-bold font-['var(--font-family)'] text-[var(--color-secondary)]">
-                            {restaurantName}
-                        </h1>
-                        <p className="text-sm text-gray-500 font-medium">
-                            Table • {tableData.label}
-                            {!isValidSession && (
-                                <span className="ml-2 text-red-500">(View Only)</span>
-                            )}
-                        </p>
-                    </div>
-                    <div className="h-10 w-auto shrink-0">
-                        <VideoLogo className="h-full" />
-                    </div>
-                </div>
-            </header>
-
-            <main className="max-w-2xl mx-auto px-4 mt-6">
-                {/* No-session banner — ask waiter to open table */}
-                {!isValidSession && (
-                    <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
-                        <p className="text-amber-800 font-semibold">👋 Welcome!</p>
-                        <p className="text-amber-700 text-sm mt-1">
-                            Please ask your waiter to open a session for this table so you can place orders.
-                        </p>
-                    </div>
-                )}
-
-                <MenuSection
-                    categories={categories || []}
-                    items={menuItems || []}
-                    sessionId={sessionToken}
-                    restaurantSlug={tableToken}
-                    restaurantId={restaurantId}
-                />
-            </main>
-
-            {/* Service Requests — gated by features_v2 flag */}
-            {isValidSession && sessionUUID && features?.serviceRequestsEnabled !== false && (
-                <ServiceRequestPanel
-                    sessionId={sessionUUID}
-                    restaurantId={restaurantId}
-                />
-            )}
-
-            {/* Persistent Bottom Cart Summary */}
-            <CartSummary sessionId={sessionToken} tableSlug={tableToken} />
-        </div>
+        <TablePageClient
+            tableData={{
+                id: tableData.id,
+                label: tableData.label,
+                qr_token: tableToken,
+                restaurant_id: tableData.restaurant_id,
+                restaurants: Array.isArray(tableData.restaurants)
+                    ? tableData.restaurants[0] || null
+                    : (tableData.restaurants as unknown as { name: string; logo_url: string | null } | null),
+            }}
+            categories={categories || []}
+            menuItems={menuItems}
+            sessionToken={sessionToken}
+            sessionUUID={sessionUUID}
+            isValidSession={isValidSession}
+            serviceRequestsEnabled={features?.serviceRequestsEnabled !== false}
+        />
     )
 }

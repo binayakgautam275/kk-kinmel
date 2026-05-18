@@ -65,8 +65,8 @@ export default async function OrderPage(props: {
             <main className="max-w-xl mx-auto px-4 mt-6">
                 <OrderTracker orderId={params.orderId} initialOrder={order} />
 
-                {/* Pay Now Section — shown when Nepal pay is enabled and order isn't paid yet */}
-                {order.restaurant_id && features?.nepalPayEnabled && order.payment_status !== 'paid' && (
+                {/* Pay Now Section — always shown when order isn't paid yet */}
+                {order.restaurant_id && order.payment_status !== 'paid' && (
                     <OrderPaymentSection
                         orderId={params.orderId}
                         restaurantId={order.restaurant_id}

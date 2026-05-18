@@ -109,7 +109,7 @@ function buildDefaultFeaturesV2(tier: 'free' | 'basic' | 'pro' | 'enterprise') {
         defaultTaxRate: 13,
         currency: 'NPR',
         currencySymbol: 'Rs.',
-        nepalPayEnabled: false,
+        nepalPayEnabled: true,
         vatEnabled: false,
         phoneOtpEnabled: false,
         bsDateEnabled: false,
@@ -118,13 +118,46 @@ function buildDefaultFeaturesV2(tier: 'free' | 'basic' | 'pro' | 'enterprise') {
 
 export async function getAllRestaurants() {
     const supabase = await createAdminClient()
-    const { data, error } = await supabase
-        .from('restaurants')
-        .select('*, users!restaurants_owner_id_fkey(email)')
-        .order('created_at', { ascending: false })
+    
+    try {
+        const { data, error } = await supabase
+            .from('restaurants')
+            .select('*')
+            .order('created_at', { ascending: false })
 
-    if (error) return { error: error.message, data: null }
-    return { data }
+        if (error) {
+            console.error('getAllRestaurants error:', error)
+            return { error: error.message, data: null }
+        }
+        
+        // If we have data, fetch owner emails separately if needed
+        if (data && data.length > 0) {
+            const ownerIds = data.filter(r => r.owner_id).map(r => r.owner_id)
+            
+            if (ownerIds.length > 0) {
+                // Fetch each owner's email individually to avoid listUsers() pagination cap
+                const emailMap = new Map<string, string | null>()
+                await Promise.all(
+                    ownerIds.map(async (id) => {
+                        const { data: u } = await supabase.auth.admin.getUserById(id)
+                        emailMap.set(id, u?.user?.email ?? null)
+                    })
+                )
+
+                return {
+                    data: data.map(r => ({
+                        ...r,
+                        users: r.owner_id ? { email: emailMap.get(r.owner_id) || null } : null
+                    }))
+                }
+            }
+        }
+        
+        return { data }
+    } catch (err) {
+        console.error('getAllRestaurants exception:', err)
+        return { error: 'Failed to fetch restaurants', data: null }
+    }
 }
 
 export async function suspendRestaurant(restaurantId: string, suspend: boolean) {
@@ -190,16 +223,16 @@ export async function createTenantWithOwner(input: CreateTenantInput) {
     let authUserId: string | null = null
     let restaurantId: string | null = null
 
-    const [{ data: existingRestaurant }, { data: existingOwner }] = await Promise.all([
+    const [{ data: existingRestaurant }, { data: existingOwnerData }] = await Promise.all([
         supabase.from('restaurants').select('id').eq('slug', restaurantSlug).maybeSingle(),
-        supabase.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+        supabase.auth.admin.getUserByEmail(ownerEmail),
     ])
 
     if (existingRestaurant) {
         return { error: 'That restaurant slug is already in use.' }
     }
 
-    if (existingOwner.users.some((user) => user.email?.toLowerCase() === ownerEmail)) {
+    if (existingOwnerData?.user) {
         return { error: 'That owner email already has an account.' }
     }
 
@@ -242,15 +275,18 @@ export async function createTenantWithOwner(input: CreateTenantInput) {
 
         restaurantId = restaurant.id
 
+        // Wait a moment for auth trigger to create user record
+        await new Promise(resolve => setTimeout(resolve, 500))
+
         const { error: userRowError } = await supabase
             .from('users')
-            .insert({
+            .upsert({
                 id: authUserId,
                 restaurant_id: restaurantId,
                 full_name: ownerFullName,
                 role_id: 2,
                 is_active: true,
-            })
+            }, { onConflict: 'id' })
 
         if (userRowError) {
             throw new Error(userRowError.message)
@@ -334,8 +370,8 @@ export async function updateOwnerContact(
     const supabase = await createAdminClient()
 
     if (updates.email) {
-        const { data: existingUser } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-        if (existingUser.users.some(u => u.id !== userId && u.email?.toLowerCase() === updates.email?.toLowerCase())) {
+        const { data: existingUser } = await supabase.auth.admin.getUserByEmail(updates.email.toLowerCase())
+        if (existingUser?.user && existingUser.user.id !== userId) {
             return { error: 'That email is already registered to another user.' }
         }
     }

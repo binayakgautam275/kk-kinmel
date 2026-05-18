@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Users, UtensilsCrossed, Settings, LogOut, BarChart3, Palette, Grid3X3, Menu, X, TrendingUp, ShoppingBag, Tag, Heart, DollarSign, Package, FileText, Truck, Clock, Building } from 'lucide-react'
+import { Users, UtensilsCrossed, Settings, LogOut, BarChart3, Palette, Grid3X3, Menu, X, TrendingUp, ShoppingBag, Tag, Heart, DollarSign, Package, FileText, Truck, Clock, Building, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import VideoLogo from '@/components/shared/VideoLogo'
@@ -48,6 +48,7 @@ export default function AdminSidebar({ userRole }: { userRole?: string }) {
                 <NavLink href="/admin/dashboard" icon={BarChart3} label="Overview" currentPath={pathname} />
                 <NavLink href="/admin/menu" icon={UtensilsCrossed} label="Menu" currentPath={pathname} />
                 <NavLink href="/admin/orders" icon={ShoppingBag} label="Orders" currentPath={pathname} />
+                <NavLink href="/admin/payments" icon={CreditCard} label="Payments" currentPath={pathname} />
                 <NavLink href="/admin/takeout" icon={Truck} label="Takeout" currentPath={pathname} />
                 <NavLink href="/admin/staff" icon={Users} label="Staff" currentPath={pathname} />
                 <NavLink href="/admin/tables" icon={Grid3X3} label="Tables & QR" currentPath={pathname} />
@@ -69,6 +70,7 @@ export default function AdminSidebar({ userRole }: { userRole?: string }) {
 
                 <div className="pt-3 mt-3 border-t border-gray-100">
                     <h4 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Config</h4>
+                    <NavLink href="/admin/homepage" icon={Palette} label="Homepage" currentPath={pathname} />
                     <NavLink href="/admin/theme" icon={Palette} label="Brand & Theme" currentPath={pathname} />
                     <NavLink href="/admin/settings" icon={Settings} label="Settings" currentPath={pathname} />
                     {userRole === 'super_admin' && (

@@ -28,12 +28,14 @@ export default function StaffManager({
     initialStaff,
     roles,
     currentUserRole,
-    currentUserId
+    currentUserId,
+    restaurantId
 }: {
     initialStaff: StaffMember[]
     roles: Role[]
     currentUserRole: string
     currentUserId: string
+    restaurantId: string
 }) {
     const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
     const [submittingId, setSubmittingId] = useState<string | null>(null)
@@ -44,6 +46,16 @@ export default function StaffManager({
         isOpen: false,
         user: null,
         newRoleId: 0
+    })
+
+    const [createModal, setCreateModal] = useState({
+        isOpen: false,
+        fullName: '',
+        email: '',
+        password: '',
+        phone: '',
+        roleId: 4, // Default to waiter
+        isCreating: false
     })
 
     const handleRoleChange = async () => {
@@ -86,6 +98,63 @@ export default function StaffManager({
         setSubmittingId(null)
     }
 
+    const handleCreateStaff = async () => {
+        if (!createModal.fullName || !createModal.email || !createModal.password) {
+            toast.error('Please fill in all required fields')
+            return
+        }
+
+        if (createModal.password.length < 8) {
+            toast.error('Password must be at least 8 characters')
+            return
+        }
+
+        setCreateModal(prev => ({ ...prev, isCreating: true }))
+
+        try {
+            const response = await fetch('/api/staff/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: createModal.fullName,
+                    email: createModal.email,
+                    password: createModal.password,
+                    phone: createModal.phone || undefined,
+                    role_id: createModal.roleId,
+                    restaurant_id: restaurantId,
+                }),
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                toast.error(data.error || 'Failed to create staff member')
+                return
+            }
+
+            // Add new staff to list
+            if (data.staff) {
+                setStaff(prev => [data.staff, ...prev])
+            }
+
+            toast.success(data.message || 'Staff member created successfully')
+            setCreateModal({
+                isOpen: false,
+                fullName: '',
+                email: '',
+                password: '',
+                phone: '',
+                roleId: 4,
+                isCreating: false
+            })
+        } catch (error) {
+            console.error('Staff creation error:', error)
+            toast.error('An error occurred while creating staff')
+        } finally {
+            setCreateModal(prev => ({ ...prev, isCreating: false }))
+        }
+    }
+
     const formatRoleName = (name: string) => {
         return name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
     }
@@ -106,8 +175,17 @@ export default function StaffManager({
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 bg-gray-50/50">
-                <h3 className="text-lg font-semibold text-gray-800">Team Roster ({staff.length})</h3>
-                <p className="text-sm text-gray-500">Staff must create accounts before being assigned roles.</p>
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-800">Team Roster ({staff.length})</h3>
+                    <p className="text-sm text-gray-500 mt-1">Create staff accounts and manage roles</p>
+                </div>
+                <button
+                    onClick={() => setCreateModal(prev => ({ ...prev, isOpen: true }))}
+                    className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2 shrink-0"
+                >
+                    <Users size={16} />
+                    Add Staff
+                </button>
             </div>
 
             {/* Desktop Table — hidden on mobile */}
@@ -165,7 +243,7 @@ export default function StaffManager({
                                     <td className="p-4 text-right pr-6">
                                         {canEdit ? (
                                             <div className="flex items-center justify-end gap-2">
-                                                <button disabled={submittingId === user.id} onClick={() => setChangeRoleModal({ isOpen: true, user, newRoleId: user.role_id })} className="text-sm font-medium text-[var(--color-primary)] hover:text-opacity-80 px-3 py-1.5 rounded-md hover:bg-[var(--color-primary)]/10 transition-colors">
+                                                <button disabled={submittingId === user.id} onClick={() => setChangeRoleModal({ isOpen: true, user, newRoleId: user.role_id })} className="text-sm font-medium text-primary hover:text-opacity-80 px-3 py-1.5 rounded-md hover:bg-primary/10 transition-colors">
                                                     Change Role
                                                 </button>
                                                 <button disabled={submittingId === user.id} onClick={() => handleToggleStatus(user)} className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${user.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>
@@ -222,7 +300,7 @@ export default function StaffManager({
                             </div>
                             {canEdit && (
                                 <div className="grid grid-cols-2 gap-2">
-                                    <button disabled={submittingId === user.id} onClick={() => setChangeRoleModal({ isOpen: true, user, newRoleId: user.role_id })} className="py-2 text-sm font-medium text-[var(--color-primary)] bg-[var(--color-primary)]/5 rounded-lg border border-[var(--color-primary)]/20 active:scale-95 transition">
+                                    <button disabled={submittingId === user.id} onClick={() => setChangeRoleModal({ isOpen: true, user, newRoleId: user.role_id })} className="py-2 text-sm font-medium text-primary bg-primary/5 rounded-lg border border-primary/20 active:scale-95 transition">
                                         Change Role
                                     </button>
                                     <button disabled={submittingId === user.id} onClick={() => handleToggleStatus(user)} className={`py-2 text-sm font-medium rounded-lg border active:scale-95 transition ${user.is_active ? 'text-red-600 bg-red-50 border-red-200' : 'text-green-600 bg-green-50 border-green-200'}`}>
@@ -250,14 +328,14 @@ export default function StaffManager({
 
                             <div className="space-y-3">
                                 {availableRoles.map(role => (
-                                    <label key={role.id} className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${changeRoleModal.newRoleId === role.id ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-gray-200 hover:border-gray-300'}`}>
+                                    <label key={role.id} className={`flex items-start gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${changeRoleModal.newRoleId === role.id ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'}`}>
                                         <input
                                             type="radio"
                                             name="role"
                                             value={role.id}
                                             checked={changeRoleModal.newRoleId === role.id}
                                             onChange={() => setChangeRoleModal({ ...changeRoleModal, newRoleId: role.id })}
-                                            className="mt-1 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                            className="mt-1 text-primary focus:ring-primary"
                                         />
                                         <div>
                                             <div className="font-medium text-gray-900 flex items-center gap-2">
@@ -285,10 +363,106 @@ export default function StaffManager({
                             <button
                                 disabled={submittingId === changeRoleModal.user.id}
                                 onClick={handleRoleChange}
-                                className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-lg shadow-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                                className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg shadow-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
                             >
                                 {submittingId === changeRoleModal.user.id ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                                 Save Role
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Create Staff Modal */}
+            {createModal.isOpen && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-6">
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Create Staff Account</h3>
+                            <p className="text-sm text-gray-500 mb-6">Add a new staff member to your restaurant.</p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name *</label>
+                                    <input
+                                        type="text"
+                                        value={createModal.fullName}
+                                        onChange={(e) => setCreateModal(prev => ({ ...prev, fullName: e.target.value }))}
+                                        placeholder="John Doe"
+                                        disabled={createModal.isCreating}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email Address *</label>
+                                    <input
+                                        type="email"
+                                        value={createModal.email}
+                                        onChange={(e) => setCreateModal(prev => ({ ...prev, email: e.target.value }))}
+                                        placeholder="john@example.com"
+                                        disabled={createModal.isCreating}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Password *</label>
+                                    <input
+                                        type="password"
+                                        value={createModal.password}
+                                        onChange={(e) => setCreateModal(prev => ({ ...prev, password: e.target.value }))}
+                                        placeholder="At least 8 characters"
+                                        disabled={createModal.isCreating}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+                                    <input
+                                        type="tel"
+                                        value={createModal.phone}
+                                        onChange={(e) => setCreateModal(prev => ({ ...prev, phone: e.target.value }))}
+                                        placeholder="123-456-7890"
+                                        disabled={createModal.isCreating}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Initial Role</label>
+                                    <select
+                                        value={createModal.roleId}
+                                        onChange={(e) => setCreateModal(prev => ({ ...prev, roleId: parseInt(e.target.value) }))}
+                                        disabled={createModal.isCreating}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:bg-gray-50"
+                                    >
+                                        {availableRoles.map(role => (
+                                            <option key={role.id} value={role.id}>
+                                                {formatRoleName(role.name)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-3">
+                            <button
+                                onClick={() => setCreateModal(prev => ({ ...prev, isOpen: false }))}
+                                disabled={createModal.isCreating}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCreateStaff}
+                                disabled={createModal.isCreating}
+                                className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg shadow-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {createModal.isCreating ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+                                Create Staff
                             </button>
                         </div>
                     </div>

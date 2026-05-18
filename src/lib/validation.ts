@@ -47,28 +47,23 @@ export const OrderQuerySchema = z.object({
 })
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// PAYMENTS (Nepal Pay: eSewa, Khalti, Fonepay)
+// PAYMENTS (QR Screenshot Upload + Cash)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-export const NepalPaymentSchema = z.object({
+export const PaymentClaimSchema = z.object({
   restaurantId: UUID,
   orderId: UUID.optional(),
   amount: POSITIVE_DECIMAL.max(999999, 'Amount too large'),
-  phone: PHONE,
-  provider: z.enum(['esewa', 'khalti', 'fonepay']),
+  paymentMethod: z.enum(['qr_scan', 'esewa', 'khalti', 'fonepay', 'cash']),
+  phone: PHONE.optional(),
   screenshot: z.instanceof(File)
     .refine(f => f.size <= 10 * 1024 * 1024, 'Screenshot must be under 10MB')
     .refine(f => ['image/jpeg', 'image/png', 'image/webp'].includes(f.type), 'Screenshot must be JPEG, PNG, or WebP')
     .optional()
 })
 
-export const StripePaymentSchema = z.object({
-  restaurantId: UUID,
-  orderId: UUID.optional(),
-  amount: POSITIVE_INT.max(999999900, 'Amount too large'), // Stripe uses cents
-  currency: z.string().length(3).toUpperCase().default('USD'),
-  paymentMethodId: z.string().startsWith('pm_', 'Invalid payment method ID')
-})
+// Keep old name as alias for backward compat with existing imports
+export const NepalPaymentSchema = PaymentClaimSchema
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // LOYALTY PROGRAM
@@ -199,6 +194,12 @@ export const UpdateOwnerContactSchema = z.object({
   phone: PHONE.optional()
 })
 
+// Public self-service signup — extends CreateTenantSchema with Nepal business fields
+export const PublicSignupSchema = CreateTenantSchema.extend({
+  panNumber: z.string().regex(/^\d{9}$/, 'PAN must be 9 digits').optional().or(z.literal('')),
+  vatRegistered: z.boolean().optional().default(false),
+})
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // LOGIN & AUTH
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -257,6 +258,50 @@ export const SearchSchema = z.object({
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // UTILITY: Safe Parse with Error Messages
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HOMEPAGE & THEMES
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+export const UpdateHomepageSchema = z.object({
+  restaurant_id: UUID,
+  template: z.enum(['modern', 'elegant', 'vibrant', 'minimal', 'classic']),
+  is_active: z.boolean().default(true),
+  hero_title: z.string().min(1).max(200),
+  hero_subtitle: z.string().max(500).optional(),
+  hero_image_url: z.string().url().optional().nullable(),
+  hero_video_url: z.string().url().optional().nullable(),
+  hero_cta_text: z.string().max(50).optional(),
+  about_section_enabled: z.boolean().default(true),
+  about_title: z.string().max(200).optional(),
+  about_description: z.string().max(1000).optional(),
+  about_image_url: z.string().url().optional().nullable(),
+  features_enabled: z.boolean().default(true),
+  features: z.array(z.object({
+    id: UUID,
+    title: z.string().min(1).max(100),
+    description: z.string().max(300),
+    icon: z.string().max(10),
+    order: z.number().int().min(0)
+  })).max(10),
+  theme: z.object({
+    primaryColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+    secondaryColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+    backgroundColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+    textColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+    fontFamily: z.string().max(100)
+  }),
+  cta_section_enabled: z.boolean().default(true),
+  cta_title: z.string().max(200).optional(),
+  cta_text: z.string().max(500).optional(),
+  cta_button_text: z.string().max(50).optional(),
+  footer_enabled: z.boolean().default(true),
+  footer_text: z.string().max(500).optional(),
+  social_links: z.array(z.object({
+    platform: z.string().max(50),
+    url: z.string().url()
+  })).max(10)
+})
 
 export function validateInput<T>(schema: z.ZodSchema<T>, data: unknown): { 
   success: boolean

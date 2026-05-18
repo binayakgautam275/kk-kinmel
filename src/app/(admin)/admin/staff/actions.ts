@@ -1,21 +1,29 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/server'
+import { getCurrentUser } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
-// Note: For a fully featured production app, we would use Supabase Admin API
-// to create the actual Auth User via a secure endpoint. For the MVP scope,
-// we will focus on updating existing users' roles or adding them to the public schema
-// assuming they've signed up or been invited. 
-// As an MVP workaround for this interface, we will build an "Invitation" 
-// simulation that creates the DB record, and in real life would trigger an email.
-// For now, we will just manage the roles of users already in the DB.
-
 export async function updateStaffRoleAction(userId: string, targetRoleId: number) {
+    const currentUser = await getCurrentUser()
     const supabase = await createAdminClient()
 
-    // Managers cannot make other people Super Admins. Only Super Admins can.
-    // For this MVP action, we'll do a simple update.
+    // Verify target user belongs to the same restaurant
+    const { data: targetUser } = await supabase
+        .from('users')
+        .select('restaurant_id')
+        .eq('id', userId)
+        .single()
+
+    if (targetUser?.restaurant_id !== currentUser.restaurantId) {
+        return { error: 'Unauthorized' }
+    }
+
+    // Managers cannot elevate anyone to super_admin (role_id: 1)
+    if (currentUser.role === 'manager' && targetRoleId === 1) {
+        return { error: 'Managers cannot assign super admin role' }
+    }
+
     const { error } = await supabase
         .from('users')
         .update({ role_id: targetRoleId })
@@ -28,7 +36,19 @@ export async function updateStaffRoleAction(userId: string, targetRoleId: number
 }
 
 export async function toggleStaffStatusAction(userId: string, isActive: boolean) {
+    const currentUser = await getCurrentUser()
     const supabase = await createAdminClient()
+
+    // Verify target user belongs to the same restaurant
+    const { data: targetUser } = await supabase
+        .from('users')
+        .select('restaurant_id')
+        .eq('id', userId)
+        .single()
+
+    if (targetUser?.restaurant_id !== currentUser.restaurantId) {
+        return { error: 'Unauthorized' }
+    }
 
     const { error } = await supabase
         .from('users')

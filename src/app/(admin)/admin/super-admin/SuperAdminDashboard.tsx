@@ -224,6 +224,25 @@ export default function SuperAdminDashboard({
 
     return (
         <div className="space-y-8">
+            {/* SaaS Control Panel Header */}
+            <div className="sticky top-0 z-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-6 text-white mb-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 rounded-xl p-3">
+                            <Building2 size={28} />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold">🏢 SaaS Control Panel</h1>
+                            <p className="text-indigo-100 text-sm mt-1">Manage all restaurant tenants and subscriptions</p>
+                        </div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
+                        <Crown size={16} />
+                        <span className="text-sm font-semibold">SUPER ADMIN</span>
+                    </div>
+                </div>
+            </div>
+
             {/* Metrics Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <MetricCard

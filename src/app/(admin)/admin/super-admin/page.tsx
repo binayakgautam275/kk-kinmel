@@ -27,6 +27,10 @@ export default async function SuperAdminPage() {
         getSaasMetrics(),
     ])
 
+    if (restaurantsResult.error) {
+        console.error('Failed to load restaurants:', restaurantsResult.error)
+    }
+
     return (
         <div className="space-y-6">
             <header>

@@ -4,11 +4,11 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { validateInput } from '@/lib/validation'
 import { z } from 'zod'
 
-const NepalPaymentInputSchema = z.object({
+const PaymentClaimInputSchema = z.object({
     restaurantId: z.string().uuid('Invalid restaurant ID'),
     amount: z.number().positive('Amount must be positive').max(999999, 'Amount too large'),
-    phone: z.string().regex(/^\+?[\d\s\-()]{7,}$/, 'Invalid phone format'),
-    provider: z.enum(['esewa', 'khalti', 'fonepay']),
+    paymentMethod: z.enum(['qr_scan', 'esewa', 'khalti', 'fonepay', 'cash']),
+    phone: z.string().regex(/^\+?[\d\s\-()]{7,}$/, 'Invalid phone format').optional(),
     screenshot: z.instanceof(File).optional(),
     orderId: z.string().uuid().nullable().optional()
 })
@@ -16,17 +16,16 @@ const NepalPaymentInputSchema = z.object({
 export async function submitPaymentClaim(formData: FormData): Promise<{ error?: string; success?: boolean }> {
     const restaurantId = formData.get('restaurantId') as string
     const amount = parseFloat(formData.get('amount') as string)
-    const phone = formData.get('phone') as string
-    const provider = formData.get('provider') as string
+    const paymentMethod = formData.get('paymentMethod') as string
+    const phone = (formData.get('phone') as string) || undefined
     const screenshot = formData.get('screenshot') as File | null
     const orderId = formData.get('orderId') as string | null
 
-    // Validate all inputs
-    const validation = validateInput(NepalPaymentInputSchema, {
+    const validation = validateInput(PaymentClaimInputSchema, {
         restaurantId,
         amount,
-        phone,
-        provider,
+        paymentMethod,
+        phone: phone && phone.trim().length > 0 ? phone : undefined,
         screenshot: screenshot && screenshot.size > 0 ? screenshot : undefined,
         orderId
     })
@@ -36,16 +35,17 @@ export async function submitPaymentClaim(formData: FormData): Promise<{ error?: 
         return { error: `Invalid payment claim: ${validation.error}` }
     }
 
-    const { restaurantId: validRestaurantId, amount: validAmount, phone: validPhone, provider: validProvider, screenshot: validScreenshot, orderId: validOrderId } = validation.data!
+    const { restaurantId: validRestaurantId, amount: validAmount, paymentMethod: validMethod, phone: validPhone, screenshot: validScreenshot, orderId: validOrderId } = validation.data!
 
     const supabase = await createAdminClient()
 
-    // Upload screenshot if provided (store URL for manual reference, not in DB)
+    let screenshotUrl: string | null = null
+
     if (validScreenshot && validScreenshot.size > 0) {
         const ext = validScreenshot.name.split('.').pop()
         const fileName = `payment-proofs/${validRestaurantId}/${Date.now()}.${ext}`
 
-        const { error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
             .from('uploads')
             .upload(fileName, validScreenshot, {
                 contentType: validScreenshot.type,
@@ -55,15 +55,11 @@ export async function submitPaymentClaim(formData: FormData): Promise<{ error?: 
         if (uploadError) {
             console.error('Screenshot upload failed:', uploadError)
             // Continue without screenshot — it's optional
+        } else if (uploadData) {
+            const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName)
+            screenshotUrl = publicUrl
         }
     }
-
-    // Insert payment verification record
-    // DB columns: amount, payment_method, reference_code (for phone/txn id)
-    // status is derived from staff_verified/staff_rejected booleans (defaults false)
-    // Map the provider label to a valid payment_method enum value
-    const VALID_METHODS = ['qr_scan', 'esewa', 'khalti', 'fonepay', 'cash', 'card', 'stripe'] as const
-    const paymentMethod = validProvider as 'esewa' | 'khalti' | 'fonepay'
 
     const { error } = await supabase
         .from('payment_verifications')
@@ -71,8 +67,9 @@ export async function submitPaymentClaim(formData: FormData): Promise<{ error?: 
             restaurant_id: validRestaurantId,
             order_id: validOrderId || null,
             amount: validAmount,
-            payment_method: paymentMethod,
-            reference_code: validPhone,
+            payment_method: validMethod,
+            reference_code: validPhone || null,
+            screenshot_url: screenshotUrl,
         })
 
     if (error) {

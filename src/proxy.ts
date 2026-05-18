@@ -23,7 +23,9 @@ const ROLE_ACCESS: Record<string, string[]> = {
     '/admin/shifts': ['manager', 'super_admin'],
     '/admin/takeout': ['manager', 'super_admin'],
     '/admin/orders': ['waiter', 'manager', 'super_admin'],
+    '/admin/payments': ['manager', 'super_admin'],
     '/admin/theme': ['manager', 'super_admin'],
+    '/admin/homepage': ['manager', 'super_admin'],
     '/admin/super-admin': ['super_admin'],
 }
 
@@ -49,7 +51,8 @@ export async function proxy(request: NextRequest) {
         '/admin/dashboard', '/admin/menu', '/admin/staff', '/admin/tables',
         '/admin/settings', '/admin/analytics', '/admin/pricing', '/admin/promos',
         '/admin/loyalty', '/admin/reports', '/admin/ingredients', '/admin/shifts',
-        '/admin/takeout', '/admin/orders', '/admin/theme', '/admin/super-admin',
+        '/admin/takeout', '/admin/orders', '/admin/payments', '/admin/theme',
+        '/admin/homepage', '/admin/super-admin',
     ]
 
     const isProtected = protectedPrefixes.some((prefix) => pathname.startsWith(prefix))

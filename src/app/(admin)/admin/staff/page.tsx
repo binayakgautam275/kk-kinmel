@@ -59,6 +59,7 @@ export default async function StaffManagementPage() {
                 roles={roles || []}
                 currentUserRole={currentUserRole}
                 currentUserId={userId}
+                restaurantId={restaurantId}
             />
         </div>
     )

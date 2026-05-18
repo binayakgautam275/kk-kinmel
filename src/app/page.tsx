@@ -50,7 +50,7 @@ export default async function Home() {
                             Staff Login
                         </Link>
                         <Link
-                            href="#pricing"
+                            href="/signup"
                             className="hidden sm:inline-flex px-4 sm:px-5 py-2 sm:py-2.5 text-sm font-semibold bg-[var(--color-primary)] text-white rounded-xl hover:opacity-90 transition-all shadow-sm"
                         >
                             Get Started
@@ -430,7 +430,7 @@ export default async function Home() {
                         <TechBadge icon={<ShieldCheck size={16} />} label="Row Level Security" />
                         <TechBadge icon={<Globe size={16} />} label="PWA Enabled" />
                         <TechBadge icon={<Clock size={16} />} label="Real-time Sync" />
-                        <TechBadge icon={<CreditCard size={16} />} label="Stripe Ready" />
+                        <TechBadge icon={<CreditCard size={16} />} label="QR & Cash Payments" />
                     </div>
                 </div>
             </section>
@@ -486,7 +486,7 @@ export default async function Home() {
                     </p>
                     <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
                         <Link
-                            href="#pricing"
+                            href="/signup"
                             className="inline-flex items-center justify-center gap-2 px-6 sm:px-8 py-3.5 sm:py-4 bg-[var(--color-primary)] hover:opacity-90 text-white font-semibold rounded-xl shadow-lg shadow-[var(--color-primary)]/25 transition-all text-base sm:text-lg active:scale-[0.98]"
                         >
                             Start Free Trial <ArrowRight size={20} />
@@ -743,7 +743,7 @@ function PricingCard({ tier, price, period, description, features, cta, highligh
                 ))}
             </ul>
             <a
-                href={tier === 'Enterprise' ? 'mailto:hello@kkhane.com' : '/login'}
+                href={tier === 'Enterprise' ? 'mailto:hello@kkhane.com' : '/signup'}
                 className={`block text-center py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
                     highlighted
                         ? 'bg-[var(--color-primary)] text-white hover:opacity-90'
