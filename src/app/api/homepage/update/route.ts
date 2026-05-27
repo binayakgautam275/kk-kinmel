@@ -8,7 +8,8 @@ export async function POST(req: NextRequest) {
         const supabase = await createAdminClient()
 
         const body = await req.json()
-        const { restaurant_id, ...configData } = body
+        // hero_cta_text is not a DB column — it lives inside the cta JSONB field as cta.button_text
+        const { restaurant_id, hero_cta_text, ...configData } = body
 
         // Verify user has access to this restaurant
         const { data: userData } = await supabase
@@ -22,6 +23,14 @@ export async function POST(req: NextRequest) {
                 { error: 'Unauthorized' },
                 { status: 403 }
             )
+        }
+
+        // Merge hero_cta_text into cta.button_text so nothing is lost
+        if (hero_cta_text) {
+            configData.cta = {
+                ...(configData.cta || {}),
+                button_text: hero_cta_text,
+            }
         }
 
         // Check if homepage config exists

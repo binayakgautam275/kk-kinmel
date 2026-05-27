@@ -54,6 +54,7 @@ export async function getClientIp(): Promise<string> {
 /**
  * Rate limit middleware for Server Actions
  * Returns null if request is allowed, error message if rate limited
+ * Fails gracefully if Upstash is not available
  */
 export async function checkRateLimit(key: string, requests: number = 10, windowSeconds: number = 60): Promise<string | null> {
   const ratelimit = getRatelimit(key, requests, windowSeconds)
@@ -62,15 +63,21 @@ export async function checkRateLimit(key: string, requests: number = 10, windowS
     return null
   }
 
-  const ip = await getClientIp()
-  const response = await ratelimit.limit(ip)
+  try {
+    const ip = await getClientIp()
+    const response = await ratelimit.limit(ip)
 
-  if (!response.success) {
-    const resetTime = response.reset ? new Date(response.reset).getTime() - Date.now() : 60000
-    return `Rate limit exceeded. Try again in ${Math.ceil(resetTime / 1000)} seconds.`
+    if (!response.success) {
+      const resetTime = response.reset ? new Date(response.reset).getTime() - Date.now() : 60000
+      return `Rate limit exceeded. Try again in ${Math.ceil(resetTime / 1000)} seconds.`
+    }
+
+    return null
+  } catch (error) {
+    console.warn(`Rate limit check failed for ${key}:`, error instanceof Error ? error.message : 'Unknown error')
+    // Fail open - allow the request if rate limiting fails
+    return null
   }
-
-  return null
 }
 
 /**

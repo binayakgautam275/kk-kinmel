@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import HomepageGate from '@/components/customer/HomepageGate'
 import type { MenuItem, MenuCategory } from '@/types/database'
 import MenuSection from '@/components/customer/MenuSection'
@@ -9,6 +10,7 @@ import ServiceRequestPanel from '@/components/customer/ServiceRequestPanel'
 import VideoLogo from '@/components/shared/VideoLogo'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
+import { UtensilsCrossed } from 'lucide-react'
 
 interface TablePageClientProps {
     tableData: {
@@ -41,43 +43,57 @@ export default function TablePageClient({
     translations,
     supportedLanguages,
 }: TablePageClientProps) {
-    const [showMenu, setShowMenu] = useState(!isValidSession) // Show menu immediately if no session, otherwise start with homepage
+    const [showMenu, setShowMenu] = useState(!isValidSession)
 
-    const restaurantName = tableData.restaurants?.name || 'Smart Restaurant'
+    const restaurantName = tableData.restaurants?.name || 'Restaurant'
+    const logoUrl = tableData.restaurants?.logo_url
 
     const menuContent = (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            {/* Header */}
-            <header className="bg-white px-4 py-6 shadow-sm sticky top-0 z-20">
-                <div className="flex justify-between items-center max-w-2xl mx-auto">
-                    <div>
-                        <h1 className="text-2xl font-bold font-['var(--font-family)'] text-[var(--color-secondary)]">
-                            {restaurantName}
-                        </h1>
-                        <p className="text-sm text-gray-500 font-medium">
-                            Table • {tableData.label}
-                            {!isValidSession && (
-                                <span className="ml-2 text-red-500">(View Only)</span>
-                            )}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                        {multiLanguageEnabled && <LanguageSwitcher />}
-                        <div className="h-10 w-auto">
-                            <VideoLogo className="h-full" />
+        <div className="min-h-screen bg-gray-50 pb-28">
+            {/* Sticky header — compact, restaurant-branded */}
+            <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
+                <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+                    {/* Restaurant identity */}
+                    <div className="flex items-center gap-2.5 min-w-0">
+                        {logoUrl ? (
+                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 shrink-0">
+                                <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="32px" />
+                            </div>
+                        ) : (
+                            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
+                                <UtensilsCrossed size={15} className="text-[var(--color-primary)]" />
+                            </div>
+                        )}
+                        <div className="min-w-0">
+                            <p className="text-sm font-bold text-[var(--color-secondary)] leading-none truncate">{restaurantName}</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">
+                                Table {tableData.label}
+                                {!isValidSession && <span className="ml-1 text-amber-500 font-medium">· View only</span>}
+                            </p>
                         </div>
+                    </div>
+
+                    {/* Right side: language switcher + platform logo */}
+                    <div className="flex items-center gap-2 shrink-0">
+                        {multiLanguageEnabled && <LanguageSwitcher />}
+                        <VideoLogo className="h-6 opacity-60" />
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-2xl mx-auto px-4 mt-6">
-                {/* No-session banner — ask waiter to open table */}
+            <main className="max-w-2xl mx-auto px-4 pt-4">
+                {/* No-session notice */}
                 {!isValidSession && (
-                    <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-center">
-                        <p className="text-amber-800 font-semibold">👋 Welcome!</p>
-                        <p className="text-amber-700 text-sm mt-1">
-                            Please ask your waiter to open a session for this table so you can place orders.
-                        </p>
+                    <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                        <div className="flex items-start gap-3">
+                            <span className="text-2xl mt-0.5">👋</span>
+                            <div>
+                                <p className="font-semibold text-amber-900 text-sm">Welcome to {restaurantName}!</p>
+                                <p className="text-amber-700 text-sm mt-0.5">
+                                    Ask your waiter to open a session for Table {tableData.label} so you can place orders.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -90,7 +106,7 @@ export default function TablePageClient({
                 />
             </main>
 
-            {/* Service Requests — gated by features_v2 flag */}
+            {/* Service request FAB — only when session active */}
             {isValidSession && sessionUUID && serviceRequestsEnabled && (
                 <ServiceRequestPanel
                     sessionId={sessionUUID}
@@ -98,7 +114,7 @@ export default function TablePageClient({
                 />
             )}
 
-            {/* Persistent Bottom Cart Summary */}
+            {/* Sticky cart bar */}
             <CartSummary sessionId={sessionToken} tableSlug={tableData.qr_token} />
         </div>
     )

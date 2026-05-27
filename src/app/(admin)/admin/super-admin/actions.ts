@@ -448,7 +448,6 @@ export async function getSaasMetrics() {
         supabase.from('restaurants').select('subscription_tier'),
     ])
 
-    // Count by tier
     const tiers: Record<string, number> = { free: 0, basic: 0, pro: 0, enterprise: 0 }
     tierBreakdown?.forEach((r: { subscription_tier?: string }) => {
         const tier = r.subscription_tier || 'free'
@@ -460,5 +459,391 @@ export async function getSaasMetrics() {
         activeRestaurants: activeRestaurants || 0,
         totalOrders: totalOrders || 0,
         tierBreakdown: tiers,
+    }
+}
+
+// ============================================================
+// Cross-Tenant Query Actions (super_admin only)
+// ============================================================
+
+export async function getSaasMetricsFull() {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString()
+
+    const [
+        { count: totalRestaurants },
+        { count: activeRestaurants },
+        { count: totalOrders },
+        { data: tierData },
+        { data: suspendedData },
+        { data: mrrData },
+        { data: recentTenants },
+        { data: recentOrders30 },
+        { data: expiringData },
+    ] = await Promise.all([
+        supabase.from('restaurants').select('*', { count: 'exact', head: true }),
+        supabase.from('restaurants').select('*', { count: 'exact', head: true }).eq('is_active', true).eq('is_suspended', false),
+        supabase.from('orders').select('*', { count: 'exact', head: true }),
+        supabase.from('restaurants').select('id, name, subscription_tier, subscription_expires_at'),
+        supabase.from('restaurants').select('id').eq('is_suspended', true),
+        supabase.from('subscription_payments').select('amount').gte('created_at', thirtyDaysAgo),
+        supabase.from('restaurants').select('id, name, subscription_tier, created_at').order('created_at', { ascending: false }).limit(5),
+        supabase.from('orders').select('restaurant_id, total_amount').gte('placed_at', thirtyDaysAgo),
+        supabase.from('restaurants').select('id, name, subscription_expires_at').not('subscription_expires_at', 'is', null),
+    ])
+
+    const tiers: Record<string, number> = { free: 0, basic: 0, pro: 0, enterprise: 0 }
+    ;(tierData || []).forEach((r: { subscription_tier?: string }) => {
+        const t = r.subscription_tier || 'free'
+        tiers[t] = (tiers[t] || 0) + 1
+    })
+
+    const mrr = (mrrData || []).reduce((s: number, p: { amount: number }) => s + (p.amount || 0), 0)
+
+    // Top 5 restaurants by order count (last 30 days)
+    const orderCountMap: Record<string, { count: number; revenue: number }> = {}
+    for (const o of (recentOrders30 || []) as Array<{ restaurant_id: string; total_amount: number }>) {
+        if (!orderCountMap[o.restaurant_id]) orderCountMap[o.restaurant_id] = { count: 0, revenue: 0 }
+        orderCountMap[o.restaurant_id].count++
+        orderCountMap[o.restaurant_id].revenue += o.total_amount || 0
+    }
+    // Enrich with restaurant names
+    const restaurantIds = Object.keys(orderCountMap)
+    let restaurantNames: Record<string, string> = {}
+    if (restaurantIds.length > 0) {
+        const { data: rNames } = await supabase.from('restaurants').select('id, name').in('id', restaurantIds)
+        for (const r of (rNames || []) as Array<{ id: string; name: string }>) {
+            restaurantNames[r.id] = r.name
+        }
+    }
+    const top5 = Object.entries(orderCountMap)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 5)
+        .map(([id, stats]) => ({ id, name: restaurantNames[id] || id.slice(0, 8), ...stats }))
+
+    // Expiring within 7 days
+    const now = Date.now()
+    const expiringSoon = (expiringData || []).filter((r: { subscription_expires_at: string | null }) => {
+        if (!r.subscription_expires_at) return false
+        const diff = new Date(r.subscription_expires_at).getTime() - now
+        return diff > 0 && diff < 7 * 24 * 3600 * 1000
+    }) as Array<{ id: string; name: string; subscription_expires_at: string }>
+
+    return {
+        totalRestaurants: totalRestaurants || 0,
+        activeRestaurants: activeRestaurants || 0,
+        suspendedRestaurants: (suspendedData || []).length,
+        totalOrders: totalOrders || 0,
+        tierBreakdown: tiers,
+        mrr,
+        recentTenants: (recentTenants || []) as Array<{ id: string; name: string; subscription_tier: string; created_at: string }>,
+        top5ByOrders: top5,
+        expiringSoon,
+    }
+}
+
+export async function getAllOrdersAcrossRestaurants(limit = 200) {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const { data, error } = await supabase
+        .from('orders')
+        .select('id, restaurant_id, total_amount, status, placed_at, payment_status, session_id, restaurants(name), sessions(tables(label))')
+        .order('placed_at', { ascending: false })
+        .limit(limit)
+
+    if (error) return { error: error.message, data: null }
+    return { data }
+}
+
+export async function getAllStaffAcrossRestaurants() {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, is_active, restaurant_id, role_id, restaurants(name, subscription_tier), roles(name)')
+        .neq('role_id', 5)
+        .order('restaurant_id')
+
+    if (error) return { error: error.message, data: null }
+
+    // Fetch emails from auth
+    const userIds = (data || []).map((u: { id: string }) => u.id)
+    const emailMap: Record<string, string> = {}
+    await Promise.all(
+        userIds.map(async (id: string) => {
+            const { data: authUser } = await supabase.auth.admin.getUserById(id)
+            emailMap[id] = authUser?.user?.email || ''
+        })
+    )
+
+    const enriched = (data || []).map((u: Record<string, unknown>) => ({
+        ...u,
+        email: emailMap[u.id as string] || '',
+    }))
+
+    return { data: enriched }
+}
+
+export async function getAllMenusAcrossRestaurants() {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const [{ data: restaurants }, { data: items }] = await Promise.all([
+        supabase.from('restaurants').select('id, name, subscription_tier').eq('is_active', true).order('name'),
+        supabase.from('menu_items').select('id, name, price, is_available, restaurant_id, category_id, menu_categories(name)').order('restaurant_id'),
+    ])
+
+    if (!restaurants) return { data: null }
+
+    // Group items by restaurant
+    const itemsByRestaurant: Record<string, typeof items> = {}
+    for (const item of (items || []) as Array<{ restaurant_id: string }>) {
+        if (!itemsByRestaurant[item.restaurant_id]) itemsByRestaurant[item.restaurant_id] = []
+        itemsByRestaurant[item.restaurant_id]!.push(item as never)
+    }
+
+    const grouped = (restaurants as Array<{ id: string; name: string; subscription_tier: string }>).map(r => ({
+        ...r,
+        items: itemsByRestaurant[r.id] || [],
+        totalItems: (itemsByRestaurant[r.id] || []).length,
+        availableItems: (itemsByRestaurant[r.id] || []).filter((i: { is_available: boolean }) => i.is_available).length,
+    }))
+
+    return { data: grouped }
+}
+
+export async function getAllTablesAcrossRestaurants() {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const [{ data: tables }, { data: activeSessions }] = await Promise.all([
+        supabase.from('tables').select('id, label, capacity, qr_token, is_active, restaurant_id, restaurants(name)').order('restaurant_id').order('label'),
+        supabase.from('sessions').select('table_id').eq('status', 'active'),
+    ])
+
+    if (!tables) return { data: null }
+
+    const activeTableIds = new Set((activeSessions || []).map((s: { table_id: string }) => s.table_id))
+
+    const enriched = (tables as unknown as Array<{ id: string; label: string; capacity: number | null; qr_token: string; is_active: boolean; restaurant_id: string; restaurants: { name: string } | null }>)
+        .map(t => ({ ...t, hasActiveSession: activeTableIds.has(t.id) }))
+
+    return { data: enriched }
+}
+
+export async function getAllTakeoutOrdersAcrossRestaurants(limit = 100) {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const { data, error } = await supabase
+        .from('takeout_orders')
+        .select('id, restaurant_id, customer_name, customer_phone, status, total_amount, placed_at, payment_status, restaurants(name)')
+        .order('placed_at', { ascending: false })
+        .limit(limit)
+
+    if (error) return { error: error.message, data: null }
+    return { data }
+}
+
+export async function getAllSubscriptionPayments(limit = 100) {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const { data, error } = await supabase
+        .from('subscription_payments')
+        .select('id, restaurant_id, amount, payment_method, reference_code, notes, created_at, recorded_by, restaurants(name, subscription_tier, subscription_expires_at, subscription_status)')
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+    if (error) return { error: error.message, data: null }
+    return { data }
+}
+
+export async function getAllPromoCodesAcrossRestaurants() {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const { data, error } = await supabase
+        .from('promo_codes')
+        .select('id, restaurant_id, code, promo_type, value, current_uses, max_uses, valid_until, is_active, restaurants(name)')
+        .order('restaurant_id')
+        .order('created_at', { ascending: false })
+
+    if (error) return { error: error.message, data: null }
+    return { data }
+}
+
+export async function getAllLoyaltyOverview() {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const [{ data: configs }, { data: memberCounts }] = await Promise.all([
+        supabase.from('loyalty_config').select('restaurant_id, points_per_dollar, redemption_threshold, redemption_value, is_active, restaurants(name, subscription_tier)'),
+        supabase.from('loyalty_members').select('restaurant_id'),
+    ])
+
+    if (!configs) return { data: null }
+
+    const countByRestaurant: Record<string, number> = {}
+    for (const m of (memberCounts || []) as Array<{ restaurant_id: string }>) {
+        countByRestaurant[m.restaurant_id] = (countByRestaurant[m.restaurant_id] || 0) + 1
+    }
+
+    const enriched = (configs as unknown as Array<{ restaurant_id: string; points_per_dollar: number; redemption_threshold: number; redemption_value: number; is_active: boolean; restaurants: { name: string; subscription_tier: string } | null }>)
+        .map(c => ({ ...c, memberCount: countByRestaurant[c.restaurant_id] || 0 }))
+
+    return { data: enriched }
+}
+
+export async function getAllPricingRulesOverview() {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const [{ data: rules }, { data: settings }] = await Promise.all([
+        supabase.from('pricing_rules').select('restaurant_id, is_active'),
+        supabase.from('settings').select('restaurant_id, features_v2, restaurants(name, subscription_tier)'),
+    ])
+
+    if (!settings) return { data: null }
+
+    // Count active rules per restaurant
+    const activeRulesMap: Record<string, number> = {}
+    for (const r of (rules || []) as Array<{ restaurant_id: string; is_active: boolean }>) {
+        if (r.is_active) {
+            activeRulesMap[r.restaurant_id] = (activeRulesMap[r.restaurant_id] || 0) + 1
+        }
+    }
+
+    const enriched = (settings as unknown as Array<{
+        restaurant_id: string
+        features_v2: { dynamicPricingEnabled?: boolean }
+        restaurants: { name: string; subscription_tier: string } | null
+    }>).map(s => ({
+        restaurant_id: s.restaurant_id,
+        restaurant: s.restaurants,
+        dynamicPricingEnabled: s.features_v2?.dynamicPricingEnabled || false,
+        activeRules: activeRulesMap[s.restaurant_id] || 0,
+    }))
+
+    return { data: enriched }
+}
+
+export async function getAllEodReportsAcrossRestaurants(limit = 100) {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const { data, error } = await supabase
+        .from('eod_reports')
+        .select('id, restaurant_id, report_date, total_orders, total_revenue, avg_order_value, created_at, restaurants(name)')
+        .order('report_date', { ascending: false })
+        .limit(limit)
+
+    if (error) return { error: error.message, data: null }
+    return { data }
+}
+
+export async function getAllIngredientsAcrossRestaurants() {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const { data, error } = await supabase
+        .from('ingredients')
+        .select('id, restaurant_id, name, unit, stock_quantity, reorder_level, is_active, restaurants(name)')
+        .eq('is_active', true)
+        .order('restaurant_id')
+        .order('name')
+
+    if (error) return { error: error.message, data: null }
+    return { data }
+}
+
+export async function getAllShiftsAcrossRestaurants(limit = 100) {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const [{ data: active }, { data: recent }] = await Promise.all([
+        supabase
+            .from('staff_shifts')
+            .select('id, user_id, restaurant_id, clock_in, clock_out, hours_worked, restaurants(name), users(full_name, roles(name))')
+            .is('clock_out', null)
+            .order('clock_in', { ascending: false }),
+        supabase
+            .from('staff_shifts')
+            .select('id, user_id, restaurant_id, clock_in, clock_out, hours_worked, restaurants(name), users(full_name, roles(name))')
+            .not('clock_out', 'is', null)
+            .order('clock_in', { ascending: false })
+            .limit(limit),
+    ])
+
+    return { activeShifts: active || [], recentShifts: recent || [] }
+}
+
+export async function getPlatformAnalytics() {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600 * 1000)
+
+    const [
+        { data: paymentHistory },
+        { data: orders30 },
+        { data: allRestaurants },
+        { data: newTenants },
+    ] = await Promise.all([
+        // Subscription payments for MRR chart (12 months)
+        supabase.from('subscription_payments').select('amount, created_at').gte('created_at', new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString()).order('created_at'),
+        // Orders last 30 days for revenue/volume per restaurant
+        supabase.from('orders').select('restaurant_id, total_amount, placed_at').gte('placed_at', thirtyDaysAgo.toISOString()),
+        // All restaurants for tier breakdown
+        supabase.from('restaurants').select('id, name, subscription_tier, subscription_status, is_suspended, created_at'),
+        // New tenant signups by month (last 6 months)
+        supabase.from('restaurants').select('created_at').gte('created_at', sixMonthsAgo.toISOString()),
+    ])
+
+    // Build monthly MRR buckets (last 12 months)
+    const mrrByMonth: Record<string, number> = {}
+    for (const p of (paymentHistory || []) as Array<{ amount: number; created_at: string }>) {
+        const month = p.created_at.slice(0, 7) // YYYY-MM
+        mrrByMonth[month] = (mrrByMonth[month] || 0) + (p.amount || 0)
+    }
+
+    // Orders per restaurant (last 30 days)
+    const orderStatsMap: Record<string, { count: number; revenue: number }> = {}
+    for (const o of (orders30 || []) as Array<{ restaurant_id: string; total_amount: number }>) {
+        if (!orderStatsMap[o.restaurant_id]) orderStatsMap[o.restaurant_id] = { count: 0, revenue: 0 }
+        orderStatsMap[o.restaurant_id].count++
+        orderStatsMap[o.restaurant_id].revenue += o.total_amount || 0
+    }
+
+    // Enrich with restaurant names
+    const restaurantStatsArray = ((allRestaurants || []) as Array<{ id: string; name: string; subscription_tier: string; subscription_status: string; is_suspended: boolean; created_at: string }>)
+        .map(r => ({
+            id: r.id,
+            name: r.name,
+            tier: r.subscription_tier,
+            status: r.subscription_status,
+            isSuspended: r.is_suspended,
+            orders30d: orderStatsMap[r.id]?.count || 0,
+            revenue30d: orderStatsMap[r.id]?.revenue || 0,
+        }))
+        .sort((a, b) => b.orders30d - a.orders30d)
+
+    // New tenants by month
+    const tenantsByMonth: Record<string, number> = {}
+    for (const t of (newTenants || []) as Array<{ created_at: string }>) {
+        const month = t.created_at.slice(0, 7)
+        tenantsByMonth[month] = (tenantsByMonth[month] || 0) + 1
+    }
+
+    return {
+        mrrByMonth,
+        restaurantStats: restaurantStatsArray,
+        tenantsByMonth,
     }
 }

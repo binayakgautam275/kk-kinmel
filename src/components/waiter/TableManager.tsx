@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { openSession, closeSession } from '@/app/(staff)/waiter/actions'
 import { Users, QrCode, PowerOff, Power } from 'lucide-react'
@@ -17,10 +17,11 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
     const [tables, setTables] = useState<TableWithSession[]>(initialTables)
     const [selectedTable, setSelectedTable] = useState<TableWithSession | null>(null)
     const [isProcessing, setIsProcessing] = useState(false)
-    const supabase = createClient()
+    const supabaseRef = useRef(createClient())
     const { confirm } = useConfirmStore()
 
     useEffect(() => {
+        const supabase = supabaseRef.current
         // Listen for session changes and update state reactively (no page reload)
         const channel = supabase
             .channel(`waiter-sessions-${restaurantId}`)
@@ -69,7 +70,7 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [restaurantId, supabase])
+    }, [restaurantId])
 
     const handleOpenSession = async (tableId: string) => {
         setIsProcessing(true)

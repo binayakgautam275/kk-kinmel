@@ -11,6 +11,41 @@ interface HomepageGateProps {
     children: React.ReactNode
 }
 
+function LoadingSkeleton() {
+    return (
+        <div className="min-h-screen bg-gray-50 flex flex-col">
+            {/* Header skeleton */}
+            <div className="bg-white border-b border-gray-100 h-14 flex items-center px-4 gap-3">
+                <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse" />
+                <div className="space-y-1.5">
+                    <div className="w-32 h-3 bg-gray-200 rounded animate-pulse" />
+                    <div className="w-16 h-2.5 bg-gray-100 rounded animate-pulse" />
+                </div>
+            </div>
+            {/* Category nav skeleton */}
+            <div className="bg-white border-b border-gray-100 px-4 py-3 flex gap-4">
+                {[60, 80, 50, 70, 55].map((w, i) => (
+                    <div key={i} className="h-3 bg-gray-200 rounded animate-pulse" style={{ width: w }} />
+                ))}
+            </div>
+            {/* Card skeleton grid */}
+            <div className="flex-1 p-4 grid grid-cols-2 gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="bg-white rounded-xl overflow-hidden border border-gray-100 animate-pulse">
+                        <div className="aspect-4/3 bg-gray-200" />
+                        <div className="p-3 space-y-2">
+                            <div className="h-3 bg-gray-200 rounded w-3/4" />
+                            <div className="h-2.5 bg-gray-100 rounded w-full" />
+                            <div className="h-2.5 bg-gray-100 rounded w-2/3" />
+                            <div className="h-8 bg-gray-200 rounded-lg w-full mt-1" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
 export default function HomepageGate({ restaurantId, onProceed, children }: HomepageGateProps) {
     const [homepageConfig, setHomepageConfig] = useState<HomepageConfig | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -24,11 +59,9 @@ export default function HomepageGate({ restaurantId, onProceed, children }: Home
                     const config = await response.json()
                     setHomepageConfig(config)
                 } else {
-                    // No homepage config, go straight to menu
                     setShowHomepage(false)
                 }
-            } catch (error) {
-                console.error('Error loading homepage:', error)
+            } catch {
                 setShowHomepage(false)
             } finally {
                 setIsLoading(false)
@@ -39,7 +72,7 @@ export default function HomepageGate({ restaurantId, onProceed, children }: Home
     }, [restaurantId])
 
     if (isLoading) {
-        return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>
+        return <LoadingSkeleton />
     }
 
     if (!showHomepage || !homepageConfig) {
@@ -55,16 +88,17 @@ export default function HomepageGate({ restaurantId, onProceed, children }: Home
                     onProceed()
                 }}
             />
-            <div className="fixed bottom-6 right-6">
+            {/* Floating CTA — elevated above cart bar */}
+            <div className="fixed bottom-6 right-4 z-50">
                 <button
                     onClick={() => {
                         setShowHomepage(false)
                         onProceed()
                     }}
-                    className="px-6 py-3 bg-primary text-white rounded-full shadow-lg hover:opacity-90 flex items-center gap-2 font-semibold"
+                    className="px-6 py-3 bg-primary text-white rounded-full shadow-xl shadow-primary/30 hover:opacity-90 flex items-center gap-2 font-semibold text-sm"
                 >
                     View Menu
-                    <ChevronRight size={20} />
+                    <ChevronRight size={18} />
                 </button>
             </div>
         </div>

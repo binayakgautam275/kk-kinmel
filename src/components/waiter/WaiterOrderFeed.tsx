@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { markOrderDelivered } from '@/app/(staff)/waiter/order-actions'
-import { playKitchenPing } from '@/lib/audio'
+import { playOrderReady, playNewOrder } from '@/lib/audio'
+import { toast } from 'react-hot-toast'
 import { timeAgo, formatCurrency } from '@/lib/utils'
 import { Package, ChefHat, Clock, Truck, Loader2 } from 'lucide-react'
 import type { Order, OrderItem, MenuItem, Session, Table, OrderStatus } from '@/types/database'
@@ -32,10 +33,14 @@ export default function WaiterOrderFeed({
     restaurantId: string
 }) {
     const [orders, setOrders] = useState<WaiterOrder[]>(initialOrders)
+    const ordersRef = useRef(orders)
     const [processingId, setProcessingId] = useState<string | null>(null)
-    const supabase = createClient()
+    const supabaseRef = useRef(createClient())
+
+    useEffect(() => { ordersRef.current = orders }, [orders])
 
     useEffect(() => {
+        const supabase = supabaseRef.current
         const channel = supabase
             .channel(`waiter-orders-${restaurantId}`)
             .on(
@@ -53,7 +58,21 @@ export default function WaiterOrderFeed({
                         .eq('id', payload.new.id)
                         .single()
                     if (data) {
-                        setOrders((prev) => [data as unknown as WaiterOrder, ...prev])
+                        const order = data as unknown as WaiterOrder
+                        setOrders((prev) => [order, ...prev])
+                        playNewOrder().catch(() => {})
+                        const tableLabel = (order.sessions as unknown as { tables?: { label?: string } })?.tables?.label
+                        toast.custom((t) => (
+                            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 border border-yellow-300`}>
+                                <span className="text-xl mt-0.5">🛎️</span>
+                                <div className="min-w-0">
+                                    <p className="font-bold text-sm text-yellow-700">New Order Placed</p>
+                                    <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                        {tableLabel ? `Table ${tableLabel}` : 'Takeout'} · {formatCurrency(order.total_amount)}
+                                    </p>
+                                </div>
+                            </div>
+                        ), { duration: 5000, position: 'top-right' })
                     }
                 }
             )
@@ -68,9 +87,21 @@ export default function WaiterOrderFeed({
                 (payload) => {
                     const newStatus = payload.new.status as OrderStatus
 
-                    // Play ping when order becomes ready for pickup
                     if (newStatus === 'ready') {
-                        playKitchenPing()
+                        playOrderReady().catch(() => {})
+                        const order = ordersRef.current.find(o => o.id === payload.new.id)
+                        const tableLabel = (order?.sessions as unknown as { tables?: { label?: string } })?.tables?.label
+                        toast.custom((t) => (
+                            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 border-2 border-green-400`}>
+                                <span className="text-xl mt-0.5">✅</span>
+                                <div className="min-w-0">
+                                    <p className="font-bold text-sm text-green-700">Order Ready for Pickup!</p>
+                                    <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                        {tableLabel ? `Table ${tableLabel}` : 'Takeout'} · {formatCurrency(payload.new.total_amount)}
+                                    </p>
+                                </div>
+                            </div>
+                        ), { duration: 8000, position: 'top-right' })
                     }
 
                     setOrders((prev) =>
@@ -92,7 +123,7 @@ export default function WaiterOrderFeed({
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [restaurantId, supabase])
+    }, [restaurantId])
 
     const handleMarkDelivered = async (orderId: string) => {
         setProcessingId(orderId)

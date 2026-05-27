@@ -1,35 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Save, Type, Palette } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import type { Settings } from '@/types/database'
 import { toast } from 'react-hot-toast'
+import { updateThemeAction } from '@/app/(admin)/admin/theme/actions'
 
 export default function ThemeCustomizer({ initialSettings, restaurantName }: { initialSettings: Partial<Settings>, restaurantName?: string }) {
     const [settings, setSettings] = useState(initialSettings)
     const [isSaving, setIsSaving] = useState(false)
-    const supabase = createClient()
-    const router = useRouter()
 
     const handleSave = async () => {
+        if (!settings.id || !settings.theme) return
         setIsSaving(true)
-
-        // In a real app, you'd validate and maybe upload new images here before updating the row.
-        const { error } = await supabase
-            .from('settings')
-            .update({
-                theme: settings.theme,
-            })
-            .eq('id', settings.id)
-
+        const result = await updateThemeAction(settings.id, settings.theme as Record<string, string>)
         setIsSaving(false)
-        if (!error) {
-            toast.success('Settings saved! The application will now reflect these changes.')
-            router.refresh()
+        if (!result.error) {
+            toast.success('Theme saved — changes are now live.')
         } else {
-            toast.error('Failed to save settings: ' + error.message)
+            toast.error('Failed to save: ' + result.error)
         }
     }
 
@@ -74,35 +63,42 @@ export default function ThemeCustomizer({ initialSettings, restaurantName }: { i
                     </div>
 
                     <div className="grid grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Primary Color</label>
-                            <div className="flex items-center gap-3">
-                                <input
-                                    type="color"
-                                    value={settings.theme?.primaryColor || '#ff6b00'}
-                                    onChange={(e) => updateTheme('primaryColor', e.target.value)}
-                                    className="w-12 h-12 rounded cursor-pointer border-0 p-0"
-                                />
-                                <code className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-600">
-                                    {settings.theme?.primaryColor || '#ff6b00'}
-                                </code>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Secondary Color</label>
-                            <div className="flex items-center gap-3">
-                                <input
-                                    type="color"
-                                    value={settings.theme?.secondaryColor || '#1a1a1a'}
-                                    onChange={(e) => updateTheme('secondaryColor', e.target.value)}
-                                    className="w-12 h-12 rounded cursor-pointer border-0 p-0"
-                                />
-                                <code className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-600">
-                                    {settings.theme?.secondaryColor || '#1a1a1a'}
-                                </code>
-                            </div>
-                        </div>
+                        {([
+                            { key: 'primaryColor',   label: 'Primary Color',   def: '#E85D04' },
+                            { key: 'secondaryColor', label: 'Secondary Color', def: '#1B263B' },
+                        ] as const).map(({ key, label, def }) => {
+                            const val = settings.theme?.[key] || def
+                            return (
+                                <div key={key}>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+                                    <div className="flex items-center gap-3">
+                                        {/* Colored swatch — click opens native color picker */}
+                                        <label
+                                            className="relative w-10 h-10 rounded-xl border-2 border-white shadow-md cursor-pointer shrink-0 ring-1 ring-gray-200"
+                                            style={{ backgroundColor: val }}
+                                        >
+                                            <input
+                                                type="color"
+                                                value={val}
+                                                onChange={(e) => updateTheme(key, e.target.value)}
+                                                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                                            />
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={val}
+                                            maxLength={7}
+                                            onChange={(e) => {
+                                                const v = e.target.value
+                                                if (/^#[0-9a-fA-F]{0,6}$/.test(v)) updateTheme(key, v)
+                                            }}
+                                            className="w-28 px-2 py-1.5 text-sm font-mono border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
+                                            placeholder="#000000"
+                                        />
+                                    </div>
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
 

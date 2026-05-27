@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Users, UtensilsCrossed, Settings, LogOut, BarChart3, Palette, Grid3X3, Menu, X, TrendingUp, ShoppingBag, Tag, Heart, DollarSign, Package, FileText, Truck, Clock, Building, CreditCard } from 'lucide-react'
+import { Users, UtensilsCrossed, Settings, LogOut, BarChart3, Palette, Grid3X3, Menu, X, TrendingUp, ShoppingBag, Tag, Heart, DollarSign, Package, FileText, Truck, Clock, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import VideoLogo from '@/components/shared/VideoLogo'
 import { createClient } from '@/lib/supabase/client'
 
-export default function AdminSidebar({ userRole }: { userRole?: string }) {
+export default function AdminSidebar({ userRole, restaurantName }: { userRole?: string; restaurantName?: string }) {
     const pathname = usePathname()
     const router = useRouter()
     const supabase = createClient()
@@ -32,13 +32,16 @@ export default function AdminSidebar({ userRole }: { userRole?: string }) {
     const sidebarContent = (
         <>
             <div className="p-5 md:p-6 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <VideoLogo className="h-8" />
+                <div className="flex items-center gap-3 min-w-0">
+                    <VideoLogo className="h-8 shrink-0" />
+                    {restaurantName && (
+                        <span className="text-sm font-semibold text-gray-800 truncate">{restaurantName}</span>
+                    )}
                 </div>
                 {/* Close button — mobile only */}
                 <button
                     onClick={() => setIsOpen(false)}
-                    className="md:hidden p-2 -mr-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                    className="md:hidden p-2 -mr-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 shrink-0"
                 >
                     <X size={20} />
                 </button>
@@ -73,9 +76,6 @@ export default function AdminSidebar({ userRole }: { userRole?: string }) {
                     <NavLink href="/admin/homepage" icon={Palette} label="Homepage" currentPath={pathname} />
                     <NavLink href="/admin/theme" icon={Palette} label="Brand & Theme" currentPath={pathname} />
                     <NavLink href="/admin/settings" icon={Settings} label="Settings" currentPath={pathname} />
-                    {userRole === 'super_admin' && (
-                        <NavLink href="/admin/super-admin" icon={Building} label="SaaS Panel" currentPath={pathname} />
-                    )}
                 </div>
             </nav>
 

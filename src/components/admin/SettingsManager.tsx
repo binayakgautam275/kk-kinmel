@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Save, Store, Mail, Phone, MapPin, Building, Percent, Check, Loader2, QrCode, Shield, ToggleLeft, ToggleRight } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Save, Store, Mail, Phone, MapPin, Building, Percent, Check, Loader2, QrCode, Shield, ToggleLeft, ToggleRight, Upload, X, Bell, Play } from 'lucide-react'
 import { updateRestaurantSettingsAction } from '@/app/(admin)/admin/settings/actions'
 import { updateFeaturesAction } from '@/lib/features'
 import { toast } from 'react-hot-toast'
@@ -35,6 +35,62 @@ export default function SettingsManager({
     canEdit: boolean
 }) {
     const [formData, setFormData] = useState<RestaurantSettings>(initialRestaurant)
+    const [uploadingField, setUploadingField] = useState<'logo_url' | 'payment_qr_url' | 'notification_sound' | null>(null)
+    const logoInputRef = useRef<HTMLInputElement>(null)
+    const qrInputRef = useRef<HTMLInputElement>(null)
+    const soundInputRef = useRef<HTMLInputElement>(null)
+
+    const handleFileUpload = async (file: File, field: 'logo_url' | 'payment_qr_url') => {
+        setUploadingField(field)
+        const fd = new FormData()
+        fd.append('file', file)
+        fd.append('type', 'image')
+        fd.append('folder', 'settings')
+        try {
+            const res = await fetch('/api/upload', { method: 'POST', body: fd })
+            const data = await res.json()
+            if (!res.ok) {
+                toast.error(data.error || 'Upload failed')
+            } else {
+                setFormData(prev => ({ ...prev, [field]: data.url }))
+                toast.success(field === 'logo_url' ? 'Logo uploaded' : 'QR uploaded')
+            }
+        } catch {
+            toast.error('Network error during upload')
+        } finally {
+            setUploadingField(null)
+        }
+    }
+
+    const handleSoundUpload = async (file: File) => {
+        setUploadingField('notification_sound')
+        const fd = new FormData()
+        fd.append('file', file)
+        fd.append('type', 'audio')
+        fd.append('folder', 'sounds')
+        try {
+            const res = await fetch('/api/upload', { method: 'POST', body: fd })
+            const data = await res.json()
+            if (!res.ok) {
+                toast.error(data.error || 'Upload failed')
+            } else {
+                await updateFeaturesAction(formData.id, { notificationSoundUrl: data.url })
+                setFeatures(prev => ({ ...prev, notificationSoundUrl: data.url }))
+                toast.success('Notification sound uploaded')
+            }
+        } catch {
+            toast.error('Network error during upload')
+        } finally {
+            setUploadingField(null)
+        }
+    }
+
+    const handleRemoveSound = async () => {
+        await updateFeaturesAction(formData.id, { notificationSoundUrl: null })
+        setFeatures(prev => ({ ...prev, notificationSoundUrl: null }))
+        toast.success('Notification sound removed')
+    }
+
     const [features, setFeatures] = useState<Features>(initialFeatures || {
         loyaltyEnabled: false,
         promosEnabled: true,
@@ -184,22 +240,52 @@ export default function SettingsManager({
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL (Optional)</label>
-                        <input
-                            type="url"
-                            name="logo_url"
-                            value={formData.logo_url || ''}
-                            onChange={handleChange}
-                            disabled={!canEdit || isSubmitting}
-                            className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border disabled:bg-gray-50 disabled:text-gray-500"
-                            placeholder="https://example.com/logo.png"
-                        />
-                        {formData.logo_url && (
-                            <div className="mt-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50 inline-block">
-                                <p className="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wide">Logo Preview</p>
-                                <img src={formData.logo_url} alt="Logo Preview" className="h-12 object-contain bg-white rounded p-1 border border-gray-200" />
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Logo</label>
+                        <div className="flex items-start gap-4">
+                            {/* Current logo preview or placeholder */}
+                            <div className="w-20 h-20 rounded-xl border-2 border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                                {formData.logo_url
+                                    ? <img src={formData.logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
+                                    : <Store size={28} className="text-gray-300" />
+                                }
                             </div>
-                        )}
+                            <div className="flex-1 space-y-2">
+                                {/* Upload button */}
+                                {canEdit && (
+                                    <label className={`flex items-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition ${uploadingField === 'logo_url' ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'}`}>
+                                        {uploadingField === 'logo_url'
+                                            ? <Loader2 size={15} className="animate-spin text-blue-500" />
+                                            : <Upload size={15} className="text-gray-500" />
+                                        }
+                                        <span className="text-sm font-medium text-gray-600">
+                                            {uploadingField === 'logo_url' ? 'Uploading…' : 'Upload Logo'}
+                                        </span>
+                                        <input
+                                            ref={logoInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'logo_url') }}
+                                        />
+                                    </label>
+                                )}
+                                {/* URL fallback */}
+                                <input
+                                    type="url"
+                                    name="logo_url"
+                                    value={formData.logo_url || ''}
+                                    onChange={handleChange}
+                                    disabled={!canEdit || isSubmitting}
+                                    className="w-full border-gray-300 rounded-lg shadow-sm sm:text-sm p-2 border disabled:bg-gray-50 disabled:text-gray-500"
+                                    placeholder="or paste image URL…"
+                                />
+                                {formData.logo_url && canEdit && (
+                                    <button type="button" onClick={() => setFormData(p => ({ ...p, logo_url: null }))} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700">
+                                        <X size={12} /> Remove logo
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -337,20 +423,39 @@ export default function SettingsManager({
                 <div className="p-6 space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="text-sm font-medium text-gray-700 mb-1">QR Code Image URL</label>
-                            <input
-                                type="url"
-                                name="payment_qr_url"
-                                value={formData.payment_qr_url || ''}
-                                onChange={handleChange}
-                                disabled={!canEdit || isSubmitting}
-                                className="w-full border-gray-300 rounded-lg shadow-sm sm:text-sm p-2.5 border disabled:bg-gray-50 disabled:text-gray-500"
-                                placeholder="https://..."
-                            />
-                            <p className="mt-1.5 text-xs text-gray-500">Direct link to your payment QR image</p>
+                            <label className="text-sm font-medium text-gray-700 mb-2 block">QR Code Image</label>
+                            <div className="space-y-2">
+                                {canEdit && (
+                                    <label className={`flex items-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition ${uploadingField === 'payment_qr_url' ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'}`}>
+                                        {uploadingField === 'payment_qr_url'
+                                            ? <Loader2 size={15} className="animate-spin text-blue-500" />
+                                            : <Upload size={15} className="text-gray-500" />
+                                        }
+                                        <span className="text-sm font-medium text-gray-600">
+                                            {uploadingField === 'payment_qr_url' ? 'Uploading…' : 'Upload QR Image'}
+                                        </span>
+                                        <input
+                                            ref={qrInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0], 'payment_qr_url') }}
+                                        />
+                                    </label>
+                                )}
+                                <input
+                                    type="url"
+                                    name="payment_qr_url"
+                                    value={formData.payment_qr_url || ''}
+                                    onChange={handleChange}
+                                    disabled={!canEdit || isSubmitting}
+                                    className="w-full border-gray-300 rounded-lg shadow-sm sm:text-sm p-2 border disabled:bg-gray-50 disabled:text-gray-500"
+                                    placeholder="or paste QR image URL…"
+                                />
+                            </div>
                         </div>
                         <div>
-                            <label className="text-sm font-medium text-gray-700 mb-1">QR Provider</label>
+                            <label className="text-sm font-medium text-gray-700 mb-2 block">QR Provider</label>
                             <select
                                 name="payment_qr_provider"
                                 value={formData.payment_qr_provider || ''}
@@ -358,22 +463,26 @@ export default function SettingsManager({
                                 disabled={!canEdit || isSubmitting}
                                 className="w-full border-gray-300 rounded-lg shadow-sm sm:text-sm p-2.5 border disabled:bg-gray-50 disabled:text-gray-500"
                             >
-                                <option value="">Select provider...</option>
+                                <option value="">Select provider…</option>
                                 <option value="esewa">eSewa</option>
                                 <option value="khalti">Khalti</option>
                                 <option value="fonepay">Fonepay</option>
                                 <option value="nepal_pay">Nepal Pay</option>
                                 <option value="other">Other</option>
                             </select>
+
+                            {formData.payment_qr_url && (
+                                <div className="mt-4 flex items-start gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50">
+                                    <img src={formData.payment_qr_url} alt="Payment QR" className="h-24 w-24 object-contain bg-white rounded-lg p-1 border border-gray-200 shrink-0" />
+                                    {canEdit && (
+                                        <button type="button" onClick={() => setFormData(p => ({ ...p, payment_qr_url: null }))} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 mt-1">
+                                            <X size={12} /> Remove QR
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                    {formData.payment_qr_url && (
-                        <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 inline-block">
-                            <p className="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wide">QR Preview</p>
-                            <img src={formData.payment_qr_url} alt="Payment QR" className="h-32 object-contain bg-white rounded-lg p-2 border border-gray-200" />
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -453,6 +562,62 @@ export default function SettingsManager({
                         </button>
                     ))}
                 </div>
+            </div>
+        </div>
+
+        {/* Notification Sound */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-6 max-w-4xl">
+            <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                <div className="p-2 bg-amber-100 text-amber-600 rounded-lg">
+                    <Bell size={20} />
+                </div>
+                <div>
+                    <h3 className="text-lg font-semibold text-gray-800">Notification Sound</h3>
+                    <p className="text-sm text-gray-500">Custom sound played on kitchen and waiter screens when a new order arrives</p>
+                </div>
+            </div>
+            <div className="p-6 flex flex-col sm:flex-row items-start gap-4">
+                <label className={`flex items-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition ${uploadingField === 'notification_sound' ? 'border-amber-300 bg-amber-50' : 'border-gray-300 hover:border-amber-400 hover:bg-amber-50'} ${!canEdit ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {uploadingField === 'notification_sound'
+                        ? <Loader2 size={16} className="animate-spin text-amber-600" />
+                        : <Upload size={16} className="text-amber-600" />}
+                    <span className="text-sm font-medium text-gray-700">
+                        {uploadingField === 'notification_sound' ? 'Uploading…' : features.notificationSoundUrl ? 'Replace sound' : 'Upload MP3/WAV'}
+                    </span>
+                    <input
+                        ref={soundInputRef}
+                        type="file"
+                        accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg"
+                        className="hidden"
+                        disabled={!canEdit || uploadingField === 'notification_sound'}
+                        onChange={(e) => { if (e.target.files?.[0]) handleSoundUpload(e.target.files[0]) }}
+                    />
+                </label>
+
+                {features.notificationSoundUrl && (
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={() => new Audio(features.notificationSoundUrl!).play().catch(() => {})}
+                            className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg hover:bg-green-100 transition"
+                        >
+                            <Play size={13} /> Test sound
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleRemoveSound}
+                            disabled={!canEdit}
+                            className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 disabled:opacity-50"
+                        >
+                            <X size={12} /> Remove
+                        </button>
+                        <span className="text-xs text-gray-400 max-w-xs truncate">{features.notificationSoundUrl.split('/').pop()}</span>
+                    </div>
+                )}
+
+                {!features.notificationSoundUrl && (
+                    <p className="text-sm text-gray-400 py-2">No custom sound — default pip-pip tone will play</p>
+                )}
             </div>
         </div>
         </>

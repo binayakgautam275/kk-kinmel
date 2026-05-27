@@ -244,6 +244,8 @@ export interface Settings {
         vatEnabled: boolean
         phoneOtpEnabled: boolean
         bsDateEnabled: boolean
+        // Notification
+        notificationSoundUrl?: string | null
     }
     business_hours: Record<string, unknown> | null
     updated_at: string

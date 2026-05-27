@@ -6,7 +6,7 @@ import { completeTakeoutOrder } from '@/app/api/takeout/actions'
 import { formatCurrency } from '@/lib/utils'
 import type { TakeoutOrder } from '@/types/database'
 import { Phone, User, Clock, CreditCard } from 'lucide-react'
-import { playKitchenPing } from '@/lib/audio'
+import { playOrderReady } from '@/lib/audio'
 
 interface Props {
     initialOrders: TakeoutOrder[]
@@ -36,7 +36,7 @@ export default function WaiterTakeoutFeed({ initialOrders, restaurantId }: Props
                         const newOrder = payload.new as TakeoutOrder
                         if (newOrder.status === 'ready_for_pickup') {
                             setOrders((prev) => [newOrder, ...prev])
-                            playKitchenPing()
+                            playOrderReady().catch(() => {})
                         }
                     } else if (payload.eventType === 'UPDATE') {
                         const updated = payload.new as TakeoutOrder
@@ -46,7 +46,7 @@ export default function WaiterTakeoutFeed({ initialOrders, restaurantId }: Props
                                 if (exists) {
                                     return prev.map((o) => (o.id === updated.id ? updated : o))
                                 }
-                                playKitchenPing()
+                                playOrderReady().catch(() => {})
                                 return [updated, ...prev]
                             })
                         } else {

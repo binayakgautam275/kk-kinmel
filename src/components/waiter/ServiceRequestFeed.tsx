@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { acknowledgeServiceRequest, completeServiceRequest } from '@/app/api/service-requests/actions'
 import { Bell, Droplets, Receipt, Sparkles, MessageCircle, Check, Clock } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
-import { playKitchenPing } from '@/lib/audio'
+import { playServiceRequest } from '@/lib/audio'
+import { toast } from 'react-hot-toast'
 import type { ServiceRequest, ServiceRequestType } from '@/types/database'
 
 const ICON_MAP: Record<ServiceRequestType, typeof Bell> = {
@@ -46,9 +47,10 @@ export default function ServiceRequestFeed({
     userId: string
 }) {
     const [requests, setRequests] = useState<ServiceRequestWithTable[]>(initialRequests)
-    const supabase = createClient()
+    const supabaseRef = useRef(createClient())
 
     useEffect(() => {
+        const supabase = supabaseRef.current
         const channel = supabase
             .channel(`service-requests-${restaurantId}`)
             .on(
@@ -68,8 +70,22 @@ export default function ServiceRequestFeed({
                         .single()
 
                     if (data) {
-                        setRequests((prev) => [data as unknown as ServiceRequestWithTable, ...prev])
-                        playKitchenPing()
+                        const req = data as unknown as ServiceRequestWithTable
+                        setRequests((prev) => [req, ...prev])
+                        playServiceRequest().catch(() => {})
+                        const tableLabel = req.sessions?.tables?.label
+                        const label = LABEL_MAP[req.request_type as ServiceRequestType] || 'Service Request'
+                        toast.custom((t) => (
+                            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-gray-900 text-white shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 border border-amber-500/40`}>
+                                <span className="text-xl mt-0.5">🔔</span>
+                                <div className="min-w-0">
+                                    <p className="font-bold text-sm text-amber-400">{label}</p>
+                                    <p className="text-xs text-gray-300 mt-0.5">
+                                        Table {tableLabel || '?'}{req.message ? ` — ${req.message}` : ''}
+                                    </p>
+                                </div>
+                            </div>
+                        ), { duration: 7000, position: 'top-right' })
                     }
                 }
             )
@@ -94,7 +110,7 @@ export default function ServiceRequestFeed({
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [restaurantId, supabase])
+    }, [restaurantId])
 
     const handleAcknowledge = async (id: string) => {
         // Optimistic update

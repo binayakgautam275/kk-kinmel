@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getOptionalUser } from '@/lib/auth'
 import Link from 'next/link'
 import VideoLogo from '@/components/shared/VideoLogo'
+import CopyrightYear from '@/components/shared/CopyrightYear'
 import MobileNav from './MobileNav'
 import {
     QrCode, ChefHat, ArrowRight, Smartphone, BarChart3,
@@ -38,9 +39,12 @@ export default async function Home() {
                     </Link>
                     <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
                         <a href="#features" className="hover:text-gray-900 transition">Features</a>
+                        <a href="/features" className="hover:text-gray-900 transition">All Features</a>
                         <a href="#how-it-works" className="hover:text-gray-900 transition">How it Works</a>
                         <a href="#pricing" className="hover:text-gray-900 transition">Pricing</a>
-                        <a href="#faq" className="hover:text-gray-900 transition">FAQ</a>
+                        <a href="/docs" className="hover:text-gray-900 transition">Docs</a>
+                        <a href="/blog" className="hover:text-gray-900 transition">Blog</a>
+                        <a href="/contact" className="hover:text-gray-900 transition">Contact</a>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3">
                         <Link
@@ -519,33 +523,37 @@ export default async function Home() {
                             <h4 className="text-sm font-semibold text-white mb-4">Product</h4>
                             <ul className="space-y-2.5 text-sm text-gray-400">
                                 <li><a href="#features" className="hover:text-white transition">Features</a></li>
+                                <li><a href="/features" className="hover:text-white transition">All Features</a></li>
                                 <li><a href="#pricing" className="hover:text-white transition">Pricing</a></li>
                                 <li><a href="#how-it-works" className="hover:text-white transition">How It Works</a></li>
                                 <li><a href="#faq" className="hover:text-white transition">FAQ</a></li>
                             </ul>
                         </div>
 
-                        {/* Access */}
+                        {/* Resources */}
                         <div>
-                            <h4 className="text-sm font-semibold text-white mb-4">Access</h4>
+                            <h4 className="text-sm font-semibold text-white mb-4">Resources</h4>
                             <ul className="space-y-2.5 text-sm text-gray-400">
-                                <li><Link href="/login" className="hover:text-white transition">Staff Login</Link></li>
-                                <li><a href="#pricing" className="hover:text-white transition">Start Free Trial</a></li>
+                                <li><a href="/docs" className="hover:text-white transition">Documentation</a></li>
+                                <li><a href="/blog" className="hover:text-white transition">Blog</a></li>
+                                <li><a href="/about" className="hover:text-white transition">About Us</a></li>
+                                <li><a href="/contact" className="hover:text-white transition">Contact</a></li>
                             </ul>
                         </div>
 
                         {/* Contact */}
                         <div>
-                            <h4 className="text-sm font-semibold text-white mb-4">Contact</h4>
+                            <h4 className="text-sm font-semibold text-white mb-4">Legal</h4>
                             <ul className="space-y-2.5 text-sm text-gray-400">
-                                <li>hello@kkkhane.com</li>
-                                <li>Kathmandu, Nepal</li>
+                                <li><a href="/contact" className="hover:text-white transition">Contact</a></li>
+                                <li><a href="#" className="hover:text-white transition">Privacy Policy</a></li>
+                                <li><a href="#" className="hover:text-white transition">Terms of Service</a></li>
                             </ul>
                         </div>
                     </div>
 
                     <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-xs text-gray-500">
-                        <p>&copy; {new Date().getFullYear()} KKhane. All rights reserved.</p>
+                        <p>&copy; <CopyrightYear /> KKhane. All rights reserved.</p>
                         <p>Built with ❤️ in Nepal</p>
                     </div>
                 </div>

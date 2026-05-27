@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { signupRestaurant } from './actions'
@@ -68,6 +68,7 @@ export default function SignupForm() {
     const router = useRouter()
     const supabase = createClient()
 
+    const [mounted, setMounted] = useState(false)
     const [step, setStep] = useState<Step>(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [globalError, setGlobalError] = useState('')
@@ -85,6 +86,11 @@ export default function SignupForm() {
     const [ownerEmail, setOwnerEmail] = useState('')
     const [ownerPassword, setOwnerPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
+
+    // Set mounted to true after component hydrates
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const selectedPlan = PLANS.find(p => p.id === plan)!
 
@@ -178,25 +184,27 @@ export default function SignupForm() {
                     <p className="text-gray-500 mt-2">Get started in minutes. No credit card required.</p>
                 </div>
 
-                {/* Step indicator */}
-                <div className="flex items-center justify-center gap-2 mb-8">
-                    {(['Plan', 'Restaurant', 'Account', 'Review'] as const).map((label, i) => {
-                        const num = i + 1
-                        const done = num < step
-                        const active = num === step
-                        return (
-                            <div key={label} className="flex items-center gap-2">
-                                <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
-                                    done ? 'bg-green-500 text-white' : active ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-500'
-                                }`}>
-                                    {done ? <Check size={14} /> : num}
+                {/* Step indicator - only show after hydration */}
+                {mounted && (
+                    <div className="flex items-center justify-center gap-2 mb-8">
+                        {(['Plan', 'Restaurant', 'Account', 'Review'] as const).map((label, i) => {
+                            const num = i + 1
+                            const done = num < step
+                            const active = num === step
+                            return (
+                                <div key={label} className="flex items-center gap-2">
+                                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${
+                                        done ? 'bg-green-500 text-white' : active ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-500'
+                                    }`}>
+                                        {done ? <Check size={14} /> : num}
+                                    </div>
+                                    <span className={`text-sm hidden sm:inline ${active ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>{label}</span>
+                                    {i < 3 && <ChevronRight size={14} className="text-gray-300" />}
                                 </div>
-                                <span className={`text-sm hidden sm:inline ${active ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>{label}</span>
-                                {i < 3 && <ChevronRight size={14} className="text-gray-300" />}
-                            </div>
-                        )
-                    })}
-                </div>
+                            )
+                        })}
+                    </div>
+                )}
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                     {/* Step 1: Plan Selection */}

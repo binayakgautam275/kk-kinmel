@@ -7,6 +7,7 @@ import {
     getLoyaltyConfig,
     redeemLoyaltyPoints,
 } from '@/app/api/loyalty/actions'
+import { formatCurrency } from '@/lib/utils'
 import type { LoyaltyMember, LoyaltyConfig } from '@/types/database'
 
 interface LoyaltyPanelProps {
@@ -81,7 +82,7 @@ export default function LoyaltyPanel({
         const result = await redeemLoyaltyPoints(activeMember.id, restaurantId)
         if (result.discount > 0) {
             onRedeemDiscount(result.discount)
-            setRedeemMessage(`$${result.discount.toFixed(2)} discount applied!`)
+            setRedeemMessage(`${formatCurrency(result.discount)} discount applied!`)
             // Refresh member data
             const updated = await lookupLoyaltyMember(restaurantId, activeMember.phone || '')
             if (updated.member) onMemberSet(updated.member)
@@ -142,7 +143,7 @@ export default function LoyaltyPanel({
                             disabled={loading}
                             className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                         >
-                            Redeem {config.redemption_threshold} pts → ${config.redemption_value.toFixed(2)} off
+                            Redeem {config.redemption_threshold} pts → {formatCurrency(config.redemption_value)} off
                         </button>
                     )}
                 </div>

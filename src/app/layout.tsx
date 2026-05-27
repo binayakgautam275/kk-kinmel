@@ -64,12 +64,20 @@ function themeToCSS(theme: Record<string, string>): string {
     full: '9999px',
   }
 
+  // Support both named keys ("lg") and raw px values ("12px") saved by ThemeCustomizer
+  const resolveRadius = (val: string | undefined): string => {
+    if (!val) return radiusMap.lg
+    if (radiusMap[val]) return radiusMap[val]
+    if (/^\d+(\.\d+)?(px|rem|em)$/.test(val)) return val
+    return radiusMap.lg
+  }
+
   return `
     :root {
       --color-primary: ${theme.primaryColor || '#E85D04'};
       --color-secondary: ${theme.secondaryColor || '#1B263B'};
       --font-family: ${fontMap[theme.fontFamily] || fontMap.Inter};
-      --border-radius: ${radiusMap[theme.borderRadius] || radiusMap.lg};
+      --border-radius: ${resolveRadius(theme.borderRadius)};
     }
   `
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircle, XCircle, Clock, Banknote, ScanLine, Loader2, ExternalLink } from 'lucide-react'
 import { verifyPayment, verifyPaymentAndCloseTable } from '@/components/waiter/payment-verification-actions'
@@ -50,9 +50,10 @@ export default function PaymentVerificationPanel({
     const [claims, setClaims] = useState<PaymentClaim[]>(initialClaims)
     const [loading, setLoading] = useState<string | null>(null)
     const [filter, setFilter] = useState<'pending' | 'verified' | 'rejected' | 'all'>('pending')
-    const supabase = createClient()
+    const supabaseRef = useRef(createClient())
 
     useEffect(() => {
+        const supabase = supabaseRef.current
         const channel = supabase
             .channel(`admin-payment-verifications-${restaurantId}`)
             .on('postgres_changes', {
@@ -81,7 +82,7 @@ export default function PaymentVerificationPanel({
             })
 
         return () => { supabase.removeChannel(channel) }
-    }, [restaurantId, supabase])
+    }, [restaurantId])
 
     const handleVerify = async (claimId: string, action: 'verified' | 'rejected') => {
         setLoading(claimId)

@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { Bell, Droplets, Receipt, Sparkles, UtensilsCrossed, X, Loader2, Check } from 'lucide-react'
 import { createServiceRequest } from '@/app/api/service-requests/actions'
+import { useCartStore } from '@/lib/stores/cart'
+import { useHydratedStore } from '@/lib/stores/useHydratedStore'
 import type { ServiceRequestType } from '@/types/database'
 
 type RequestOption = {
@@ -34,6 +36,11 @@ export default function ServiceRequestPanel({
     const [success, setSuccess] = useState<string | null>(null)
     const [error, setError] = useState('')
     const [customMessage, setCustomMessage] = useState('')
+
+    const totalItems = useHydratedStore(useCartStore, (s) => s.totalItems)
+    const cartCount = totalItems ? totalItems() : 0
+    // Shift FAB above CartSummary (~80px tall) when cart bar is visible
+    const fabBottom = cartCount > 0 ? 'bottom-28' : 'bottom-6'
 
     const handlePreset = async (option: RequestOption) => {
         setLoading(option.id)
@@ -82,7 +89,7 @@ export default function ServiceRequestPanel({
         return (
             <button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-24 right-4 z-40 bg-white shadow-xl border border-gray-200 rounded-full p-3.5 active:scale-95 transition-transform"
+                className={`fixed ${fabBottom} right-4 z-60 bg-white shadow-xl border border-gray-200 rounded-full p-3.5 active:scale-95 transition-all duration-300`}
                 aria-label="Service requests"
             >
                 <Bell size={22} className="text-gray-700" />
@@ -91,7 +98,7 @@ export default function ServiceRequestPanel({
     }
 
     return (
-        <div className="fixed bottom-24 right-4 z-50 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+        <div className={`fixed ${fabBottom} right-4 z-60 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden`}>
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50">
                 <h3 className="font-semibold text-gray-800 text-sm">Need Help?</h3>

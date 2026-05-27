@@ -24,7 +24,8 @@ export default async function OrderPage(props: {
       *,
       order_items (
         *,
-        menu_items (name)
+        menu_items (name),
+        order_item_modifiers (*)
       )
     `)
         .eq('id', params.orderId)

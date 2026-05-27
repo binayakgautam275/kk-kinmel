@@ -6,7 +6,9 @@ import StaffShiftClock from '@/components/shared/StaffShiftClock'
 import PaymentVerificationFeed from '@/components/waiter/PaymentVerificationFeed'
 import WaiterOrderFeed from '@/components/waiter/WaiterOrderFeed'
 import WaiterTakeoutFeed from '@/components/waiter/WaiterTakeoutFeed'
+import FloorStats from '@/components/waiter/FloorStats'
 import { getRestaurantFeatures } from '@/lib/features'
+import { Users, Package, Bell, ChefHat } from 'lucide-react'
 
 export const revalidate = 0
 
@@ -14,34 +16,31 @@ export default async function WaiterPage() {
     const { id: userId, restaurantId } = await getCurrentUser()
     const adminSupabase = await createAdminClient()
 
-    // Fetch all tables AND their active sessions (if any)
-    // Using adminSupabase to bypass RLS — this page is already protected by proxy.ts
+    // Fetch tables AND their active sessions
     const { data: tables } = await adminSupabase
         .from('tables')
-        .select(`
-      *,
-      sessions (
-        *
-      )
-    `)
+        .select(`*, sessions (*)`)
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
         .order('label', { ascending: true })
 
-    // Map the nested array into a cleaner union for the client
     const mappedTables = tables?.map(table => {
         const sessions = table.sessions as unknown as { status: string }[]
         const activeSession = sessions?.find((s) => s.status === 'active')
-        return {
-            ...table,
-            activeSession: activeSession || null
-        }
+        return { ...table, activeSession: activeSession || null }
     }) || []
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
-    // Fetch feature flags + all parallel data
-    const [features, { data: serviceRequests }, { data: activeShift }, { data: shiftHistory }, { data: paymentClaims }, { data: activeOrders }, { data: readyTakeouts }] = await Promise.all([
+    const [
+        features,
+        { data: serviceRequests },
+        { data: activeShift },
+        { data: shiftHistory },
+        { data: paymentClaims },
+        { data: activeOrders },
+        { data: readyTakeouts },
+    ] = await Promise.all([
         getRestaurantFeatures(restaurantId),
         adminSupabase
             .from('service_requests')
@@ -90,45 +89,27 @@ export default async function WaiterPage() {
             .limit(20),
     ])
 
+    // Floor stats for the top bar
+    const occupiedTables = mappedTables.filter(t => t.activeSession).length
+    const totalTables = mappedTables.length
+    const readyOrders = (activeOrders || []).filter(o => o.status === 'ready').length
+    const kitchenOrders = (activeOrders || []).filter(o => o.status === 'preparing' || o.status === 'confirmed' || o.status === 'pending').length
+    const pendingRequests = (serviceRequests || []).filter(r => r.status === 'pending').length
+
     return (
-        <div className="space-y-6 p-4">
-            {/* Staff Shift Clock — gated */}
-            {features?.staffShiftsEnabled && (
-                <StaffShiftClock
-                    userId={userId}
-                    restaurantId={restaurantId}
-                    initialShift={activeShift || null}
-                    initialHistory={shiftHistory || []}
-                />
-            )}
+        <div className="space-y-4 md:space-y-5">
 
-            {/* Nepal Payment Verification Feed — gated */}
-            {features?.nepalPayEnabled && (
-                <PaymentVerificationFeed
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    initialClaims={(paymentClaims || []) as any[]}
-                    restaurantId={restaurantId}
-                    userId={userId}
-                />
-            )}
-
-            {/* Takeout Pickup Feed — gated */}
-            {features?.takeoutEnabled && (
-                <WaiterTakeoutFeed
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    initialOrders={(readyTakeouts || []) as any[]}
-                    restaurantId={restaurantId}
-                />
-            )}
-
-            {/* Active Order Feed — waiter sees ready orders here (Step 7) */}
-            <WaiterOrderFeed
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                initialOrders={(activeOrders || []) as any[]}
+            {/* Floor Stats — always-visible at-a-glance bar */}
+            <FloorStats
+                occupiedTables={occupiedTables}
+                totalTables={totalTables}
+                readyOrders={readyOrders}
+                kitchenOrders={kitchenOrders}
+                pendingRequests={pendingRequests}
                 restaurantId={restaurantId}
             />
 
-            {/* Service Request Feed — gated */}
+            {/* 1. Service Requests — most urgent, someone needs help NOW */}
             {features?.serviceRequestsEnabled !== false && (
                 <ServiceRequestFeed
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -138,11 +119,49 @@ export default async function WaiterPage() {
                 />
             )}
 
+            {/* 2. Active Order Feed — ready orders need immediate delivery */}
+            <WaiterOrderFeed
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                initialOrders={(activeOrders || []) as any[]}
+                restaurantId={restaurantId}
+            />
+
+            {/* 3. Nepal Payment Verification */}
+            {features?.nepalPayEnabled && (
+                <PaymentVerificationFeed
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    initialClaims={(paymentClaims || []) as any[]}
+                    restaurantId={restaurantId}
+                    userId={userId}
+                />
+            )}
+
+            {/* 4. Takeout Pickup Feed */}
+            {features?.takeoutEnabled && (
+                <WaiterTakeoutFeed
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    initialOrders={(readyTakeouts || []) as any[]}
+                    restaurantId={restaurantId}
+                />
+            )}
+
+            {/* 5. Table Manager — manage floor, open/close sessions */}
             <TableManager
                 initialTables={mappedTables as unknown as TableWithSession[]}
                 restaurantId={restaurantId}
                 appUrl={appUrl}
             />
+
+            {/* 6. Shift Clock — used at start/end of shift only */}
+            {features?.staffShiftsEnabled && (
+                <StaffShiftClock
+                    userId={userId}
+                    restaurantId={restaurantId}
+                    initialShift={activeShift || null}
+                    initialHistory={shiftHistory || []}
+                />
+            )}
+
         </div>
     )
 }

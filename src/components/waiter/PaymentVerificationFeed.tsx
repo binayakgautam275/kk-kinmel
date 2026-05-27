@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircle, XCircle, Clock, Smartphone, Loader2, DoorClosed } from 'lucide-react'
 import { verifyPayment, verifyPaymentAndCloseTable } from './payment-verification-actions'
@@ -40,10 +40,11 @@ export default function PaymentVerificationFeed({
 }) {
     const [claims, setClaims] = useState<PaymentClaim[]>(initialClaims)
     const [loading, setLoading] = useState<string | null>(null)
-    const supabase = createClient()
+    const supabaseRef = useRef(createClient())
 
     // Realtime subscription for new payment claims
     useEffect(() => {
+        const supabase = supabaseRef.current
         const channel = supabase
             .channel(`payment-verifications-${restaurantId}`)
             .on(
@@ -77,7 +78,7 @@ export default function PaymentVerificationFeed({
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [restaurantId, supabase])
+    }, [restaurantId])
 
     const handleVerify = async (claimId: string, action: 'verified' | 'rejected') => {
         setLoading(claimId)

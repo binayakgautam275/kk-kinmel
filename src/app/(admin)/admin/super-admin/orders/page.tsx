@@ -1,0 +1,26 @@
+import { requireRole } from '@/lib/auth'
+import { getAllOrdersAcrossRestaurants, getAllRestaurants } from '../actions'
+import OrdersClient from './OrdersClient'
+
+export const dynamic = 'force-dynamic'
+
+export default async function OrdersPage() {
+    await requireRole('super_admin')
+
+    const [ordersResult, restaurantsResult] = await Promise.all([
+        getAllOrdersAcrossRestaurants(300),
+        getAllRestaurants(),
+    ])
+
+    const restaurants = (restaurantsResult.data || []).map((r: { id: string; name: string }) => ({ id: r.id, name: r.name }))
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900">All Orders</h1>
+                <p className="text-gray-500 mt-1 text-sm">Platform-wide order history across all restaurant tenants.</p>
+            </div>
+            <OrdersClient orders={(ordersResult.data || []) as any} restaurants={restaurants} />
+        </div>
+    )
+}
