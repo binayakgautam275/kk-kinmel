@@ -47,6 +47,26 @@ export async function deleteCategoryAction(id: string) {
 
 export async function addItemAction(item: Record<string, unknown>) {
     const supabase = await createAdminClient()
+
+    // Enforce plan menu item limit
+    const restaurantId = item.restaurant_id as string
+    const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('max_menu_items')
+        .eq('id', restaurantId)
+        .single()
+
+    const maxItems = (restaurant as { max_menu_items?: number } | null)?.max_menu_items ?? 9999
+
+    const { count: currentCount } = await supabase
+        .from('menu_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('restaurant_id', restaurantId)
+
+    if ((currentCount ?? 0) >= maxItems) {
+        return { error: `Menu item limit reached. Your plan allows ${maxItems} items. Upgrade to add more.` }
+    }
+
     const { data, error } = await supabase
         .from('menu_items')
         .insert(item)

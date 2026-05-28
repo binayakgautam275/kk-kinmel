@@ -417,6 +417,7 @@ export interface EodReport {
     avg_order_value: number
     total_cogs: number
     gross_profit: number
+    unverified_orders: number
     closed_by: string | null
     notes: string | null
     created_at: string

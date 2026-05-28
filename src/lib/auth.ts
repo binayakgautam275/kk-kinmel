@@ -22,7 +22,8 @@ export interface CurrentUser {
  *  1. First try JWT custom claims (no DB roundtrip — set by 004_jwt_claims_hook.sql)
  *  2. Fall back to admin DB lookup if claims are missing (e.g. token not yet refreshed)
  *
- * Redirects to /admin if not authenticated, /unauthorized if no restaurant.
+ * Redirects to /login if not authenticated, /unauthorized if no restaurant,
+ * /suspended if the restaurant has been auto-suspended.
  */
 export async function getCurrentUser(): Promise<CurrentUser> {
     const supabase = await createServerClient()
@@ -32,9 +33,20 @@ export async function getCurrentUser(): Promise<CurrentUser> {
         redirect('/login')
     }
 
-    // Try JWT claims first (fast path — no DB call)
+    const adminSupabase = await createAdminClient()
+
+    // Try JWT claims first (fast path — no DB call for role)
     const claims = await getJwtClaims()
     if (claims?.restaurant_id && claims?.app_role) {
+        // Still check suspension status (single indexed query)
+        const { data: rest } = await adminSupabase
+            .from('restaurants')
+            .select('is_suspended')
+            .eq('id', claims.restaurant_id)
+            .single()
+
+        if (rest?.is_suspended) redirect('/suspended')
+
         return {
             id: user.id,
             email: user.email || '',
@@ -44,16 +56,18 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     }
 
     // Fallback: admin DB lookup (needed when JWT hasn't refreshed yet)
-    const adminSupabase = await createAdminClient()
     const { data: userData } = await adminSupabase
         .from('users')
-        .select('restaurant_id, roles(name)')
+        .select('restaurant_id, roles(name), restaurants(is_suspended)')
         .eq('id', user.id)
         .single()
 
     if (!userData?.restaurant_id) {
         redirect('/unauthorized')
     }
+
+    const isSuspended = (userData.restaurants as unknown as { is_suspended?: boolean } | null)?.is_suspended
+    if (isSuspended) redirect('/suspended')
 
     const roleName = (userData.roles as unknown as { name: string } | null)?.name || 'waiter'
 

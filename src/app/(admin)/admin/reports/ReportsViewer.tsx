@@ -89,6 +89,15 @@ export default function ReportsViewer({ initialReports, restaurantId }: {
                                 <Stat label="Voids" value={String(r.total_voids)} />
                                 <Stat label="Refunds" value={String(r.total_refunds)} />
                                 <Stat label="Cancelled" value={String(r.total_cancelled)} />
+                                <div>
+                                    <p className="text-gray-500 text-xs">Unverified Payments</p>
+                                    <p className={`font-semibold mt-0.5 ${(r.unverified_orders ?? 0) > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                                        {r.unverified_orders ?? 0}
+                                        {(r.unverified_orders ?? 0) > 0 && (
+                                            <span className="ml-1.5 text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold">⚠ investigate</span>
+                                        )}
+                                    </p>
+                                </div>
                                 {r.notes && (
                                     <div className="col-span-full">
                                         <p className="text-gray-500 text-xs">Notes</p>

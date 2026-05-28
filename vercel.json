@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/generate-eod-reports",
       "schedule": "15 18 * * *"
+    },
+    {
+      "path": "/api/cron/auto-suspend",
+      "schedule": "0 0 * * *"
     }
   ]
 }

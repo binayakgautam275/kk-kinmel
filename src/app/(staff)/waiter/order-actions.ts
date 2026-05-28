@@ -42,6 +42,90 @@ export async function markOrderDelivered(orderId: string) {
 }
 
 /**
+ * Waiter records cash payment for a delivered order.
+ * Creates a verified payment_verification record (cash method) and marks the
+ * order paid. Closes the session automatically if all orders are now settled.
+ */
+export async function markCashPaid(
+    orderId: string
+): Promise<{ error?: string; success?: boolean; tableClosed?: boolean }> {
+    const currentUser = await requireRole('waiter', 'manager', 'super_admin')
+    const supabase = await createAdminClient()
+
+    // 1. Fetch order details
+    const { data: order, error: orderFetchError } = await supabase
+        .from('orders')
+        .select('id, restaurant_id, session_id, total_amount, payment_status')
+        .eq('id', orderId)
+        .single()
+
+    if (orderFetchError || !order) return { error: 'Order not found' }
+    if (order.payment_status === 'paid') return { error: 'Order is already marked as paid' }
+
+    // 2. Mark the order as paid
+    const { error: updateError } = await supabase
+        .from('orders')
+        .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
+        .eq('id', orderId)
+
+    if (updateError) return { error: updateError.message }
+
+    // 3. Insert a verified cash payment_verification record
+    await supabase.from('payment_verifications').insert({
+        restaurant_id: order.restaurant_id,
+        order_id: orderId,
+        amount: order.total_amount,
+        payment_method: 'cash',
+        staff_verified: true,
+        staff_rejected: false,
+        staff_verified_by: currentUser.id,
+        staff_verified_at: new Date().toISOString(),
+    })
+
+    void logAudit({
+        restaurantId: order.restaurant_id,
+        userId: currentUser.id,
+        action: 'payment_verified',
+        entityType: 'payment',
+        entityId: orderId,
+        newValue: { payment_method: 'cash', amount: order.total_amount },
+    })
+
+    // 4. Close session if all orders in session are now paid
+    let tableClosed = false
+    if (order.session_id) {
+        const { count: unpaidCount } = await supabase
+            .from('orders')
+            .select('id', { count: 'exact', head: true })
+            .eq('session_id', order.session_id)
+            .neq('payment_status', 'paid')
+            .neq('status', 'cancelled')
+
+        if (unpaidCount === 0) {
+            await supabase
+                .from('sessions')
+                .update({ status: 'closed', closed_at: new Date().toISOString() })
+                .eq('id', order.session_id)
+                .eq('status', 'active')
+
+            void logAudit({
+                restaurantId: order.restaurant_id,
+                userId: currentUser.id,
+                action: 'session_closed',
+                entityType: 'session',
+                entityId: order.session_id,
+                newValue: { reason: 'all_orders_paid' },
+            })
+
+            tableClosed = true
+        }
+    }
+
+    revalidatePath('/waiter')
+    return { success: true, tableClosed }
+}
+
+/**
  * Combined action: Verify payment claim → Mark orders paid → Close session.
  * Step 9 of the Golden Path: "Verify Payment & Close Table"
  *

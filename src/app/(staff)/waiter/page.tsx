@@ -7,6 +7,7 @@ import PaymentVerificationFeed from '@/components/waiter/PaymentVerificationFeed
 import WaiterOrderFeed from '@/components/waiter/WaiterOrderFeed'
 import WaiterTakeoutFeed from '@/components/waiter/WaiterTakeoutFeed'
 import FloorStats from '@/components/waiter/FloorStats'
+import CashPaymentFeed from '@/components/waiter/CashPaymentFeed'
 import { getRestaurantFeatures } from '@/lib/features'
 import { Users, Package, Bell, ChefHat } from 'lucide-react'
 
@@ -40,6 +41,7 @@ export default async function WaiterPage() {
         { data: paymentClaims },
         { data: activeOrders },
         { data: readyTakeouts },
+        { data: unpaidDelivered },
     ] = await Promise.all([
         getRestaurantFeatures(restaurantId),
         adminSupabase
@@ -87,6 +89,17 @@ export default async function WaiterPage() {
             .eq('status', 'ready_for_pickup')
             .order('pickup_time', { ascending: true })
             .limit(20),
+        adminSupabase
+            .from('orders')
+            .select(`
+                id, total_amount, delivered_at, session_id,
+                sessions ( id, tables ( label ) )
+            `)
+            .eq('restaurant_id', restaurantId)
+            .eq('status', 'delivered')
+            .eq('payment_status', 'unpaid')
+            .order('delivered_at', { ascending: true })
+            .limit(30),
     ])
 
     // Floor stats for the top bar
@@ -126,7 +139,16 @@ export default async function WaiterPage() {
                 restaurantId={restaurantId}
             />
 
-            {/* 3. Nepal Payment Verification */}
+            {/* 3. Cash Payment Quick-Actions — delivered orders awaiting cash collection */}
+            {unpaidDelivered && unpaidDelivered.length > 0 && (
+                <CashPaymentFeed
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    initialOrders={unpaidDelivered as any[]}
+                    restaurantId={restaurantId}
+                />
+            )}
+
+            {/* 4. Nepal Payment Verification */}
             {features?.nepalPayEnabled && (
                 <PaymentVerificationFeed
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -136,7 +158,7 @@ export default async function WaiterPage() {
                 />
             )}
 
-            {/* 4. Takeout Pickup Feed */}
+            {/* 5. Takeout Pickup Feed */}
             {features?.takeoutEnabled && (
                 <WaiterTakeoutFeed
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -145,14 +167,14 @@ export default async function WaiterPage() {
                 />
             )}
 
-            {/* 5. Table Manager — manage floor, open/close sessions */}
+            {/* 6. Table Manager — manage floor, open/close sessions */}
             <TableManager
                 initialTables={mappedTables as unknown as TableWithSession[]}
                 restaurantId={restaurantId}
                 appUrl={appUrl}
             />
 
-            {/* 6. Shift Clock — used at start/end of shift only */}
+            {/* 7. Shift Clock — used at start/end of shift only */}
             {features?.staffShiftsEnabled && (
                 <StaffShiftClock
                     userId={userId}
