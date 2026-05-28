@@ -10,7 +10,7 @@ export default async function TeamPage() {
 
     const { data: staff } = await adminSupabase
         .from('users')
-        .select('id, full_name, email, role, created_at, is_active')
+        .select('id, full_name, email, role_id, roles(name), created_at, is_active')
         .eq('restaurant_id', restaurantId)
         .neq('role_id', 5)
         .order('created_at', { ascending: false })

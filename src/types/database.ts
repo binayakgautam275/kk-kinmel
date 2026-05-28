@@ -607,10 +607,7 @@ export interface SubscriptionPlan {
 // ============================================================
 export interface InvoiceSequence {
     restaurant_id: string
-    current_number: number
-    prefix: string
-    fiscal_year: string
-    updated_at: string
+    last_sequence: number  // atomically incremented; format: INV-YYYY-00001
 }
 
 // ============================================================

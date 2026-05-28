@@ -107,7 +107,7 @@ export async function inviteStaffMember(
 
     const { error: updateError } = await adminSupabase
         .from('users')
-        .update({ restaurant_id: restaurantId, full_name, role_id, is_active: true })
+        .update({ restaurant_id: restaurantId, full_name, email, role_id, is_active: true })
         .eq('id', authUser.user.id)
 
     if (updateError) {

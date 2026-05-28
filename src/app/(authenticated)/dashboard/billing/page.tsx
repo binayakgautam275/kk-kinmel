@@ -42,9 +42,9 @@ export default async function BillingPage() {
             .eq('id', restaurantId)
             .single(),
         adminSupabase.from('subscription_payments')
-            .select('amount, payment_method, reference_code, payment_date')
+            .select('amount, payment_method, reference_code, payment_date, paid_at')
             .eq('restaurant_id', restaurantId)
-            .order('payment_date', { ascending: false })
+            .order('paid_at', { ascending: false })
             .limit(20),
     ])
 
@@ -138,7 +138,7 @@ export default async function BillingPage() {
                             {(payments || []).map((p, i) => (
                                 <tr key={i} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-3 text-gray-700">
-                                        {p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '—'}
+                                        {(p.payment_date || p.paid_at) ? new Date(p.payment_date ?? p.paid_at).toLocaleDateString() : '—'}
                                     </td>
                                     <td className="px-6 py-3 text-gray-600 capitalize">{p.payment_method || '—'}</td>
                                     <td className="px-6 py-3 text-gray-400 font-mono text-xs hidden sm:table-cell">{p.reference_code || '—'}</td>

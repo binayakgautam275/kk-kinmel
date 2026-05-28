@@ -8,7 +8,8 @@ interface StaffMember {
     id: string
     full_name: string | null
     email: string | null
-    role: string | null
+    role_id: number | null
+    roles: { name: string }[] | null
     created_at: string | null
     is_active: boolean | null
 }
@@ -151,9 +152,9 @@ export default function TeamManager({ initialStaff }: { initialStaff: StaffMembe
                                     <p className="text-xs text-gray-500 truncate">{member.email || '—'}</p>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
-                                    {member.role && (
-                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${ROLE_COLORS[member.role] || 'bg-gray-100 text-gray-700'}`}>
-                                            {member.role.replace('_', ' ')}
+                                    {member.roles?.[0]?.name && (
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${ROLE_COLORS[member.roles[0].name] || 'bg-gray-100 text-gray-700'}`}>
+                                            {member.roles[0].name.replace('_', ' ')}
                                         </span>
                                     )}
                                     {!member.is_active && (
