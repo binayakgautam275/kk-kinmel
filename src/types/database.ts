@@ -53,6 +53,7 @@ export interface Restaurant {
     // Subscription limits
     max_staff: number
     max_menu_items: number
+    max_tables: number
 }
 
 export interface User {
@@ -68,6 +69,8 @@ export interface User {
     roles?: Role
 }
 
+export type TableStatus = 'available' | 'dirty' | 'reserved'
+
 export interface Table {
     id: string
     restaurant_id: string
@@ -76,6 +79,7 @@ export interface Table {
     nfc_uid: string | null
     capacity: number | null
     is_active: boolean
+    table_status: TableStatus
     created_at: string
 }
 
@@ -174,6 +178,7 @@ export interface Order {
     stripe_payment_intent_id: string | null
     promo_code_id: string | null
     loyalty_member_id: string | null
+    refunded_amount: number
     placed_at: string
     confirmed_at: string | null
     ready_at: string | null

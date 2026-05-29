@@ -98,7 +98,7 @@ export async function placeOrder(
     // The client passes session_token (e.g. 's-abc123'), but the RPC expects the UUID primary key
     const { data: sessionData, error: sessionError } = await supabase
         .from('sessions')
-        .select('id')
+        .select('id, restaurant_id')
         .eq('session_token', sessionId)
         .eq('status', 'active')
         .single()
@@ -186,8 +186,7 @@ export async function placeOrder(
             console.error('[order]', result.order_id, 'deduct_ingredients RPC error:', deductResult.value.error)
         } else {
             // Deduction succeeded — fire low-stock check in background (never blocks the order)
-            const { data: orderRow } = await supabase.from('orders').select('restaurant_id').eq('id', result.order_id).single()
-            if (orderRow?.restaurant_id) void checkAndAlertLowStock(orderRow.restaurant_id)
+            if (sessionData.restaurant_id) void checkAndAlertLowStock(sessionData.restaurant_id)
         }
 
         // SMS notifications — best-effort, never block the order
@@ -373,29 +372,21 @@ async function placeOrderFallback(
                 } else if (promo.promo_type === 'amount_off') {
                     discount = Math.min(promo.value, subtotal)
                 } else if (promo.promo_type === 'free_item' && promo.free_item_id) {
-                    const { data: freeMenuItem } = await supabase
-                        .from('menu_items').select('price').eq('id', promo.free_item_id).single()
-                    if (freeMenuItem) {
-                        discount = Math.min(freeMenuItem.price ?? 0, subtotal)
-                        await supabase.from('order_items').insert({
-                            order_id: orderId, menu_item_id: promo.free_item_id,
-                            quantity: 1, unit_price: 0, special_request: 'FREE (promo)',
-                        })
-                    }
+                    // Insert free item at unit_price 0 — it doesn't add to subtotal,
+                    // so no separate discount is needed (the 0 price IS the discount)
+                    await supabase.from('order_items').insert({
+                        order_id: orderId, menu_item_id: promo.free_item_id,
+                        quantity: 1, unit_price: 0, special_request: 'FREE (promo)',
+                    })
                 } else if (promo.promo_type === 'bogo' && promo.bogo_buy_item_id && promo.bogo_get_item_id) {
-                    // Check the customer has the bogo_buy_item in their order
+                    // Customer gets bogo_get_item free for every bogo_buy_item ordered.
+                    // Insert the free item at unit_price 0 — no additional discount needed.
                     const buyItemInOrder = payload.find(p => p.menu_item_id === promo.bogo_buy_item_id)
                     if (buyItemInOrder) {
-                        const { data: getMenuItem } = await supabase
-                            .from('menu_items').select('price, name').eq('id', promo.bogo_get_item_id).single()
-                        if (getMenuItem) {
-                            const freeQty = buyItemInOrder.quantity
-                            discount = Math.min((getMenuItem.price ?? 0) * freeQty, subtotal)
-                            await supabase.from('order_items').insert({
-                                order_id: orderId, menu_item_id: promo.bogo_get_item_id,
-                                quantity: freeQty, unit_price: 0, special_request: 'BOGO FREE',
-                            })
-                        }
+                        await supabase.from('order_items').insert({
+                            order_id: orderId, menu_item_id: promo.bogo_get_item_id,
+                            quantity: buyItemInOrder.quantity, unit_price: 0, special_request: 'BOGO FREE',
+                        })
                     }
                 }
 

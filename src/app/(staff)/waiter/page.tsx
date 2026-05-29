@@ -75,7 +75,7 @@ export default async function WaiterPage() {
         adminSupabase
             .from('orders')
             .select(`
-                id, status, total_amount, placed_at, customer_note, payment_status, session_id,
+                id, status, total_amount, placed_at, ready_at, customer_note, payment_status, session_id,
                 sessions ( id, tables ( label ) ),
                 order_items ( id, quantity, menu_items ( name ) )
             `)

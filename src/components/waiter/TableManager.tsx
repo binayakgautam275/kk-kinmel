@@ -11,7 +11,6 @@ import { useConfirmStore } from '@/lib/stores/confirm'
 
 export type TableWithSession = Table & {
     activeSession?: Session | null
-    table_status?: 'available' | 'dirty' | 'reserved'
 }
 
 const TABLE_STATUS_STYLES: Record<string, string> = {

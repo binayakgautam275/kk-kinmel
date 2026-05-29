@@ -12,6 +12,16 @@ import { sendLowStockAlertEmail } from '@/lib/email'
 export async function checkAndAlertLowStock(restaurantId: string): Promise<void> {
     const supabase = await createAdminClient()
 
+    // Cooldown: skip if we alerted within the last hour to prevent email spam
+    const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name, low_stock_alerted_at')
+        .eq('id', restaurantId)
+        .single()
+
+    const lastAlerted = (restaurant as { low_stock_alerted_at?: string | null } | null)?.low_stock_alerted_at
+    if (lastAlerted && Date.now() - new Date(lastAlerted).getTime() < 60 * 60 * 1000) return
+
     // Supabase JS can't do column-to-column comparisons, so fetch and filter in JS
     const { data: allIngredients } = await supabase
         .from('ingredients')
@@ -37,13 +47,13 @@ export async function checkAndAlertLowStock(restaurantId: string): Promise<void>
     const managerEmail = managers?.[0]?.email
     if (!managerEmail) return
 
-    const { data: restaurant } = await supabase
-        .from('restaurants')
-        .select('name')
-        .eq('id', restaurantId)
-        .single()
-
     const restaurantName = (restaurant as { name?: string } | null)?.name ?? 'Restaurant'
+
+    // Mark alert sent before sending (prevents duplicate sends on concurrent requests)
+    void supabase
+        .from('restaurants')
+        .update({ low_stock_alerted_at: new Date().toISOString() })
+        .eq('id', restaurantId)
 
     void sendLowStockAlertEmail(managerEmail, restaurantName, belowThreshold)
 }

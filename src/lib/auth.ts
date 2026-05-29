@@ -53,7 +53,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
             rest.subscription_status !== 'suspended' &&
             rest.subscription_status !== 'cancelled'
         ) {
-            void adminSupabase
+            await adminSupabase
                 .from('restaurants')
                 .update({ is_suspended: true, subscription_status: 'suspended' })
                 .eq('id', claims.restaurant_id)

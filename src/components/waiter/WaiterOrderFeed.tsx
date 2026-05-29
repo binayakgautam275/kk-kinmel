@@ -17,7 +17,7 @@ type WaiterOrder = Order & {
 }
 
 const ORDER_SELECT = `
-  id, status, total_amount, placed_at, customer_note, payment_status, session_id,
+  id, status, total_amount, placed_at, ready_at, customer_note, payment_status, session_id,
   sessions ( id, tables ( label ) ),
   order_items (
     id, quantity,
@@ -154,7 +154,11 @@ export default function WaiterOrderFeed({
     }
 
     const STALE_MS = 15 * 60 * 1000 // 15 minutes
-    const isStale = (placedAt: string) => now - new Date(placedAt).getTime() > STALE_MS
+    // Use ready_at (when kitchen marked it ready) — falls back to placed_at if missing
+    const isStale = (order: WaiterOrder) => {
+        const ts = (order as unknown as { ready_at?: string | null }).ready_at || order.placed_at
+        return now - new Date(ts).getTime() > STALE_MS
+    }
 
     // Group by status — ready orders on top (most urgent for waiter)
     const readyOrders = orders.filter((o) => o.status === 'ready')
@@ -186,7 +190,7 @@ export default function WaiterOrderFeed({
 
             {/* Ready Orders — top priority, highlighted */}
             {readyOrders.map((order) => {
-                const stale = isStale(order.placed_at)
+                const stale = isStale(order)
                 return (
                 <div
                     key={order.id}
