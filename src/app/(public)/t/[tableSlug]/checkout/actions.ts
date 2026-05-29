@@ -9,6 +9,7 @@ import { Redis } from '@upstash/redis'
 import { validateInput, OrderItemSchema } from '@/lib/validation'
 import { z } from 'zod'
 import { sendOrderConfirmationSms, sendLoyaltyPointsSms } from '@/lib/sms'
+import { checkAndAlertLowStock } from '@/app/(admin)/admin/ingredients/actions'
 
 type PlaceOrderItemPayload = {
     menu_item_id: string
@@ -149,7 +150,8 @@ export async function placeOrder(
             sessionUuid,
             payload,
             customerNote || null,
-            loyaltyMemberId || null
+            loyaltyMemberId || null,
+            promoCode || null
         )
 
         if (fallback) {
@@ -171,10 +173,22 @@ export async function placeOrder(
     }
 
     if (result.order_id) {
-        await Promise.allSettled([
+        const [pricingResult, deductResult] = await Promise.allSettled([
             supabase.rpc('apply_pricing_rules_to_order', { p_order_id: result.order_id }),
             supabase.rpc('deduct_ingredients_for_order',  { p_order_id: result.order_id }),
         ])
+        if (pricingResult.status === 'rejected') {
+            console.error('[order]', result.order_id, 'apply_pricing_rules failed:', pricingResult.reason)
+        }
+        if (deductResult.status === 'rejected') {
+            console.error('[order]', result.order_id, 'deduct_ingredients failed:', deductResult.reason)
+        } else if (deductResult.status === 'fulfilled' && deductResult.value.error) {
+            console.error('[order]', result.order_id, 'deduct_ingredients RPC error:', deductResult.value.error)
+        } else {
+            // Deduction succeeded — fire low-stock check in background (never blocks the order)
+            const { data: orderRow } = await supabase.from('orders').select('restaurant_id').eq('id', result.order_id).single()
+            if (orderRow?.restaurant_id) void checkAndAlertLowStock(orderRow.restaurant_id)
+        }
 
         // SMS notifications — best-effort, never block the order
         if (loyaltyMemberId) {
@@ -234,7 +248,8 @@ async function placeOrderFallback(
     sessionUuid: string,
     payload: PlaceOrderItemPayload[],
     customerNote: string | null,
-    loyaltyMemberId: string | null
+    loyaltyMemberId: string | null,
+    promoCode: string | null = null
 ): Promise<{
     orderId: string
     subtotal: number
@@ -332,7 +347,64 @@ async function placeOrderFallback(
         subtotal += itemTotal
     }
 
-    const discount = 0
+    let discount = 0
+    let promoCodeId: string | null = null
+
+    if (promoCode && subtotal > 0) {
+        const { data: promo } = await supabase
+            .from('promo_codes')
+            .select('id, promo_type, value, free_item_id, bogo_buy_item_id, bogo_get_item_id, min_order_amount, max_discount_amount, max_uses, current_uses, valid_until, is_active')
+            .eq('restaurant_id', restaurantId)
+            .eq('code', promoCode.toUpperCase())
+            .eq('is_active', true)
+            .single()
+
+        if (promo && (!promo.valid_until || new Date(promo.valid_until) > new Date())) {
+            const minOrder = promo.min_order_amount ?? 0
+
+            if (subtotal < minOrder) {
+                // Minimum order not met — silently skip (RPC would raise an error; fallback skips gracefully)
+                console.warn(`[fallback] Promo ${promoCode} min_order ${minOrder} not met (subtotal ${subtotal})`)
+            } else if (!promo.max_uses || promo.current_uses < promo.max_uses) {
+                promoCodeId = promo.id
+
+                if (promo.promo_type === 'percentage_off') {
+                    discount = Math.min(subtotal * (promo.value / 100), promo.max_discount_amount ?? Infinity)
+                } else if (promo.promo_type === 'amount_off') {
+                    discount = Math.min(promo.value, subtotal)
+                } else if (promo.promo_type === 'free_item' && promo.free_item_id) {
+                    const { data: freeMenuItem } = await supabase
+                        .from('menu_items').select('price').eq('id', promo.free_item_id).single()
+                    if (freeMenuItem) {
+                        discount = Math.min(freeMenuItem.price ?? 0, subtotal)
+                        await supabase.from('order_items').insert({
+                            order_id: orderId, menu_item_id: promo.free_item_id,
+                            quantity: 1, unit_price: 0, special_request: 'FREE (promo)',
+                        })
+                    }
+                } else if (promo.promo_type === 'bogo' && promo.bogo_buy_item_id && promo.bogo_get_item_id) {
+                    // Check the customer has the bogo_buy_item in their order
+                    const buyItemInOrder = payload.find(p => p.menu_item_id === promo.bogo_buy_item_id)
+                    if (buyItemInOrder) {
+                        const { data: getMenuItem } = await supabase
+                            .from('menu_items').select('price, name').eq('id', promo.bogo_get_item_id).single()
+                        if (getMenuItem) {
+                            const freeQty = buyItemInOrder.quantity
+                            discount = Math.min((getMenuItem.price ?? 0) * freeQty, subtotal)
+                            await supabase.from('order_items').insert({
+                                order_id: orderId, menu_item_id: promo.bogo_get_item_id,
+                                quantity: freeQty, unit_price: 0, special_request: 'BOGO FREE',
+                            })
+                        }
+                    }
+                }
+
+                // Increment usage counter
+                void supabase.from('promo_codes').update({ current_uses: (promo.current_uses ?? 0) + 1 }).eq('id', promo.id)
+            }
+        }
+    }
+
     const tax = 0
     const total = subtotal - discount + tax
 
@@ -343,6 +415,7 @@ async function placeOrderFallback(
             discount_amount: discount,
             tax_amount: tax,
             total_amount: total,
+            promo_code_id: promoCodeId,
         })
         .eq('id', orderId)
 
@@ -350,11 +423,13 @@ async function placeOrderFallback(
         console.error('Fallback order totals update failed:', totalsUpdateError)
     }
 
-    // Apply pricing rules + deduct ingredients (best-effort)
-    await Promise.allSettled([
+    const [pricingFb, deductFb] = await Promise.allSettled([
         supabase.rpc('apply_pricing_rules_to_order', { p_order_id: orderId }),
         supabase.rpc('deduct_ingredients_for_order',  { p_order_id: orderId }),
     ])
+    if (pricingFb.status === 'rejected') console.error('[fallback]', orderId, 'apply_pricing failed:', pricingFb.reason)
+    if (deductFb.status === 'rejected') console.error('[fallback]', orderId, 'deduct_ingredients failed:', deductFb.reason)
+    else if (deductFb.status === 'fulfilled' && deductFb.value?.error) console.error('[fallback]', orderId, 'deduct_ingredients RPC error:', deductFb.value.error)
 
     return {
         orderId,

@@ -2,11 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { markOrderDelivered } from '@/app/(staff)/waiter/order-actions'
+import { markOrderDelivered, markDeliveredAndCashPaid } from '@/app/(staff)/waiter/order-actions'
 import { playOrderReady, playNewOrder } from '@/lib/audio'
 import { toast } from 'react-hot-toast'
 import { timeAgo, formatCurrency } from '@/lib/utils'
-import { Package, ChefHat, Clock, Truck, Loader2 } from 'lucide-react'
+import { Package, ChefHat, Clock, Truck, Loader2, Banknote } from 'lucide-react'
 import type { Order, OrderItem, MenuItem, Session, Table, OrderStatus } from '@/types/database'
 
 type WaiterOrder = Order & {
@@ -35,7 +35,15 @@ export default function WaiterOrderFeed({
     const [orders, setOrders] = useState<WaiterOrder[]>(initialOrders)
     const ordersRef = useRef(orders)
     const [processingId, setProcessingId] = useState<string | null>(null)
+    const [cashProcessingId, setCashProcessingId] = useState<string | null>(null)
+    const [now, setNow] = useState(() => Date.now())
     const supabaseRef = useRef(createClient())
+
+    // Tick every 30s so aging labels stay current
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 30_000)
+        return () => clearInterval(interval)
+    }, [])
 
     useEffect(() => { ordersRef.current = orders }, [orders])
 
@@ -127,11 +135,26 @@ export default function WaiterOrderFeed({
 
     const handleMarkDelivered = async (orderId: string) => {
         setProcessingId(orderId)
-        // Optimistic remove
         setOrders((prev) => prev.filter((o) => o.id !== orderId))
         await markOrderDelivered(orderId)
         setProcessingId(null)
     }
+
+    const handleCashAndDeliver = async (orderId: string) => {
+        setCashProcessingId(orderId)
+        setOrders((prev) => prev.filter((o) => o.id !== orderId))
+        const res = await markDeliveredAndCashPaid(orderId)
+        if (res.error) {
+            toast.error(res.error)
+            setCashProcessingId(null)
+        } else {
+            toast.success(res.tableClosed ? 'Cash received — table closed ✅' : 'Cash received ✓')
+            setCashProcessingId(null)
+        }
+    }
+
+    const STALE_MS = 15 * 60 * 1000 // 15 minutes
+    const isStale = (placedAt: string) => now - new Date(placedAt).getTime() > STALE_MS
 
     // Group by status — ready orders on top (most urgent for waiter)
     const readyOrders = orders.filter((o) => o.status === 'ready')
@@ -162,24 +185,33 @@ export default function WaiterOrderFeed({
             </h2>
 
             {/* Ready Orders — top priority, highlighted */}
-            {readyOrders.map((order) => (
+            {readyOrders.map((order) => {
+                const stale = isStale(order.placed_at)
+                return (
                 <div
                     key={order.id}
-                    className="bg-white rounded-xl shadow-sm border-2 border-green-300 p-4 space-y-3"
+                    className={`bg-white rounded-xl shadow-sm border-2 p-4 space-y-3 ${stale ? 'border-red-400 animate-pulse' : 'border-green-300'}`}
                 >
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Package size={16} className="text-green-600" />
-                            <span className="font-bold text-green-700">
+                            <Package size={16} className={stale ? 'text-red-500' : 'text-green-600'} />
+                            <span className={`font-bold ${stale ? 'text-red-600' : 'text-green-700'}`}>
                                 Table{' '}
                                 {(order.sessions as unknown as { tables?: { label?: string } })
                                     ?.tables?.label || '?'}{' '}
                                 — READY
                             </span>
                         </div>
-                        <span className="text-xs text-gray-400">
-                            {timeAgo(order.placed_at)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                            {stale && (
+                                <span className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
+                                    ⚠ Getting cold!
+                                </span>
+                            )}
+                            <span className="text-xs text-gray-400">
+                                {timeAgo(order.placed_at)}
+                            </span>
+                        </div>
                     </div>
 
                     <ul className="text-sm text-gray-700 space-y-1">
@@ -196,25 +228,42 @@ export default function WaiterOrderFeed({
                         </p>
                     )}
 
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 gap-2 flex-wrap">
                         <span className="text-sm font-medium text-gray-600">
                             {formatCurrency(order.total_amount)}
                         </span>
-                        <button
-                            onClick={() => handleMarkDelivered(order.id)}
-                            disabled={processingId === order.id}
-                            className="bg-green-600 text-white font-medium rounded-lg py-2.5 px-4 flex items-center gap-1.5 text-sm active:scale-95 disabled:opacity-50"
-                        >
-                            {processingId === order.id ? (
-                                <Loader2 size={16} className="animate-spin" />
-                            ) : (
-                                <Truck size={16} />
-                            )}
-                            Mark Delivered
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => handleCashAndDeliver(order.id)}
+                                disabled={!!cashProcessingId || !!processingId}
+                                className="bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg py-2 px-3 flex items-center gap-1.5 text-sm active:scale-95 disabled:opacity-50 transition"
+                                title="Deliver and collect cash payment"
+                            >
+                                {cashProcessingId === order.id ? (
+                                    <Loader2 size={15} className="animate-spin" />
+                                ) : (
+                                    <Banknote size={15} />
+                                )}
+                                Cash
+                            </button>
+                            <button
+                                onClick={() => handleMarkDelivered(order.id)}
+                                disabled={!!processingId || !!cashProcessingId}
+                                className="bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg py-2 px-3 flex items-center gap-1.5 text-sm active:scale-95 disabled:opacity-50 transition"
+                                title="Deliver (digital payment)"
+                            >
+                                {processingId === order.id ? (
+                                    <Loader2 size={15} className="animate-spin" />
+                                ) : (
+                                    <Truck size={15} />
+                                )}
+                                Deliver
+                            </button>
+                        </div>
                     </div>
                 </div>
-            ))}
+                )
+            })}
 
             {/* Preparing Orders */}
             {preparingOrders.length > 0 && (

@@ -80,3 +80,22 @@ export async function closeSession(sessionId: string) {
     revalidatePath('/waiter')
     return { success: true }
 }
+
+/**
+ * Waiter marks a table as dirty (needs cleaning) or reserved.
+ * Clears back to 'available' once actioned.
+ */
+export async function setTableStatus(
+    tableId: string,
+    status: 'available' | 'dirty' | 'reserved'
+): Promise<{ error?: string; success?: boolean }> {
+    const supabase = await createAdminClient()
+    const { error } = await supabase
+        .from('tables')
+        .update({ table_status: status })
+        .eq('id', tableId)
+
+    if (error) return { error: error.message }
+    revalidatePath('/waiter')
+    return { success: true }
+}

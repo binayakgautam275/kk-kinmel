@@ -11,6 +11,7 @@ type AdminOrder = {
     status: string
     payment_status: string
     total_amount: number | null
+    refunded_amount: number | null
     placed_at: string
     customer_note: string | null
     sessions: { tables: { label: string } | null } | null
@@ -41,7 +42,7 @@ export default async function AdminOrdersPage() {
     const { data: orders } = await adminSupabase
         .from('orders')
         .select(`
-            id, status, payment_status, total_amount, placed_at, customer_note,
+            id, status, payment_status, total_amount, refunded_amount, placed_at, customer_note,
             sessions ( tables ( label ) ),
             order_items ( id, quantity, menu_items ( name ) )
         `)
@@ -115,7 +116,7 @@ export default async function AdminOrdersPage() {
                                         {canRefund && (
                                             <td className="px-4 py-4">
                                                 {refundable && (
-                                                    <RefundOrderButton orderId={order.id} paymentStatus={order.payment_status} />
+                                                    <RefundOrderButton orderId={order.id} paymentStatus={order.payment_status} totalAmount={order.total_amount ?? 0} refundedAmount={order.refunded_amount ?? 0} />
                                                 )}
                                             </td>
                                         )}
@@ -160,7 +161,7 @@ export default async function AdminOrdersPage() {
                                     <div className="text-[10px] text-gray-400">
                                         {new Date(order.placed_at).toLocaleDateString()} · {new Date(order.placed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </div>
-                                    {refundable && <RefundOrderButton orderId={order.id} paymentStatus={order.payment_status} />}
+                                    {refundable && <RefundOrderButton orderId={order.id} paymentStatus={order.payment_status} totalAmount={order.total_amount ?? 0} refundedAmount={order.refunded_amount ?? 0} />}
                                 </div>
                             </div>
                         )

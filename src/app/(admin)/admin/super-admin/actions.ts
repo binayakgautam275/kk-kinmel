@@ -5,11 +5,11 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { validateInput, CreateTenantSchema } from '@/lib/validation'
 
-const TIER_LIMITS: Record<'free' | 'basic' | 'pro' | 'enterprise', { max_staff: number; max_menu_items: number }> = {
-    free: { max_staff: 3, max_menu_items: 20 },
-    basic: { max_staff: 10, max_menu_items: 100 },
-    pro: { max_staff: 50, max_menu_items: 500 },
-    enterprise: { max_staff: 999, max_menu_items: 9999 },
+const TIER_LIMITS: Record<'free' | 'basic' | 'pro' | 'enterprise', { max_staff: number; max_menu_items: number; max_tables: number }> = {
+    free: { max_staff: 3, max_menu_items: 20, max_tables: 10 },
+    basic: { max_staff: 10, max_menu_items: 100, max_tables: 30 },
+    pro: { max_staff: 50, max_menu_items: 500, max_tables: 100 },
+    enterprise: { max_staff: 999, max_menu_items: 9999, max_tables: 999 },
 }
 
 const TIER_FEATURES: Record<'free' | 'basic' | 'pro' | 'enterprise', {
@@ -190,6 +190,7 @@ export async function updateSubscriptionTier(
             subscription_tier: tier,
             max_staff: limits.max_staff,
             max_menu_items: limits.max_menu_items,
+            max_tables: limits.max_tables,
         })
         .eq('id', restaurantId)
 
@@ -431,6 +432,26 @@ export async function recordSubscriptionPayment(
 
     revalidatePath('/admin/super-admin')
     return { success: true, newExpiry: newExpiry.toISOString() }
+}
+
+/**
+ * Suspend all restaurants whose subscription has expired.
+ * Safe to call repeatedly — only affects non-suspended restaurants.
+ */
+export async function runSubscriptionAutoSuspend(): Promise<{
+    error?: string
+    suspended?: { id: string; name: string }[]
+}> {
+    await requireRole('super_admin')
+    const supabase = await createAdminClient()
+
+    const { data, error } = await supabase
+        .rpc('auto_suspend_expired_subscriptions')
+
+    if (error) return { error: error.message }
+
+    revalidatePath('/admin/super-admin')
+    return { suspended: (data as { suspended_id: string; suspended_name: string }[] | null)?.map(r => ({ id: r.suspended_id, name: r.suspended_name })) || [] }
 }
 
 export async function getSaasMetrics() {

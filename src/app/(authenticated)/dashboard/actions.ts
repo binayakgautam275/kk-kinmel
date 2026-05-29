@@ -3,6 +3,7 @@
 import { getCurrentUser } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendStaffInviteEmail } from '@/lib/email'
 
 // ---------------------------------------------------------------------------
 // Restaurant settings
@@ -114,6 +115,16 @@ export async function inviteStaffMember(
         await adminSupabase.auth.admin.deleteUser(authUser.user.id)
         return { error: updateError.message }
     }
+
+    // Email the invite — best-effort, never fail the action
+    const { data: restaurantRow } = await adminSupabase
+        .from('restaurants')
+        .select('name')
+        .eq('id', restaurantId)
+        .single()
+    const restaurantName = (restaurantRow as { name?: string } | null)?.name ?? 'the restaurant'
+    const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.kkkhane.com'}/login`
+    void sendStaffInviteEmail(email, full_name, restaurantName, tempPassword, loginUrl)
 
     revalidatePath('/dashboard/team')
     return { tempPassword }

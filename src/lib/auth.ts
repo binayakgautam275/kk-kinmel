@@ -38,12 +38,27 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     // Try JWT claims first (fast path — no DB call for role)
     const claims = await getJwtClaims()
     if (claims?.restaurant_id && claims?.app_role) {
-        // Still check suspension status (single indexed query)
         const { data: rest } = await adminSupabase
             .from('restaurants')
-            .select('is_suspended')
+            .select('is_suspended, subscription_expires_at, subscription_status')
             .eq('id', claims.restaurant_id)
             .single()
+
+        // Lazy auto-suspend: if subscription lapsed and not yet suspended, do it now
+        if (
+            rest &&
+            !rest.is_suspended &&
+            rest.subscription_expires_at &&
+            new Date(rest.subscription_expires_at) < new Date() &&
+            rest.subscription_status !== 'suspended' &&
+            rest.subscription_status !== 'cancelled'
+        ) {
+            void adminSupabase
+                .from('restaurants')
+                .update({ is_suspended: true, subscription_status: 'suspended' })
+                .eq('id', claims.restaurant_id)
+            redirect('/suspended')
+        }
 
         if (rest?.is_suspended) redirect('/suspended')
 
@@ -58,7 +73,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     // Fallback: admin DB lookup (needed when JWT hasn't refreshed yet)
     const { data: userData } = await adminSupabase
         .from('users')
-        .select('restaurant_id, roles(name), restaurants(is_suspended)')
+        .select('restaurant_id, roles(name), restaurants(is_suspended, subscription_expires_at, subscription_status)')
         .eq('id', user.id)
         .single()
 
@@ -66,7 +81,29 @@ export async function getCurrentUser(): Promise<CurrentUser> {
         redirect('/unauthorized')
     }
 
-    const isSuspended = (userData.restaurants as unknown as { is_suspended?: boolean } | null)?.is_suspended
+    const restaurant = userData.restaurants as unknown as {
+        is_suspended?: boolean
+        subscription_expires_at?: string | null
+        subscription_status?: string
+    } | null
+
+    // Lazy auto-suspend on fallback path too
+    if (
+        restaurant &&
+        !restaurant.is_suspended &&
+        restaurant.subscription_expires_at &&
+        new Date(restaurant.subscription_expires_at) < new Date() &&
+        restaurant.subscription_status !== 'suspended' &&
+        restaurant.subscription_status !== 'cancelled'
+    ) {
+        void adminSupabase
+            .from('restaurants')
+            .update({ is_suspended: true, subscription_status: 'suspended' })
+            .eq('id', userData.restaurant_id)
+        redirect('/suspended')
+    }
+
+    const isSuspended = restaurant?.is_suspended
     if (isSuspended) redirect('/suspended')
 
     const roleName = (userData.roles as unknown as { name: string } | null)?.name || 'waiter'

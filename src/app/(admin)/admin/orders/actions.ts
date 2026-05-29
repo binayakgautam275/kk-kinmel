@@ -7,8 +7,9 @@ import { logAudit } from '@/lib/audit'
 
 export async function refundOrderAction(
     orderId: string,
-    reason: string
-): Promise<{ error?: string; success?: boolean }> {
+    reason: string,
+    refundAmount?: number
+): Promise<{ error?: string; success?: boolean; partial?: boolean }> {
     const currentUser = await requireRole('manager', 'super_admin')
 
     if (!reason.trim()) return { error: 'A reason is required for refunds.' }
@@ -17,23 +18,40 @@ export async function refundOrderAction(
 
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('id, restaurant_id, total_amount, payment_status, status')
+        .select('id, restaurant_id, total_amount, payment_status, status, refunded_amount')
         .eq('id', orderId)
         .single()
 
     if (fetchError || !order) return { error: 'Order not found.' }
-    if (order.payment_status === 'refunded') return { error: 'Order has already been refunded.' }
+    if (order.payment_status === 'refunded') return { error: 'Order has already been fully refunded.' }
     if (!['paid', 'unpaid'].includes(order.payment_status)) {
-        return { error: `Cannot refund an order with status: ${order.payment_status}` }
+        return { error: `Cannot refund an order with payment status: ${order.payment_status}` }
     }
+
+    const totalAmount = order.total_amount ?? 0
+    const alreadyRefunded = order.refunded_amount ?? 0
+    const maxRefundable = totalAmount - alreadyRefunded
+
+    // Default to full refund if no amount specified
+    const amount = refundAmount !== undefined ? refundAmount : maxRefundable
+
+    if (amount <= 0) return { error: 'Refund amount must be greater than 0.' }
+    if (amount > maxRefundable) {
+        return { error: `Cannot refund more than the remaining amount (${maxRefundable}).` }
+    }
+
+    const newRefundedTotal = alreadyRefunded + amount
+    const isFullRefund = newRefundedTotal >= totalAmount
+
+    const notePrefix = isFullRefund ? '[REFUNDED]' : `[PARTIAL REFUND Rs.${amount}]`
+    const newPaymentStatus = isFullRefund ? 'refunded' : order.payment_status
 
     const { error: updateError } = await supabase
         .from('orders')
         .update({
-            payment_status: 'refunded',
-            customer_note: order.payment_status === 'paid'
-                ? `[REFUNDED] ${reason}`
-                : `[VOIDED] ${reason}`,
+            payment_status: newPaymentStatus,
+            refunded_amount: newRefundedTotal,
+            customer_note: `${notePrefix} ${reason}`,
         })
         .eq('id', orderId)
 
@@ -45,10 +63,10 @@ export async function refundOrderAction(
         action: 'order_cancelled',
         entityType: 'order',
         entityId: orderId,
-        oldValue: { payment_status: order.payment_status, total_amount: order.total_amount },
-        newValue: { payment_status: 'refunded', reason },
+        oldValue: { payment_status: order.payment_status, refunded_amount: alreadyRefunded },
+        newValue: { payment_status: newPaymentStatus, refunded_amount: newRefundedTotal, reason, partial: !isFullRefund },
     })
 
     revalidatePath('/admin/orders')
-    return { success: true }
+    return { success: true, partial: !isFullRefund }
 }

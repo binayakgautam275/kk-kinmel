@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { openSession, closeSession } from '@/app/(staff)/waiter/actions'
-import { Users, QrCode, PowerOff, Power } from 'lucide-react'
+import { openSession, closeSession, setTableStatus } from '@/app/(staff)/waiter/actions'
+import { Users, QrCode, PowerOff, Power, Sparkles, CalendarClock } from 'lucide-react'
 import type { Table, Session } from '@/types/database'
 import { QRCodeSVG } from 'qrcode.react'
 import { toast } from 'react-hot-toast'
@@ -11,6 +11,26 @@ import { useConfirmStore } from '@/lib/stores/confirm'
 
 export type TableWithSession = Table & {
     activeSession?: Session | null
+    table_status?: 'available' | 'dirty' | 'reserved'
+}
+
+const TABLE_STATUS_STYLES: Record<string, string> = {
+    active:    'bg-green-50 border-green-500 text-green-700',
+    dirty:     'bg-amber-50 border-amber-400 text-amber-700',
+    reserved:  'bg-blue-50 border-blue-400 text-blue-700',
+    available: 'bg-white border-gray-200 text-gray-500',
+}
+
+const TABLE_DOT_STYLES: Record<string, string> = {
+    active:   'bg-green-500 animate-pulse',
+    dirty:    'bg-amber-400',
+    reserved: 'bg-blue-400',
+    available:'bg-gray-300',
+}
+
+function getEffectiveStatus(table: TableWithSession): string {
+    if (table.activeSession) return 'active'
+    return table.table_status || 'available'
 }
 
 export default function TableManager({ initialTables, restaurantId, appUrl }: { initialTables: TableWithSession[], restaurantId: string, appUrl: string }) {
@@ -22,21 +42,18 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
 
     useEffect(() => {
         const supabase = supabaseRef.current
-        // Listen for session changes and update state reactively (no page reload)
         const channel = supabase
             .channel(`waiter-sessions-${restaurantId}`)
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'sessions', filter: `restaurant_id=eq.${restaurantId}` },
                 (payload) => {
-                    // New session opened — update the matching table
                     const newSession = payload.new as Session
                     setTables(prev => prev.map(t =>
                         t.id === newSession.table_id
                             ? { ...t, activeSession: newSession }
                             : t
                     ))
-                    // Update selected table if it's the one that changed
                     setSelectedTable(prev =>
                         prev?.id === newSession.table_id
                             ? { ...prev, activeSession: newSession }
@@ -65,16 +82,25 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
                     })
                 }
             )
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'tables', filter: `restaurant_id=eq.${restaurantId}` },
+                (payload) => {
+                    const updated = payload.new as TableWithSession
+                    setTables(prev => prev.map(t => t.id === updated.id ? { ...t, table_status: updated.table_status } : t))
+                    setSelectedTable(prev => prev?.id === updated.id ? { ...prev, table_status: updated.table_status } : prev)
+                }
+            )
             .subscribe()
 
-        return () => {
-            supabase.removeChannel(channel)
-        }
+        return () => { supabase.removeChannel(channel) }
     }, [restaurantId])
 
     const handleOpenSession = async (tableId: string) => {
         setIsProcessing(true)
         await openSession(tableId, restaurantId)
+        // Clear dirty/reserved status when opening a new session
+        await setTableStatus(tableId, 'available')
         toast.success('Session opened')
         setIsProcessing(false)
     }
@@ -95,15 +121,37 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
         setSelectedTable(null)
     }
 
+    const handleSetStatus = async (tableId: string, status: 'available' | 'dirty' | 'reserved') => {
+        setIsProcessing(true)
+        const res = await setTableStatus(tableId, status)
+        if (res.error) {
+            toast.error(res.error)
+        } else {
+            const label = status === 'dirty' ? 'Marked dirty' : status === 'reserved' ? 'Reserved' : 'Available'
+            toast.success(label)
+            setTables(prev => prev.map(t => t.id === tableId ? { ...t, table_status: status } : t))
+            setSelectedTable(prev => prev?.id === tableId ? { ...prev, table_status: status } : prev)
+        }
+        setIsProcessing(false)
+    }
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Table Grid (2/3 width on desktop) */}
+            {/* Table Grid */}
             <div className="lg:col-span-2 space-y-4">
                 <h2 className="text-xl font-bold text-gray-900 border-b pb-2">Active Floor Plan</h2>
 
+                {/* Legend */}
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Active</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block" /> Available</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> Dirty</span>
+                    <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-blue-400 inline-block" /> Reserved</span>
+                </div>
+
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {tables.map(table => {
-                        const isActive = !!table.activeSession
+                        const effectiveStatus = getEffectiveStatus(table)
                         const isSelected = selectedTable?.id === table.id
 
                         return (
@@ -113,9 +161,7 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
                                 className={`
                   relative aspect-square rounded-xl p-4 flex flex-col items-center justify-center transition-all border-2
                   ${isSelected ? 'ring-4 ring-gray-200 scale-105 z-10' : 'hover:scale-105'}
-                  ${isActive
-                                        ? 'bg-green-50 border-green-500 text-green-700 shadow-sm'
-                                        : 'bg-white border-gray-200 text-gray-500 shadow-sm'}
+                  ${TABLE_STATUS_STYLES[effectiveStatus] || TABLE_STATUS_STYLES.available}
                 `}
                             >
                                 <span className="text-2xl font-bold mb-1">{table.label}</span>
@@ -123,30 +169,39 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
                                     <Users size={14} />
                                     <span>{table.capacity || '-'}</span>
                                 </div>
-
-                                {/* Status Indicator */}
-                                <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                                {effectiveStatus === 'dirty' && (
+                                    <span className="text-[10px] font-bold text-amber-600 mt-1">DIRTY</span>
+                                )}
+                                {effectiveStatus === 'reserved' && (
+                                    <span className="text-[10px] font-bold text-blue-600 mt-1">RESERVED</span>
+                                )}
+                                <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${TABLE_DOT_STYLES[effectiveStatus] || TABLE_DOT_STYLES.available}`} />
                             </button>
                         )
                     })}
                 </div>
             </div>
 
-            {/* Action Panel (1/3 width on desktop) */}
+            {/* Action Panel */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-fit sticky top-6">
                 {selectedTable ? (
                     <div className="space-y-6">
                         <div className="text-center pb-6 border-b border-gray-100">
                             <h3 className="text-2xl font-bold text-gray-900">Table {selectedTable.label}</h3>
                             <p className="text-gray-500 font-medium mt-1">
-                                {selectedTable.activeSession ? 'Session Active' : 'Available'}
+                                {selectedTable.activeSession
+                                    ? 'Session Active'
+                                    : selectedTable.table_status === 'dirty'
+                                        ? '🧹 Needs Cleaning'
+                                        : selectedTable.table_status === 'reserved'
+                                            ? '📋 Reserved'
+                                            : 'Available'}
                             </p>
                         </div>
 
                         {selectedTable.activeSession ? (
                             <div className="space-y-6">
                                 <div className="flex justify-center p-4 bg-gray-50 rounded-xl">
-                                    {/* QR Code dynamically generated containing table token AND session token */}
                                     <QRCodeSVG
                                         value={`${appUrl}/t/${selectedTable.qr_token}?s=${selectedTable.activeSession.session_token}`}
                                         size={200}
@@ -167,21 +222,52 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
                                 </button>
                             </div>
                         ) : (
-                            <div className="space-y-6 py-8">
+                            <div className="space-y-3">
                                 <div className="flex justify-center text-gray-300">
-                                    <QrCode size={120} strokeWidth={1} />
+                                    <QrCode size={80} strokeWidth={1} />
                                 </div>
-                                <p className="text-center text-gray-500">
+                                <p className="text-center text-sm text-gray-500">
                                     Seat customers at this table to generate a new ordering QR code.
                                 </p>
 
                                 <button
                                     onClick={() => handleOpenSession(selectedTable.id)}
                                     disabled={isProcessing}
-                                    className="w-full py-4 bg-[var(--color-secondary)] hover:bg-[var(--color-primary)] text-white font-bold rounded-lg flex items-center justify-center gap-2 transition shadow-md disabled:opacity-50"
+                                    className="w-full py-3 bg-secondary hover:bg-primary text-white font-bold rounded-lg flex items-center justify-center gap-2 transition shadow-md disabled:opacity-50"
                                 >
                                     <Power size={18} /> Open New Session
                                 </button>
+
+                                {/* Status buttons — only for non-active tables */}
+                                <div className="pt-3 border-t border-gray-100 space-y-2">
+                                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Table Status</p>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <button
+                                            onClick={() => handleSetStatus(selectedTable.id, 'available')}
+                                            disabled={isProcessing || (!selectedTable.table_status || selectedTable.table_status === 'available')}
+                                            className="flex flex-col items-center gap-1 py-2 px-1 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 transition text-xs font-medium"
+                                        >
+                                            <span className="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block" />
+                                            Clear
+                                        </button>
+                                        <button
+                                            onClick={() => handleSetStatus(selectedTable.id, 'dirty')}
+                                            disabled={isProcessing || selectedTable.table_status === 'dirty'}
+                                            className="flex flex-col items-center gap-1 py-2 px-1 rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50 disabled:opacity-40 transition text-xs font-medium"
+                                        >
+                                            <Sparkles size={12} />
+                                            Dirty
+                                        </button>
+                                        <button
+                                            onClick={() => handleSetStatus(selectedTable.id, 'reserved')}
+                                            disabled={isProcessing || selectedTable.table_status === 'reserved'}
+                                            className="flex flex-col items-center gap-1 py-2 px-1 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 disabled:opacity-40 transition text-xs font-medium"
+                                        >
+                                            <CalendarClock size={12} />
+                                            Reserve
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>

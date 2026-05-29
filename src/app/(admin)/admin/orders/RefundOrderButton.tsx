@@ -4,31 +4,45 @@ import { useState } from 'react'
 import { RotateCcw, Loader2 } from 'lucide-react'
 import { refundOrderAction } from './actions'
 import { toast } from 'react-hot-toast'
+import { formatCurrency } from '@/lib/utils'
 
 export default function RefundOrderButton({
     orderId,
     paymentStatus,
+    totalAmount,
+    refundedAmount = 0,
 }: {
     orderId: string
     paymentStatus: string
+    totalAmount: number
+    refundedAmount?: number
 }) {
     const [open, setOpen] = useState(false)
     const [reason, setReason] = useState('')
     const [loading, setLoading] = useState(false)
+    const [amountStr, setAmountStr] = useState('')
 
-    const label = paymentStatus === 'paid' ? 'Refund' : 'Void'
+    const maxRefundable = totalAmount - refundedAmount
+    const isVoid = paymentStatus !== 'paid'
+    const label = isVoid ? 'Void' : 'Refund'
+
+    // For voids (unpaid), full amount only. For paid, allow partial.
+    const parsedAmount = amountStr ? parseFloat(amountStr) : maxRefundable
+    const amountValid = parsedAmount > 0 && parsedAmount <= maxRefundable
 
     async function handleSubmit() {
         if (!reason.trim()) { toast.error('Please enter a reason.'); return }
+        if (!amountValid) { toast.error(`Enter an amount between 1 and ${maxRefundable}.`); return }
         setLoading(true)
-        const res = await refundOrderAction(orderId, reason)
+        const res = await refundOrderAction(orderId, reason, parsedAmount)
         setLoading(false)
         if (res.error) {
             toast.error(res.error)
         } else {
-            toast.success(`Order ${label.toLowerCase()}ed`)
+            toast.success(res.partial ? `Partial refund of ${formatCurrency(parsedAmount)} recorded` : `Order ${label.toLowerCase()}ed`)
             setOpen(false)
             setReason('')
+            setAmountStr('')
         }
     }
 
@@ -48,22 +62,46 @@ export default function RefundOrderButton({
                             <RotateCcw size={18} className="text-red-500" />
                             <h2 className="text-base font-bold text-gray-900">{label} Order</h2>
                         </div>
-                        <p className="text-sm text-gray-500">
-                            {paymentStatus === 'paid'
-                                ? 'This will mark the order as refunded. Record the reason for the refund.'
-                                : 'This will void the order. Record the reason.'}
-                        </p>
-                        <textarea
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            placeholder="Reason (e.g. wrong item delivered, customer complaint…)"
-                            className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
-                            rows={3}
-                            maxLength={200}
-                        />
+
+                        {refundedAmount > 0 && (
+                            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                {formatCurrency(refundedAmount)} already refunded. Remaining: {formatCurrency(maxRefundable)}
+                            </p>
+                        )}
+
+                        {paymentStatus === 'paid' && (
+                            <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">
+                                    Refund amount <span className="text-gray-400">(max {formatCurrency(maxRefundable)})</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={maxRefundable}
+                                    step="0.01"
+                                    value={amountStr}
+                                    onChange={(e) => setAmountStr(e.target.value)}
+                                    placeholder={`${maxRefundable} (full refund)`}
+                                    className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                                />
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Reason</label>
+                            <textarea
+                                value={reason}
+                                onChange={(e) => setReason(e.target.value)}
+                                placeholder="e.g. wrong item delivered, customer complaint…"
+                                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-red-300"
+                                rows={3}
+                                maxLength={200}
+                            />
+                        </div>
+
                         <div className="flex gap-2 justify-end">
                             <button
-                                onClick={() => { setOpen(false); setReason('') }}
+                                onClick={() => { setOpen(false); setReason(''); setAmountStr('') }}
                                 className="px-4 py-2 text-sm rounded-xl border border-gray-200 hover:bg-gray-50 transition"
                                 disabled={loading}
                             >
@@ -75,7 +113,7 @@ export default function RefundOrderButton({
                                 className="px-4 py-2 text-sm rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50 transition flex items-center gap-1.5"
                             >
                                 {loading && <Loader2 size={14} className="animate-spin" />}
-                                Confirm {label}
+                                Confirm {parsedAmount < maxRefundable && parsedAmount > 0 ? `Partial ${label}` : label}
                             </button>
                         </div>
                     </div>

@@ -284,3 +284,76 @@ export async function sendPaymentReceiptEmail(
     html,
   })
 }
+
+export async function sendStaffInviteEmail(
+    staffEmail: string,
+    staffName: string,
+    restaurantName: string,
+    tempPassword: string,
+    loginUrl: string
+) {
+    const html = `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9fafb;margin:0;padding:24px">
+<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden">
+  <div style="background:#1B263B;padding:20px 24px">
+    <h1 style="margin:0;color:#fff;font-size:18px">You've been invited to ${restaurantName}</h1>
+  </div>
+  <div style="padding:24px">
+    <p style="margin:0 0 16px;color:#374151">Hi ${staffName},</p>
+    <p style="margin:0 0 16px;color:#374151;font-size:14px">
+      You've been added as a staff member at <strong>${restaurantName}</strong>. Use the credentials below to log in.
+    </p>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:16px 0">
+      <p style="margin:0 0 8px;font-size:12px;color:#6b7280;text-transform:uppercase;font-weight:600;letter-spacing:0.05em">Your Login Credentials</p>
+      <p style="margin:0 0 6px;font-size:14px;color:#111827"><strong>Email:</strong> ${staffEmail}</p>
+      <p style="margin:0;font-size:14px;color:#111827"><strong>Temporary Password:</strong> <code style="background:#fff;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-family:monospace;font-size:15px;letter-spacing:0.05em">${tempPassword}</code></p>
+    </div>
+    <p style="margin:0 0 16px;font-size:13px;color:#6b7280">
+      Please log in and change your password immediately. This temporary password will work until you update it.
+    </p>
+    <a href="${loginUrl}" style="display:inline-block;background:#E85D04;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Log In Now →</a>
+    <p style="margin:20px 0 0;font-size:12px;color:#9ca3af">If you did not expect this invitation, please ignore this email.</p>
+  </div>
+</div></body></html>`
+
+    return sendEmail({
+        to: staffEmail,
+        subject: `You've been invited to ${restaurantName} — Login credentials inside`,
+        html,
+    })
+}
+
+export async function sendLowStockAlertEmail(
+    managerEmail: string,
+    restaurantName: string,
+    items: { name: string; stock_quantity: number; reorder_level: number; unit: string }[]
+) {
+    const rows = items
+        .map(i => `<tr><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6">${i.name}</td><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:center;color:#dc2626;font-weight:600">${i.stock_quantity} ${i.unit}</td><td style="padding:6px 12px;border-bottom:1px solid #f3f4f6;text-align:center;color:#6b7280">${i.reorder_level} ${i.unit}</td></tr>`)
+        .join('')
+
+    const html = `<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9fafb;margin:0;padding:24px">
+<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden">
+  <div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:16px 24px;display:flex;align-items:center;gap:8px">
+    <span style="font-size:20px">⚠️</span>
+    <h2 style="margin:0;color:#dc2626;font-size:16px">Low Stock Alert — ${restaurantName}</h2>
+  </div>
+  <div style="padding:20px 24px">
+    <p style="margin:0 0 16px;color:#374151;font-size:14px">The following ingredients have dropped below their reorder threshold:</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#f9fafb">
+        <th style="padding:8px 12px;text-align:left;color:#6b7280;font-weight:600">Ingredient</th>
+        <th style="padding:8px 12px;text-align:center;color:#6b7280;font-weight:600">Current Stock</th>
+        <th style="padding:8px 12px;text-align:center;color:#6b7280;font-weight:600">Reorder Level</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin:16px 0 0;font-size:12px;color:#9ca3af">Log in to the admin panel to restock these items.</p>
+  </div>
+</div></body></html>`
+
+    return sendEmail({
+        to: managerEmail,
+        subject: `[${restaurantName}] Low Stock Alert — ${items.length} item${items.length !== 1 ? 's' : ''} need restocking`,
+        html,
+    })
+}

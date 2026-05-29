@@ -2,6 +2,8 @@
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { requireRole } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
 
 export async function getActiveShiftsAction(restaurantId: string) {
     const supabase = await createAdminClient()
@@ -33,6 +35,68 @@ export async function approveShiftAction(shiftId: string, approvedBy: string) {
         .update({ is_approved: true, approved_by: approvedBy })
         .eq('id', shiftId)
     if (error) return { error: error.message }
+    revalidatePath('/admin/shifts')
+    return { success: true }
+}
+
+/**
+ * Manager corrects a shift's clock-in/clock-out time and break minutes.
+ * Recalculates hours_worked. Resets is_approved so the correction gets re-reviewed.
+ */
+export async function correctShiftAction(
+    shiftId: string,
+    correction: {
+        clock_in?: string   // ISO datetime
+        clock_out?: string  // ISO datetime
+        break_minutes?: number
+        notes?: string
+    }
+): Promise<{ error?: string; success?: boolean }> {
+    const currentUser = await requireRole('manager', 'super_admin')
+    const supabase = await createAdminClient()
+
+    const { data: shift } = await supabase
+        .from('staff_shifts')
+        .select('clock_in, clock_out, break_minutes, restaurant_id')
+        .eq('id', shiftId)
+        .single()
+
+    if (!shift) return { error: 'Shift not found' }
+
+    const newClockIn = correction.clock_in ?? shift.clock_in
+    const newClockOut = correction.clock_out ?? shift.clock_out
+    const newBreakMins = correction.break_minutes ?? shift.break_minutes ?? 0
+
+    let hoursWorked: number | null = null
+    if (newClockIn && newClockOut) {
+        const totalMins = (new Date(newClockOut).getTime() - new Date(newClockIn).getTime()) / 60000
+        hoursWorked = Math.max(0, Math.round((totalMins - newBreakMins) / 60 * 100) / 100)
+    }
+
+    const { error } = await supabase
+        .from('staff_shifts')
+        .update({
+            clock_in: newClockIn,
+            clock_out: newClockOut ?? null,
+            break_minutes: newBreakMins,
+            hours_worked: hoursWorked,
+            notes: correction.notes !== undefined ? correction.notes : undefined,
+            is_approved: false, // reset — corrected shift needs re-approval
+        })
+        .eq('id', shiftId)
+
+    if (error) return { error: error.message }
+
+    void logAudit({
+        restaurantId: shift.restaurant_id,
+        userId: currentUser.id,
+        action: 'shift_corrected',
+        entityType: 'shift',
+        entityId: shiftId,
+        oldValue: { clock_in: shift.clock_in, clock_out: shift.clock_out, break_minutes: shift.break_minutes },
+        newValue: { clock_in: newClockIn, clock_out: newClockOut, break_minutes: newBreakMins, hours_worked: hoursWorked },
+    })
+
     revalidatePath('/admin/shifts')
     return { success: true }
 }
