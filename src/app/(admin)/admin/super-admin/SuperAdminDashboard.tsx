@@ -29,10 +29,10 @@ interface SaasMetrics {
 }
 
 const TIER_COLORS: Record<string, string> = {
-    free: 'bg-gray-100 text-gray-700',
-    basic: 'bg-blue-100 text-blue-700',
-    pro: 'bg-purple-100 text-purple-700',
-    enterprise: 'bg-amber-100 text-amber-700',
+    free:       'bg-gray-100 text-gray-700 border-gray-200',
+    basic:      'bg-blue-100 text-blue-700 border-blue-200',
+    pro:        'bg-purple-100 text-purple-700 border-purple-200',
+    enterprise: 'bg-amber-100 text-amber-700 border-amber-200',
 }
 
 export default function SuperAdminDashboard({
@@ -255,60 +255,32 @@ export default function SuperAdminDashboard({
     })
 
     return (
-        <div className="space-y-8">
-            {/* SaaS Control Panel Header */}
-            <div className="sticky top-0 z-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg p-6 text-white mb-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-white/20 rounded-xl p-3">
-                            <Building2 size={28} />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold">🏢 SaaS Control Panel</h1>
-                            <p className="text-indigo-100 text-sm mt-1">Manage all restaurant tenants and subscriptions</p>
-                        </div>
-                    </div>
-                    <div className="hidden md:flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
-                        <Crown size={16} />
-                        <span className="text-sm font-semibold">SUPER ADMIN</span>
-                    </div>
+        <div className="space-y-5 md:space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                        <Crown size={18} className="text-indigo-500" />
+                        Tenant Management
+                    </h1>
+                    <p className="text-sm text-gray-400 mt-0.5">Manage subscriptions, tiers and restaurant accounts</p>
                 </div>
             </div>
 
             {/* Metrics Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <MetricCard
-                    icon={Building2}
-                    label="Total Restaurants"
-                    value={metrics.totalRestaurants}
-                    color="bg-blue-500"
-                />
-                <MetricCard
-                    icon={CheckCircle}
-                    label="Active"
-                    value={metrics.activeRestaurants}
-                    color="bg-green-500"
-                />
-                <MetricCard
-                    icon={ShoppingBag}
-                    label="Total Orders"
-                    value={metrics.totalOrders}
-                    color="bg-purple-500"
-                />
-                <MetricCard
-                    icon={Crown}
-                    label="Pro+ Accounts"
-                    value={(metrics.tierBreakdown.pro || 0) + (metrics.tierBreakdown.enterprise || 0)}
-                    color="bg-amber-500"
-                />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <MetricCard icon={Building2}   bg="bg-indigo-50"  ic="text-indigo-600"  label="Total Tenants"  value={metrics.totalRestaurants} />
+                <MetricCard icon={CheckCircle} bg="bg-emerald-50" ic="text-emerald-600" label="Active"         value={metrics.activeRestaurants} />
+                <MetricCard icon={ShoppingBag} bg="bg-blue-50"    ic="text-blue-600"    label="Total Orders"   value={metrics.totalOrders} />
+                <MetricCard icon={Crown}       bg="bg-purple-50"  ic="text-purple-600"  label="Pro+ Accounts"  value={(metrics.tierBreakdown.pro || 0) + (metrics.tierBreakdown.enterprise || 0)} />
             </div>
 
             {/* Tier Breakdown */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-                <h3 className="font-semibold text-gray-800 mb-4">Subscription Distribution</h3>
-                <div className="flex gap-4 flex-wrap">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                <h3 className="font-semibold text-gray-900 text-sm mb-3">Subscription Distribution</h3>
+                <div className="flex gap-2 flex-wrap">
                     {Object.entries(metrics.tierBreakdown).map(([tier, count]) => (
-                        <div key={tier} className={`px-4 py-2 rounded-full text-sm font-semibold ${TIER_COLORS[tier] || 'bg-gray-100 text-gray-700'}`}>
+                        <div key={tier} className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${TIER_COLORS[tier] || 'bg-gray-100 text-gray-700'}`}>
                             {tier.charAt(0).toUpperCase() + tier.slice(1)}: {count}
                         </div>
                     ))}
@@ -333,8 +305,8 @@ export default function SuperAdminDashboard({
             )}
 
             {/* Restaurant List */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/30 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                         <h3 className="text-lg font-semibold text-gray-800">All Restaurants</h3>
                         <p className="text-sm text-gray-500 mt-1">Manage tenants, tiers, and suspension</p>
@@ -724,7 +696,7 @@ export default function SuperAdminDashboard({
                         </div>
                         <div className="p-6 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Amount (Rs.)</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount (Rs.)</label>
                                 <input
                                     type="number"
                                     min="0"
@@ -732,15 +704,15 @@ export default function SuperAdminDashboard({
                                     placeholder="e.g. 1999"
                                     value={paymentForm.amount}
                                     onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Method</label>
                                 <select
                                     value={paymentForm.method}
                                     onChange={e => setPaymentForm(p => ({ ...p, method: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                                 >
                                     <option value="cash">Cash</option>
                                     <option value="esewa">eSewa</option>
@@ -750,23 +722,23 @@ export default function SuperAdminDashboard({
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Reference / Transaction ID</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Reference / Transaction ID</label>
                                 <input
                                     type="text"
                                     placeholder="Optional — transaction code"
                                     value={paymentForm.reference}
                                     onChange={e => setPaymentForm(p => ({ ...p, reference: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">Notes</label>
                                 <input
                                     type="text"
                                     placeholder="Optional"
                                     value={paymentForm.notes}
                                     onChange={e => setPaymentForm(p => ({ ...p, notes: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                                    className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                                 />
                             </div>
                         </div>
@@ -817,20 +789,24 @@ function MetricCard({
     icon: Icon,
     label,
     value,
-    color,
+    bg,
+    ic,
 }: {
     icon: React.ElementType
     label: string
     value: number
-    color: string
+    bg: string
+    ic: string
 }) {
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className={`inline-flex p-2 rounded-lg text-white ${color} mb-3`}>
-                <Icon size={18} />
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
+                <Icon size={18} className={ic} />
             </div>
-            <div className="text-2xl font-bold text-gray-900">{value.toLocaleString()}</div>
-            <div className="text-sm text-gray-500 mt-0.5">{label}</div>
+            <div className="min-w-0">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate">{label}</p>
+                <p className="text-xl font-bold text-gray-900 leading-tight tabular-nums">{value.toLocaleString()}</p>
+            </div>
         </div>
     )
 }

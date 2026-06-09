@@ -1,7 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Users, UtensilsCrossed, Settings, LogOut, BarChart3, Palette, Grid3X3, Menu, X, TrendingUp, ShoppingBag, Tag, Heart, DollarSign, Package, FileText, Truck, Clock, CreditCard } from 'lucide-react'
+import {
+    Users, UtensilsCrossed, Settings, LogOut, BarChart3, Palette, Grid3X3,
+    Menu, X, TrendingUp, ShoppingBag, Tag, Heart, DollarSign, Package,
+    FileText, Truck, Clock, CreditCard,
+} from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import VideoLogo from '@/components/shared/VideoLogo'
@@ -14,11 +18,9 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
     const [isOpen, setIsOpen] = useState(false)
     const prevPathRef = useRef(pathname)
 
-    // Auto-close drawer on route change
     useEffect(() => {
         if (prevPathRef.current !== pathname) {
             prevPathRef.current = pathname
-            // Defer to avoid synchronous setState within render cycle
             queueMicrotask(() => setIsOpen(false))
         }
     }, [pathname])
@@ -29,120 +31,112 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
         router.refresh()
     }
 
-    const sidebarContent = (
-        <>
-            <div className="p-5 md:p-6 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-3 min-w-0">
-                    <VideoLogo className="h-8 shrink-0" />
+    const content = (
+        <div className="flex flex-col h-full">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                    <VideoLogo className="h-7 shrink-0" />
                     {restaurantName && (
-                        <span className="text-sm font-semibold text-gray-800 truncate">{restaurantName}</span>
+                        <div className="min-w-0">
+                            <p className="text-xs font-bold text-gray-800 truncate leading-none">{restaurantName}</p>
+                            <p className="text-[9px] font-semibold text-gray-400 tracking-widest uppercase mt-0.5">Admin</p>
+                        </div>
                     )}
                 </div>
-                {/* Close button — mobile only */}
-                <button
-                    onClick={() => setIsOpen(false)}
-                    className="md:hidden p-2 -mr-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 shrink-0"
-                >
-                    <X size={20} />
+                <button onClick={() => setIsOpen(false)}
+                        className="md:hidden p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                    <X size={18} />
                 </button>
             </div>
 
-            <nav className="flex-1 p-3 md:p-4 space-y-1 overflow-y-auto">
-                <NavLink href="/admin/dashboard" icon={BarChart3} label="Overview" currentPath={pathname} />
-                <NavLink href="/admin/menu" icon={UtensilsCrossed} label="Menu" currentPath={pathname} />
-                <NavLink href="/admin/orders" icon={ShoppingBag} label="Orders" currentPath={pathname} />
-                <NavLink href="/admin/payments" icon={CreditCard} label="Payments" currentPath={pathname} />
-                <NavLink href="/admin/takeout" icon={Truck} label="Takeout" currentPath={pathname} />
-                <NavLink href="/admin/staff" icon={Users} label="Staff" currentPath={pathname} />
-                <NavLink href="/admin/tables" icon={Grid3X3} label="Tables & QR" currentPath={pathname} />
-                <NavLink href="/admin/analytics" icon={TrendingUp} label="Analytics" currentPath={pathname} />
+            {/* Nav */}
+            <nav className="flex-1 overflow-y-auto py-3 px-2.5 scrollbar-thin space-y-0.5">
+                <NavItem href="/admin/dashboard"  icon={BarChart3}       label="Overview"        path={pathname} />
+                <NavItem href="/admin/menu"        icon={UtensilsCrossed} label="Menu"            path={pathname} />
+                <NavItem href="/admin/orders"      icon={ShoppingBag}     label="Orders"         path={pathname} />
+                <NavItem href="/admin/payments"    icon={CreditCard}      label="Payments"       path={pathname} />
+                <NavItem href="/admin/takeout"     icon={Truck}           label="Takeout"        path={pathname} />
+                <NavItem href="/admin/staff"       icon={Users}           label="Staff"          path={pathname} />
+                <NavItem href="/admin/tables"      icon={Grid3X3}         label="Tables & QR"    path={pathname} />
+                <NavItem href="/admin/analytics"   icon={TrendingUp}      label="Analytics"      path={pathname} />
 
-                <div className="pt-3 mt-3 border-t border-gray-100">
-                    <h4 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Revenue</h4>
-                    <NavLink href="/admin/pricing" icon={DollarSign} label="Dynamic Pricing" currentPath={pathname} />
-                    <NavLink href="/admin/promos" icon={Tag} label="Promo Codes" currentPath={pathname} />
-                    <NavLink href="/admin/loyalty" icon={Heart} label="Loyalty Program" currentPath={pathname} />
-                    <NavLink href="/admin/reports" icon={FileText} label="EOD Reports" currentPath={pathname} />
-                </div>
+                <SectionLabel>Revenue</SectionLabel>
+                <NavItem href="/admin/pricing"    icon={DollarSign} label="Dynamic Pricing" path={pathname} />
+                <NavItem href="/admin/promos"     icon={Tag}        label="Promo Codes"     path={pathname} />
+                <NavItem href="/admin/loyalty"    icon={Heart}      label="Loyalty"         path={pathname} />
+                <NavItem href="/admin/reports"    icon={FileText}   label="EOD Reports"     path={pathname} />
 
-                <div className="pt-3 mt-3 border-t border-gray-100">
-                    <h4 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Operations</h4>
-                    <NavLink href="/admin/ingredients" icon={Package} label="Ingredients" currentPath={pathname} />
-                    <NavLink href="/admin/shifts" icon={Clock} label="Staff Shifts" currentPath={pathname} />
-                </div>
+                <SectionLabel>Operations</SectionLabel>
+                <NavItem href="/admin/ingredients" icon={Package} label="Ingredients"  path={pathname} />
+                <NavItem href="/admin/shifts"      icon={Clock}   label="Staff Shifts" path={pathname} />
 
-                <div className="pt-3 mt-3 border-t border-gray-100">
-                    <h4 className="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Config</h4>
-                    <NavLink href="/admin/homepage" icon={Palette} label="Homepage" currentPath={pathname} />
-                    <NavLink href="/admin/theme" icon={Palette} label="Brand & Theme" currentPath={pathname} />
-                    <NavLink href="/admin/settings" icon={Settings} label="Settings" currentPath={pathname} />
-                </div>
+                <SectionLabel>Config</SectionLabel>
+                <NavItem href="/admin/homepage" icon={Palette}   label="Homepage"      path={pathname} />
+                <NavItem href="/admin/theme"    icon={Palette}   label="Brand & Theme" path={pathname} />
+                <NavItem href="/admin/settings" icon={Settings}  label="Settings"      path={pathname} />
             </nav>
 
-            <div className="p-3 md:p-4 border-t border-gray-200">
+            {/* Footer */}
+            <div className="px-2.5 py-3 border-t border-gray-100 shrink-0">
                 <button
                     onClick={handleSignOut}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-600 hover:text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition active:scale-95"
                 >
-                    <LogOut size={18} />
+                    <LogOut size={16} className="shrink-0" />
                     Sign Out
                 </button>
             </div>
-        </>
+        </div>
     )
 
     return (
         <>
-            {/* Mobile hamburger trigger — rendered in the layout header */}
             <button
                 onClick={() => setIsOpen(true)}
-                className="md:hidden fixed top-3 left-3 z-40 p-2.5 bg-white border border-gray-200 rounded-xl shadow-md text-gray-700 hover:bg-gray-50 active:scale-95 transition"
-                aria-label="Open menu"
+                className="md:hidden fixed top-3 left-3 z-40 p-2 bg-white border border-gray-200 rounded-xl shadow-md text-gray-700 hover:bg-gray-50 active:scale-95 transition"
             >
-                <Menu size={22} />
+                <Menu size={20} />
             </button>
 
-            {/* Mobile Backdrop */}
             {isOpen && (
-                <div
-                    className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
-                    onClick={() => setIsOpen(false)}
-                />
+                <div className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onClick={() => setIsOpen(false)} />
             )}
 
-            {/* Mobile Drawer */}
-            <aside
-                className={`
-                    md:hidden fixed top-0 left-0 bottom-0 w-72 bg-white z-50 flex flex-col shadow-2xl
-                    transition-transform duration-300 ease-out
-                    ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-                `}
-            >
-                {sidebarContent}
+            <aside className={`md:hidden fixed top-0 left-0 bottom-0 w-64 bg-white z-50 shadow-2xl transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                {content}
             </aside>
 
-            {/* Desktop Sidebar — always visible on md+ */}
-            <aside className="hidden md:flex w-64 bg-white border-r border-gray-200 shrink-0 flex-col z-20">
-                {sidebarContent}
+            <aside className="hidden md:block w-60 bg-white border-r border-gray-100 shrink-0 z-20 h-screen sticky top-0 overflow-hidden">
+                {content}
             </aside>
         </>
     )
 }
 
-function NavLink({ href, icon: Icon, label, currentPath }: { href: string, icon: React.ElementType, label: string, currentPath: string }) {
-    const isActive = currentPath === href || currentPath.startsWith(`${href}/`)
+function SectionLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <p className="px-3 pt-4 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+            {children}
+        </p>
+    )
+}
 
+function NavItem({ href, icon: Icon, label, path }: { href: string; icon: React.ElementType; label: string; path: string }) {
+    const isActive = path === href || path.startsWith(`${href}/`)
     return (
         <Link
             href={href}
-            className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors active:scale-[0.98]
-                ${isActive
-                    ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
-            `}
+            className={`relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all active:scale-[0.97] ${
+                isActive
+                    ? 'bg-[var(--color-primary)]/8 text-[var(--color-primary)]'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+            }`}
         >
-            <Icon size={18} className={isActive ? 'text-[var(--color-primary)]' : 'text-gray-400'} />
+            {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-[var(--color-primary)]" />
+            )}
+            <Icon size={16} className={`shrink-0 ${isActive ? 'text-[var(--color-primary)]' : 'text-gray-400'}`} />
             {label}
         </Link>
     )

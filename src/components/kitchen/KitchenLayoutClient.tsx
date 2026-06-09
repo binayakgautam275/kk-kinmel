@@ -20,12 +20,10 @@ export default function KitchenLayoutClient({ children, restaurantName, staffNam
     const supabase = createClient()
     const [time, setTime] = useState('')
 
-    // Register custom notification sound if configured
     useEffect(() => {
         setCustomNotificationSound(notificationSoundUrl || null)
     }, [notificationSoundUrl])
 
-    // Live clock
     useEffect(() => {
         const tick = () => setTime(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }))
         tick()
@@ -40,45 +38,40 @@ export default function KitchenLayoutClient({ children, restaurantName, staffNam
     }
 
     return (
-        <div className="min-h-screen bg-secondary text-white flex flex-col font-['var(--font-roboto)']">
-            {/* Top Navbar */}
-            <header className="bg-secondary brightness-90 border-b border-white/10 px-3 md:px-6 py-2.5 md:py-3 shrink-0 flex items-center justify-between shadow-md gap-3">
-                {/* Left: logo + restaurant */}
-                <div className="flex items-center gap-2 md:gap-3 min-w-0">
+        <div className="min-h-screen flex flex-col" style={{ background: '#0f1117' }}>
+            <header className="shrink-0 border-b border-white/[0.07] px-4 md:px-6 h-13 flex items-center justify-between gap-4"
+                    style={{ background: 'rgba(255,255,255,0.03)' }}>
+                <div className="flex items-center gap-3 min-w-0">
                     <VideoLogo className="h-7 shrink-0" variant="dark" />
-                    <div className="hidden sm:flex flex-col leading-tight min-w-0">
-                        {restaurantName && (
-                            <span className="text-xs font-semibold text-white truncate">{restaurantName}</span>
-                        )}
-                        <span className="text-[10px] text-gray-400 font-medium tracking-wide uppercase">Kitchen Display</span>
-                    </div>
+                    {restaurantName && (
+                        <div className="hidden sm:block">
+                            <p className="text-xs font-bold text-white/70 leading-none truncate max-w-[160px]">{restaurantName}</p>
+                            <p className="text-[9px] text-white/30 font-semibold tracking-widest uppercase mt-0.5">Kitchen Display</p>
+                        </div>
+                    )}
                 </div>
 
-                {/* Center: live clock */}
-                <span className="font-mono text-sm md:text-base font-semibold text-gray-300 tracking-wide tabular-nums">
-                    {time}
-                </span>
+                <div className="absolute left-1/2 -translate-x-1/2">
+                    <span className="font-mono text-base font-bold tabular-nums tracking-wider text-white/60">
+                        {time}
+                    </span>
+                </div>
 
-                {/* Right: sound toggle + staff name + sign out */}
-                <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
                     <SoundEnableButton variant="dark" />
                     {staffName && (
-                        <span className="hidden md:block text-xs text-gray-400 font-medium max-w-30 truncate">
-                            {staffName}
-                        </span>
+                        <span className="hidden md:block text-xs text-white/40 font-medium max-w-28 truncate">{staffName}</span>
                     )}
-                    <div className="h-4 w-px bg-gray-600 hidden md:block" />
                     <button
                         onClick={handleSignOut}
-                        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-red-400 transition active:scale-95 p-2 md:px-3 md:py-1.5 rounded-lg hover:bg-gray-700/50"
+                        className="flex items-center gap-1.5 text-xs font-medium text-white/40 hover:text-red-400 transition px-2.5 py-2 rounded-lg hover:bg-red-500/10 active:scale-95"
                     >
-                        <LogOut size={16} />
+                        <LogOut size={14} />
                         <span className="hidden md:inline">Sign Out</span>
                     </button>
                 </div>
             </header>
 
-            {/* Main Workspace */}
             <main className="flex-1 overflow-hidden">
                 {children}
             </main>

@@ -20,7 +20,7 @@ type RestaurantSettings = {
     pan_number: string | null
     vat_registered: boolean
     payment_qr_url: string | null
-    payment_qr_provider: string | null
+    payment_qr_label: string | null
 }
 
 type Features = Settings['features_v2']
@@ -166,7 +166,7 @@ export default function SettingsManager({
             {/* General Information */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 text-blue-600 rounded-lg">
+                    <div className="p-2 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg">
                         <Building size={20} />
                     </div>
                     <div>
@@ -252,9 +252,9 @@ export default function SettingsManager({
                             <div className="flex-1 space-y-2">
                                 {/* Upload button */}
                                 {canEdit && (
-                                    <label className={`flex items-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition ${uploadingField === 'logo_url' ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'}`}>
+                                    <label className={`flex items-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition ${uploadingField === 'logo_url' ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/5' : 'border-gray-300 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5'}`}>
                                         {uploadingField === 'logo_url'
-                                            ? <Loader2 size={15} className="animate-spin text-blue-500" />
+                                            ? <Loader2 size={15} className="animate-spin text-[var(--color-primary)]" />
                                             : <Upload size={15} className="text-gray-500" />
                                         }
                                         <span className="text-sm font-medium text-gray-600">
@@ -363,7 +363,7 @@ export default function SettingsManager({
             {/* Nepal / IRD Compliance */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                    <div className="p-2 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg">
                         <Shield size={20} />
                     </div>
                     <div>
@@ -411,7 +411,7 @@ export default function SettingsManager({
             {/* QR Payment Setup */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
-                    <div className="p-2 bg-green-100 text-green-600 rounded-lg">
+                    <div className="p-2 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg">
                         <QrCode size={20} />
                     </div>
                     <div>
@@ -426,9 +426,9 @@ export default function SettingsManager({
                             <label className="text-sm font-medium text-gray-700 mb-2 block">QR Code Image</label>
                             <div className="space-y-2">
                                 {canEdit && (
-                                    <label className={`flex items-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition ${uploadingField === 'payment_qr_url' ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-500 hover:bg-blue-50'}`}>
+                                    <label className={`flex items-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-lg cursor-pointer transition ${uploadingField === 'payment_qr_url' ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/5' : 'border-gray-300 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5'}`}>
                                         {uploadingField === 'payment_qr_url'
-                                            ? <Loader2 size={15} className="animate-spin text-blue-500" />
+                                            ? <Loader2 size={15} className="animate-spin text-[var(--color-primary)]" />
                                             : <Upload size={15} className="text-gray-500" />
                                         }
                                         <span className="text-sm font-medium text-gray-600">
@@ -457,8 +457,8 @@ export default function SettingsManager({
                         <div>
                             <label className="text-sm font-medium text-gray-700 mb-2 block">QR Provider</label>
                             <select
-                                name="payment_qr_provider"
-                                value={formData.payment_qr_provider || ''}
+                                name="payment_qr_label"
+                                value={formData.payment_qr_label || ''}
                                 onChange={handleChange}
                                 disabled={!canEdit || isSubmitting}
                                 className="w-full border-gray-300 rounded-lg shadow-sm sm:text-sm p-2.5 border disabled:bg-gray-50 disabled:text-gray-500"
@@ -514,7 +514,7 @@ export default function SettingsManager({
         {/* Feature Toggles — separate from the form since they save instantly */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mt-6 max-w-4xl">
             <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
-                <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                <div className="p-2 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-lg">
                     {isSavingFeatures ? <Loader2 size={20} className="animate-spin" /> : <ToggleRight size={20} />}
                 </div>
                 <div>
@@ -546,7 +546,7 @@ export default function SettingsManager({
                             disabled={!canEdit || isSavingFeatures}
                             className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
                                 features[key]
-                                    ? 'bg-indigo-50 border-indigo-200'
+                                    ? 'bg-[var(--color-primary)]/8 border-[var(--color-primary)]/20'
                                     : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
@@ -555,7 +555,7 @@ export default function SettingsManager({
                                 <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
                             </div>
                             {features[key] ? (
-                                <ToggleRight size={28} className="text-indigo-600 shrink-0" />
+                                <ToggleRight size={28} className="text-[var(--color-primary)] shrink-0" />
                             ) : (
                                 <ToggleLeft size={28} className="text-gray-400 shrink-0" />
                             )}

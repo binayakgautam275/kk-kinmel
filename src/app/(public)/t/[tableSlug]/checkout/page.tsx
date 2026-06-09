@@ -10,7 +10,6 @@ import { ArrowLeft, Trash2, Plus, Minus, Loader2 } from 'lucide-react'
 import PromoCodeInput from '@/components/customer/PromoCodeInput'
 import LoyaltyPanel from '@/components/customer/LoyaltyPanel'
 import SplitBillModal from '@/components/customer/SplitBillModal'
-import NepalPaymentPanel from '@/components/customer/NepalPaymentPanel'
 import { useFeatures } from '@/lib/contexts/FeatureContext'
 import { useParams } from 'next/navigation'
 
@@ -187,15 +186,6 @@ export default function CheckoutPage() {
                     </div>
                 )}
 
-                {/* Nepal QR Payment — gated by nepalPayEnabled flag */}
-                {restaurantId && features.nepalPayEnabled && (
-                    <div className="bg-white rounded-[var(--border-radius)] shadow-sm border border-gray-100 p-4 mb-6">
-                        <NepalPaymentPanel
-                            restaurantId={restaurantId}
-                            totalAmount={finalTotal()}
-                        />
-                    </div>
-                )}
             </main>
 
             {/* Persistent Bottom Checkout Bar */}

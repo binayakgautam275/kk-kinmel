@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { QrCode, Upload, CheckCircle, Loader2, Banknote, ScanLine } from 'lucide-react'
+import { Upload, CheckCircle, Loader2, Banknote, ScanLine, Camera, X } from 'lucide-react'
 import { submitPaymentClaim } from '@/app/(public)/t/[tableSlug]/checkout/nepal-payment-actions'
 import Image from 'next/image'
 
@@ -15,10 +15,25 @@ interface NepalPaymentPanelProps {
 
 type PaymentMode = 'qr' | 'cash'
 
+const PROVIDER_LABELS: Record<string, string> = {
+    esewa: 'eSewa',
+    khalti: 'Khalti',
+    fonepay: 'Fonepay',
+    nepal_pay: 'Nepal Pay',
+}
+
+const PROVIDER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+    esewa:     { bg: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200' },
+    khalti:    { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+    fonepay:   { bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200' },
+    nepal_pay: { bg: 'bg-red-50',    text: 'text-red-700',    border: 'border-red-200' },
+}
+
 export default function NepalPaymentPanel({
     restaurantId,
     totalAmount,
     qrUrl,
+    provider,
     orderId,
 }: NepalPaymentPanelProps) {
     const [mode, setMode] = useState<PaymentMode>('qr')
@@ -29,18 +44,35 @@ export default function NepalPaymentPanel({
     const [submitted, setSubmitted] = useState(false)
     const [error, setError] = useState('')
 
+    const providerKey = provider?.toLowerCase() ?? ''
+    const providerLabel = PROVIDER_LABELS[providerKey] ?? provider ?? 'QR'
+    const providerColor = PROVIDER_COLORS[providerKey] ?? { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' }
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
-        if (file) {
-            setScreenshot(file)
-            setPreviewUrl(URL.createObjectURL(file))
-        }
+        if (!file) return
+        if (previewUrl) URL.revokeObjectURL(previewUrl)
+        setScreenshot(file)
+        setPreviewUrl(URL.createObjectURL(file))
+        setError('')
+    }
+
+    const removeScreenshot = () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl)
+        setScreenshot(null)
+        setPreviewUrl(null)
     }
 
     const handleSubmit = async () => {
-        if (mode === 'qr' && (!phone || phone.length < 10)) {
-            setError('Please enter a valid phone number')
-            return
+        if (mode === 'qr') {
+            if (!phone || phone.replace(/\D/g, '').length < 10) {
+                setError('Enter your registered phone number (10 digits)')
+                return
+            }
+            if (!screenshot) {
+                setError('Please upload your payment screenshot to confirm')
+                return
+            }
         }
 
         setIsSubmitting(true)
@@ -66,17 +98,17 @@ export default function NepalPaymentPanel({
 
     if (submitted) {
         return (
-            <div className="text-center py-6">
+            <div className="text-center py-8">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
                     <CheckCircle size={32} className="text-green-600" />
                 </div>
                 <h3 className="font-semibold text-gray-900 text-lg">
-                    {mode === 'cash' ? 'Cash Payment Noted!' : 'Payment Claimed!'}
+                    {mode === 'cash' ? 'Waiter Notified!' : 'Payment Submitted!'}
                 </h3>
-                <p className="text-gray-500 text-sm mt-2">
+                <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
                     {mode === 'cash'
-                        ? 'Your waiter has been notified. They will collect payment shortly.'
-                        : 'Your payment is being verified by the staff. You\'ll receive confirmation shortly.'}
+                        ? 'Your waiter will come to collect payment shortly.'
+                        : 'Staff will verify your payment and confirm shortly.'}
                 </p>
             </div>
         )
@@ -84,7 +116,7 @@ export default function NepalPaymentPanel({
 
     return (
         <div className="space-y-4">
-            {/* Payment method selector */}
+            {/* Mode selector */}
             <div className="grid grid-cols-2 gap-2">
                 <button
                     onClick={() => { setMode('qr'); setError('') }}
@@ -95,7 +127,7 @@ export default function NepalPaymentPanel({
                     }`}
                 >
                     <ScanLine size={16} />
-                    QR Payment
+                    {providerLabel} QR
                 </button>
                 <button
                     onClick={() => { setMode('cash'); setError('') }}
@@ -112,39 +144,46 @@ export default function NepalPaymentPanel({
 
             {mode === 'qr' && (
                 <div className="space-y-4">
-                    {/* QR Code Display */}
+                    {/* QR Code */}
                     {qrUrl ? (
-                        <div className="bg-gray-50 rounded-xl p-4 flex flex-col items-center">
-                            <p className="text-sm text-gray-600 mb-3 font-medium">
-                                Scan to pay <span className="text-[var(--color-primary)] font-bold">Rs. {totalAmount.toFixed(2)}</span>
+                        <div className={`rounded-xl p-4 flex flex-col items-center border ${providerColor.bg} ${providerColor.border}`}>
+                            <p className={`text-sm font-semibold mb-1 ${providerColor.text}`}>
+                                Scan &amp; Pay with {providerLabel}
                             </p>
-                            <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                            <p className="text-2xl font-bold text-gray-900 mb-3">
+                                Rs. {totalAmount.toFixed(2)}
+                            </p>
+                            <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
                                 <Image
                                     src={qrUrl}
-                                    alt="Payment QR Code"
+                                    alt={`${providerLabel} Payment QR Code`}
                                     width={200}
                                     height={200}
                                     className="w-48 h-48 object-contain"
                                 />
                             </div>
-                            <p className="text-xs text-gray-400 mt-2">
-                                Open eSewa / Khalti / Fonepay and scan this code
+                            <p className="text-xs text-gray-400 mt-2 text-center">
+                                Open {providerLabel} app → Scan QR → Enter exact amount → Pay
                             </p>
                         </div>
                     ) : (
-                        <div className="bg-gray-50 rounded-xl p-6 flex flex-col items-center text-center">
-                            <QrCode size={48} className="text-gray-300 mb-2" />
+                        <div className="bg-gray-50 rounded-xl p-6 flex flex-col items-center text-center border border-gray-200">
+                            <ScanLine size={40} className="text-gray-300 mb-2" />
                             <p className="text-sm text-gray-500">
-                                QR code not configured. Please ask the restaurant for payment details.
+                                QR code not set up yet. Ask staff for payment details.
                             </p>
                         </div>
                     )}
 
+                    {/* After-payment confirmation */}
                     <div className="space-y-3">
-                        <p className="text-sm font-medium text-gray-700">After paying, confirm below:</p>
+                        <p className="text-sm font-semibold text-gray-700">After paying, confirm below:</p>
 
+                        {/* Phone */}
                         <div>
-                            <label className="block text-sm text-gray-600 mb-1">Your phone number</label>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Registered phone number <span className="text-red-500">*</span>
+                            </label>
                             <input
                                 type="tel"
                                 value={phone}
@@ -154,19 +193,38 @@ export default function NepalPaymentPanel({
                             />
                         </div>
 
+                        {/* Screenshot — required for QR */}
                         <div>
-                            <label className="block text-sm text-gray-600 mb-1">
-                                Payment screenshot <span className="text-gray-400">(optional)</span>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Payment screenshot <span className="text-red-500">*</span>
                             </label>
-                            <label className="flex items-center gap-2 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition">
-                                <Upload size={18} className="text-gray-400" />
-                                <span className="text-sm text-gray-500">
-                                    {screenshot ? screenshot.name : 'Tap to upload screenshot'}
-                                </span>
-                                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                            </label>
-                            {previewUrl && (
-                                <img src={previewUrl} alt="Screenshot preview" className="mt-2 h-24 rounded-lg object-cover border border-gray-200" />
+                            {previewUrl ? (
+                                <div className="relative inline-block">
+                                    <img
+                                        src={previewUrl}
+                                        alt="Payment screenshot"
+                                        className="h-28 w-auto rounded-lg object-cover border border-gray-200"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={removeScreenshot}
+                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            ) : (
+                                <label className="flex items-center gap-2 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition">
+                                    <Camera size={18} className="text-gray-400" />
+                                    <span className="text-sm text-gray-500">Tap to upload screenshot</span>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                    />
+                                </label>
                             )}
                         </div>
                     </div>
@@ -177,47 +235,66 @@ export default function NepalPaymentPanel({
                 <div className="space-y-4">
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
                         <Banknote size={36} className="text-amber-500 mx-auto mb-2" />
-                        <p className="text-sm font-medium text-amber-800">
-                            Pay Rs. {totalAmount.toFixed(2)} in cash
+                        <p className="text-base font-bold text-amber-900">
+                            Rs. {totalAmount.toFixed(2)}
                         </p>
-                        <p className="text-xs text-amber-600 mt-1">
-                            Your waiter will collect payment at the table.
+                        <p className="text-sm text-amber-700 mt-1">
+                            Pay in cash — your waiter will collect at the table.
                         </p>
                     </div>
 
                     <div>
-                        <label className="block text-sm text-gray-600 mb-1">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
                             Upload receipt <span className="text-gray-400">(optional)</span>
                         </label>
-                        <label className="flex items-center gap-2 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition">
-                            <Upload size={18} className="text-gray-400" />
-                            <span className="text-sm text-gray-500">
-                                {screenshot ? screenshot.name : 'Tap to upload proof of payment'}
-                            </span>
-                            <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-                        </label>
-                        {previewUrl && (
-                            <img src={previewUrl} alt="Receipt preview" className="mt-2 h-24 rounded-lg object-cover border border-gray-200" />
+                        {previewUrl ? (
+                            <div className="relative inline-block">
+                                <img
+                                    src={previewUrl}
+                                    alt="Receipt"
+                                    className="h-28 w-auto rounded-lg object-cover border border-gray-200"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={removeScreenshot}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow"
+                                >
+                                    <X size={12} />
+                                </button>
+                            </div>
+                        ) : (
+                            <label className="flex items-center gap-2 border border-dashed border-gray-300 rounded-lg p-3 cursor-pointer hover:bg-gray-50 transition">
+                                <Upload size={18} className="text-gray-400" />
+                                <span className="text-sm text-gray-500">Tap to upload proof</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+                            </label>
                         )}
                     </div>
                 </div>
             )}
 
             {error && (
-                <p className="text-sm text-red-600 font-medium">{error}</p>
+                <p className="text-sm text-red-600 font-medium bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                    {error}
+                </p>
             )}
 
             <button
                 onClick={handleSubmit}
-                disabled={isSubmitting || (mode === 'qr' && !phone)}
-                className="w-full bg-[var(--color-primary)] text-white font-medium rounded-xl py-3 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-60"
+                disabled={isSubmitting || (mode === 'qr' && (!phone || !screenshot))}
+                className="w-full bg-[var(--color-primary)] text-white font-semibold rounded-xl py-3.5 flex items-center justify-center gap-2 active:scale-[0.98] transition-transform disabled:opacity-50"
             >
                 {isSubmitting ? (
-                    <><Loader2 className="animate-spin" size={18} /> Submitting...</>
+                    <><Loader2 className="animate-spin" size={18} /> Submitting…</>
                 ) : mode === 'cash' ? (
-                    <><Banknote size={18} /> Notify Waiter — I&apos;ll Pay Cash</>
+                    <><Banknote size={18} /> Notify Waiter — Pay Cash</>
                 ) : (
-                    <><CheckCircle size={18} /> I Have Paid</>
+                    <><CheckCircle size={18} /> Confirm Payment — Rs. {totalAmount.toFixed(2)}</>
                 )}
             </button>
         </div>

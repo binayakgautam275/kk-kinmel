@@ -19,7 +19,7 @@ export async function updateRestaurantSettingsAction(restaurantId: string, updat
         pan_number: updates.pan_number,
         vat_registered: updates.vat_registered,
         payment_qr_url: updates.payment_qr_url,
-        payment_qr_provider: updates.payment_qr_provider,
+        payment_qr_label: updates.payment_qr_label,
     }
 
     // Strip undefined values

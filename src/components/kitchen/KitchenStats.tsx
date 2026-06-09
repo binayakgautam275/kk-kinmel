@@ -27,9 +27,8 @@ export default function KitchenStats({
 
     useEffect(() => {
         const supabase = supabaseRef.current
-        // Listen to orders — update queue/preparing/ready counts
-        const orderChannel = supabase
-            .channel(`kitchen-stats-orders-${restaurantId}`)
+        const channel = supabase
+            .channel(`kitchen-stats-${restaurantId}`)
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
                 (payload) => {
                     const s = payload.new.status as string
@@ -42,16 +41,12 @@ export default function KitchenStats({
                 (payload) => {
                     const prev = payload.old.status as string
                     const next = payload.new.status as string
-
                     if ((prev === 'pending' || prev === 'confirmed') && next === 'preparing') {
-                        setQueued(n => Math.max(0, n - 1))
-                        setPreparing(n => n + 1)
+                        setQueued(n => Math.max(0, n - 1)); setPreparing(n => n + 1)
                     } else if (prev === 'preparing' && next === 'ready') {
-                        setPreparing(n => Math.max(0, n - 1))
-                        setReady(n => n + 1)
+                        setPreparing(n => Math.max(0, n - 1)); setReady(n => n + 1)
                     } else if ((prev === 'pending' || prev === 'confirmed') && next === 'ready') {
-                        setQueued(n => Math.max(0, n - 1))
-                        setReady(n => n + 1)
+                        setQueued(n => Math.max(0, n - 1)); setReady(n => n + 1)
                     } else if (next === 'delivered') {
                         setCompleted(n => n + 1)
                         if (prev === 'preparing') setPreparing(n => Math.max(0, n - 1))
@@ -64,70 +59,36 @@ export default function KitchenStats({
                 }
             )
             .subscribe()
-
-        return () => {
-            supabase.removeChannel(orderChannel)
-        }
+        return () => { supabase.removeChannel(channel) }
     }, [restaurantId])
+
+    const stats = [
+        { icon: Zap,         label: 'In Queue',   value: queued,    color: '#f59e0b', active: queued > 0 },
+        { icon: Clock,       label: 'Preparing',  value: preparing, color: '#f97316', active: preparing > 0 },
+        { icon: CheckCircle2,label: 'Ready',      value: ready,     color: '#10b981', active: ready > 0, pulse: ready > 0 },
+        { icon: Package,     label: 'Done Today', value: completed, color: '#60a5fa', active: true },
+    ]
 
     return (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-            <StatCard
-                icon={Zap}
-                label="In Queue"
-                value={String(queued)}
-                accent={queued > 0 ? 'yellow' : 'gray'}
-                pulse={queued > 0}
-            />
-            <StatCard
-                icon={Clock}
-                label="Preparing"
-                value={String(preparing)}
-                accent={preparing > 0 ? 'orange' : 'gray'}
-                pulse={preparing > 0}
-            />
-            <StatCard
-                icon={CheckCircle2}
-                label="Ready"
-                value={String(ready)}
-                accent={ready > 0 ? 'green' : 'gray'}
-                pulse={ready > 0}
-            />
-            <StatCard
-                icon={Package}
-                label="Completed"
-                value={String(completed)}
-                accent="blue"
-            />
-        </div>
-    )
-}
-
-const ACCENT: Record<string, { bg: string; icon: string; text: string; border: string }> = {
-    yellow: { bg: 'bg-yellow-900/20', icon: 'text-yellow-400', text: 'text-yellow-100', border: 'border-yellow-800' },
-    orange: { bg: 'bg-orange-900/20', icon: 'text-orange-400', text: 'text-orange-100', border: 'border-orange-800' },
-    green:  { bg: 'bg-emerald-900/20', icon: 'text-emerald-400', text: 'text-emerald-100', border: 'border-emerald-800' },
-    blue:   { bg: 'bg-blue-900/20', icon: 'text-blue-400', text: 'text-blue-100', border: 'border-blue-800' },
-    gray:   { bg: 'bg-gray-900/30', icon: 'text-gray-500', text: 'text-gray-100', border: 'border-gray-800' },
-}
-
-function StatCard({ icon: Icon, label, value, accent, pulse }: {
-    icon: React.ElementType
-    label: string
-    value: string
-    accent: string
-    pulse?: boolean
-}) {
-    const c = ACCENT[accent] || ACCENT.gray
-    return (
-        <div className={`rounded-xl border ${c.border} ${c.bg} p-3 md:p-4 flex items-center gap-3 shadow-sm backdrop-blur-sm`}>
-            <div className={`shrink-0 ${pulse ? 'animate-pulse' : ''}`}>
-                <Icon size={20} className={c.icon} />
-            </div>
-            <div className="min-w-0">
-                <p className={`text-lg md:text-2xl font-bold tabular-nums ${c.text}`}>{value}</p>
-                <p className="text-[10px] md:text-xs text-gray-400 font-medium truncate">{label}</p>
-            </div>
+            {stats.map((s) => {
+                const Icon = s.icon
+                return (
+                    <div key={s.label}
+                         className="rounded-xl border border-white/[0.08] p-3 md:p-4 flex items-center gap-3"
+                         style={{ background: s.active && s.color ? `${s.color}14` : 'rgba(255,255,255,0.03)' }}>
+                        <div className={`shrink-0 ${s.pulse ? 'animate-pulse' : ''}`}>
+                            <Icon size={20} style={{ color: s.active ? s.color : '#4b5563' }} />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: s.active ? s.color : '#6b7280' }}>
+                                {s.value}
+                            </p>
+                            <p className="text-[10px] md:text-xs text-white/30 font-medium mt-0.5">{s.label}</p>
+                        </div>
+                    </div>
+                )
+            })}
         </div>
     )
 }

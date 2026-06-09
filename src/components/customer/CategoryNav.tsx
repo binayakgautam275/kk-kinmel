@@ -17,7 +17,6 @@ export default function CategoryNav({
     const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({})
     const { t } = useTranslation()
 
-    // Scroll the active pill into view whenever it changes
     useEffect(() => {
         const btn = btnRefs.current[activeCategory]
         btn?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
@@ -25,49 +24,40 @@ export default function CategoryNav({
 
     const handleClick = (id: string) => {
         onCategoryChange(id)
-        // Scroll the section into view
         const target = document.getElementById(`category-section-${id}`)
         if (target) {
-            // Offset for the sticky header (14px header + 48px category nav ≈ 108px)
             const top = target.getBoundingClientRect().top + window.scrollY - 108
             window.scrollTo({ top, behavior: 'smooth' })
         }
     }
 
-    const isActive = (id: string) => activeCategory === id
-
     return (
-        <div className="bg-white border-b border-gray-100 sticky top-14 z-10">
+        <div className="bg-white/95 backdrop-blur-md border-b border-gray-100/80 sticky top-14 z-10">
             <div
                 ref={scrollRef}
-                className="flex overflow-x-auto hide-scrollbar gap-1 px-4 py-2"
-                style={{ scrollbarWidth: 'none' }}
+                className="flex overflow-x-auto gap-1.5 px-4 py-2.5"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-                <button
-                    ref={el => { btnRefs.current['all'] = el }}
-                    onClick={() => handleClick('all')}
-                    className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors shrink-0 ${
-                        isActive('all')
-                            ? 'bg-primary text-white'
-                            : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                    }`}
-                >
-                    All
-                </button>
-                {categories.map((c) => (
-                    <button
-                        key={c.id}
-                        ref={el => { btnRefs.current[c.id] = el }}
-                        onClick={() => handleClick(c.id)}
-                        className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors shrink-0 ${
-                            isActive(c.id)
-                                ? 'bg-primary text-white'
-                                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                        }`}
-                    >
-                        {t('category_name', c.id, c.name)}
-                    </button>
-                ))}
+                {['all', ...categories.map(c => c.id)].map((id, idx) => {
+                    const cat = categories.find(c => c.id === id)
+                    const label = id === 'all' ? 'All' : t('category_name', id, cat?.name || id)
+                    const isActive = activeCategory === id
+                    return (
+                        <button
+                            key={id}
+                            ref={el => { btnRefs.current[id] = el }}
+                            onClick={() => handleClick(id)}
+                            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 shrink-0 ${
+                                isActive
+                                    ? 'bg-[var(--color-primary)] text-white shadow-sm shadow-[var(--color-primary)]/30'
+                                    : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100 active:scale-95'
+                            }`}
+                        >
+                            {cat?.emoji && <span className="mr-1">{cat.emoji}</span>}
+                            {label}
+                        </button>
+                    )
+                })}
             </div>
         </div>
     )

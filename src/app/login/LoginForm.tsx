@@ -5,7 +5,7 @@ import { useActionState } from 'react'
 import Link from 'next/link'
 import { loginAction } from './actions'
 import VideoLogo from '@/components/shared/VideoLogo'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, ArrowRight, ChefHat, QrCode, BarChart3 } from 'lucide-react'
 
 const initialState = { error: null as string | null }
 
@@ -14,78 +14,138 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
     const [showPassword, setShowPassword] = useState(false)
 
     return (
-        <div className="w-full max-w-md bg-white rounded-2xl p-8 shadow-2xl mx-4">
-            <div className="flex flex-col items-center mb-8">
-                <VideoLogo className="h-10 mb-4" />
-                <h1 className="text-2xl font-bold text-center text-gray-900">Staff Login</h1>
-                <p className="text-sm text-gray-500 text-center mt-2">
-                    Sign in to access your dashboard
-                </p>
+        <div className="min-h-screen w-full flex">
+            {/* Left — brand panel */}
+            <div className="hidden lg:flex lg:w-[44%] relative flex-col justify-between p-12 overflow-hidden"
+                 style={{ background: 'linear-gradient(145deg, #1B263B 0%, #243447 60%, #1a3a2a 100%)' }}>
+                <div className="absolute inset-0 opacity-[0.05]"
+                     style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
+
+                <VideoLogo className="h-9 relative z-10" variant="dark" />
+
+                <div className="relative z-10 space-y-8">
+                    <div>
+                        <h2 className="text-3xl font-bold text-white leading-tight">
+                            Your restaurant,<br />running smarter.
+                        </h2>
+                        <p className="mt-3 text-gray-400 text-base leading-relaxed">
+                            Real-time orders, kitchen display, eSewa payments, and analytics — all in one place.
+                        </p>
+                    </div>
+                    <div className="space-y-4">
+                        {[
+                            { icon: <QrCode size={17} />, label: 'QR ordering', desc: 'Customers order from their phone' },
+                            { icon: <ChefHat size={17} />, label: 'Kitchen display', desc: 'Live order queue for kitchen staff' },
+                            { icon: <BarChart3 size={17} />, label: 'Analytics', desc: 'Revenue, trends, and reports' },
+                        ].map(f => (
+                            <div key={f.label} className="flex items-start gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-white/8 border border-white/10 flex items-center justify-center text-[var(--color-primary)] shrink-0">
+                                    {f.icon}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-white">{f.label}</p>
+                                    <p className="text-xs text-gray-400">{f.desc}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <p className="text-xs text-gray-600 relative z-10">© {new Date().getFullYear()} KKhane · Built for Nepal</p>
             </div>
 
-            <form action={formAction} className="space-y-6">
-                <input type="hidden" name="redirect" value={redirectTo} />
-
-                {state?.error && (
-                    <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm border border-red-200">
-                        {state.error}
+            {/* Right — form */}
+            <div className="flex-1 flex items-center justify-center p-6 bg-[#FAFAF8]">
+                <div className="w-full max-w-sm">
+                    <div className="lg:hidden flex justify-center mb-8">
+                        <VideoLogo className="h-8" />
                     </div>
-                )}
 
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">
-                        Email Address
-                    </label>
-                    <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        required
-                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
-                        placeholder="manager@restaurant.com"
-                    />
-                </div>
-
-                <div>
-                    <div className="flex items-center justify-between mb-1">
-                        <label className="block text-sm font-medium text-gray-700" htmlFor="password">
-                            Password
-                        </label>
-                        <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-gray-800 transition">
-                            Forgot password?
-                        </Link>
+                    <div className="mb-8">
+                        <h1 className="text-2xl font-bold text-[var(--color-secondary)]">Welcome back</h1>
+                        <p className="text-gray-500 text-sm mt-1">Sign in to your restaurant dashboard</p>
                     </div>
-                    <div className="relative">
-                        <input
-                            id="password"
-                            name="password"
-                            type={showPassword ? 'text' : 'password'}
-                            required
-                            className="w-full border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition"
-                            placeholder="••••••••"
-                        />
+
+                    <form action={formAction} className="space-y-4">
+                        <input type="hidden" name="redirect" value={redirectTo} />
+
+                        {state?.error && (
+                            <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl text-sm border border-red-100">
+                                {state.error}
+                            </div>
+                        )}
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5" htmlFor="email">
+                                Email address
+                            </label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                required
+                                className="input-base"
+                                placeholder="manager@myrestaurant.com"
+                            />
+                        </div>
+
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-sm font-medium text-gray-700" htmlFor="password">
+                                    Password
+                                </label>
+                                <Link href="/forgot-password"
+                                      className="text-xs text-[var(--color-primary)] hover:opacity-80 transition font-medium">
+                                    Forgot password?
+                                </Link>
+                            </div>
+                            <div className="relative">
+                                <input
+                                    id="password"
+                                    name="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    required
+                                    className="input-base pr-12"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition p-1"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                                </button>
+                            </div>
+                        </div>
+
                         <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
-                            tabIndex={-1}
+                            type="submit"
+                            disabled={isPending}
+                            className="w-full btn-primary py-3 text-sm rounded-xl justify-center mt-2"
                         >
-                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            {isPending ? (
+                                <span className="flex items-center gap-2 justify-center">
+                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    Signing in…
+                                </span>
+                            ) : (
+                                <span className="flex items-center gap-2 justify-center">
+                                    Sign in <ArrowRight size={16} />
+                                </span>
+                            )}
                         </button>
+                    </form>
+
+                    <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+                        <p className="text-sm text-gray-500">
+                            New restaurant?{' '}
+                            <Link href="/signup" className="text-[var(--color-primary)] font-semibold hover:opacity-80 transition">
+                                Create a free account
+                            </Link>
+                        </p>
                     </div>
                 </div>
-
-                <button
-                    type="submit"
-                    disabled={isPending}
-                    className="w-full bg-gray-900 text-white rounded-lg py-3 font-medium hover:bg-gray-800 disabled:opacity-50 transition shadow-md active:scale-95"
-                >
-                    {isPending ? 'Signing In...' : 'Sign In'}
-                </button>
-            </form>
-
-            <div className="mt-8 text-center text-xs text-gray-400">
-                Smart Restaurant Management System
             </div>
         </div>
     )
