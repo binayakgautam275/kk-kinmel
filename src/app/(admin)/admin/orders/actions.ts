@@ -18,7 +18,7 @@ export async function refundOrderAction(
 
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('id, restaurant_id, total_amount, payment_status, status, refunded_amount')
+        .select('id, restaurant_id, total_amount, payment_status, status, refunded_amount, customer_note')
         .eq('id', orderId)
         .single()
 
@@ -51,7 +51,9 @@ export async function refundOrderAction(
         .update({
             payment_status: newPaymentStatus,
             refunded_amount: newRefundedTotal,
-            customer_note: `${notePrefix} ${reason}`,
+            customer_note: order.customer_note
+                ? `${order.customer_note} | ${notePrefix} ${reason}`
+                : `${notePrefix} ${reason}`,
         })
         .eq('id', orderId)
 

@@ -98,7 +98,7 @@ export async function markCashPaid(
             .from('orders')
             .select('id', { count: 'exact', head: true })
             .eq('session_id', order.session_id)
-            .neq('payment_status', 'paid')
+            .not('payment_status', 'in', '("paid","refunded")')
             .neq('status', 'cancelled')
 
         if (unpaidCount === 0) {
@@ -179,7 +179,7 @@ export async function markDeliveredAndCashPaid(
             .from('orders')
             .select('id', { count: 'exact', head: true })
             .eq('session_id', order.session_id)
-            .neq('payment_status', 'paid')
+            .not('payment_status', 'in', '("paid","refunded")')
             .neq('status', 'cancelled')
 
         if (unpaidCount === 0) {

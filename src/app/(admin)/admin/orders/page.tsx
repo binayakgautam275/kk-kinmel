@@ -84,7 +84,7 @@ export default async function AdminOrdersPage() {
                                 const tableLabel = order.sessions?.tables?.label || '—'
                                 const itemCount = order.order_items?.length || 0
                                 const itemNames = order.order_items?.map((i) => `${i.quantity}x ${i.menu_items?.name}`).join(', ') || '—'
-                                const refundable = canRefund && order.payment_status !== 'refunded' && order.status !== 'cancelled'
+                                const refundable = canRefund && ['paid', 'unpaid'].includes(order.payment_status) && order.status !== 'cancelled'
 
                                 return (
                                     <tr key={order.id} className={`hover:bg-gray-50/50 transition ${order.payment_status === 'refunded' ? 'opacity-60' : ''}`}>
@@ -135,7 +135,7 @@ export default async function AdminOrdersPage() {
                     {orders?.map((order) => {
                         const tableLabel = order.sessions?.tables?.label || '—'
                         const itemNames = order.order_items?.map((i) => `${i.quantity}x ${i.menu_items?.name}`).join(', ') || ''
-                        const refundable = canRefund && order.payment_status !== 'refunded' && order.status !== 'cancelled'
+                        const refundable = canRefund && ['paid', 'unpaid'].includes(order.payment_status) && order.status !== 'cancelled'
 
                         return (
                             <div key={order.id} className={`p-4 space-y-2 ${order.payment_status === 'refunded' ? 'opacity-60' : ''}`}>
