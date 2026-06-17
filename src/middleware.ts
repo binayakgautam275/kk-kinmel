@@ -66,17 +66,22 @@ function getRoleFromToken(accessToken: string): string | null {
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
 
-    // Rate-limit public QR/table pages to prevent DoS
+    // Rate-limit public QR/table pages to prevent DoS.
+    // Wrapped in try/catch so a transient Redis failure never 500s a customer.
     if (/^\/t\//.test(pathname) || /^\/takeout\//.test(pathname)) {
         const limiter = getQrLimiter()
         if (limiter) {
-            const ip = getRequestIp(request)
-            const { success } = await limiter.limit(ip)
-            if (!success) {
-                return new NextResponse('Too many requests. Please slow down.', {
-                    status: 429,
-                    headers: { 'Content-Type': 'text/plain', 'Retry-After': '60' },
-                })
+            try {
+                const ip = getRequestIp(request)
+                const { success } = await limiter.limit(ip)
+                if (!success) {
+                    return new NextResponse('Too many requests. Please slow down.', {
+                        status: 429,
+                        headers: { 'Content-Type': 'text/plain', 'Retry-After': '60' },
+                    })
+                }
+            } catch {
+                // Redis unreachable — allow the request through rather than hard-failing
             }
         }
     }
