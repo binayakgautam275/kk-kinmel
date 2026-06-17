@@ -196,8 +196,14 @@ export const UpdateOwnerContactSchema = z.object({
 
 // Public self-service signup — extends CreateTenantSchema with Nepal business fields
 export const PublicSignupSchema = CreateTenantSchema.extend({
-  panNumber: z.string().regex(/^\d{9}$/, 'PAN must be 9 digits').optional().or(z.literal('')),
-  vatRegistered: z.boolean().optional().default(false),
+  panNumber:       z.string().regex(/^\d{9}$/, 'PAN must be 9 digits').optional().or(z.literal('')),
+  vatRegistered:   z.boolean().optional().default(false),
+  vatNumber:       z.string().regex(/^\d{9}$/, 'VAT number must be 9 digits').optional().or(z.literal('')),
+  slogan:          z.string().max(120).optional().or(z.literal('')),
+  restaurantEmail: z.string().email('Invalid email').optional().or(z.literal('')),
+  telephone:       z.string().max(20).optional().or(z.literal('')),
+  latitude:        z.number().optional(),
+  longitude:       z.number().optional(),
 })
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

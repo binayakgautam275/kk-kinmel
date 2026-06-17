@@ -87,6 +87,12 @@ export async function signupRestaurant(input: unknown): Promise<SignupResult> {
     const tier            = (data.subscriptionTier || 'free') as keyof typeof TIER_LIMITS
     const panNumber       = data.panNumber?.trim() || null
     const vatRegistered   = data.vatRegistered ?? false
+    const vatNumber       = data.vatNumber?.trim() || null
+    const slogan          = data.slogan?.trim() || null
+    const restaurantEmail = data.restaurantEmail?.trim().toLowerCase() || null
+    const telephone       = data.telephone?.trim() || null
+    const latitude        = data.latitude ?? null
+    const longitude       = data.longitude ?? null
 
     const supabase = await createAdminClient()
     const limits = TIER_LIMITS[tier]
@@ -125,11 +131,16 @@ export async function signupRestaurant(input: unknown): Promise<SignupResult> {
                 owner_id: authUserId,
                 name: restaurantName,
                 slug: restaurantSlug,
-                contact_email: ownerEmail,
+                contact_email: restaurantEmail || ownerEmail,
                 contact_phone: contactPhone,
                 address,
+                slogan,
+                telephone,
                 pan_number: panNumber,
                 vat_registered: vatRegistered,
+                vat_number: vatNumber,
+                latitude,
+                longitude,
                 subscription_tier: tier,
                 subscription_status: 'active',
                 max_staff: limits.max_staff,

@@ -41,6 +41,11 @@ export interface Restaurant {
     address: string | null
     pan_number: string | null
     vat_registered: boolean
+    vat_number: string | null
+    slogan: string | null
+    telephone: string | null
+    latitude: number | null
+    longitude: number | null
     payment_qr_url: string | null
     payment_qr_label: string
     // SaaS fields
