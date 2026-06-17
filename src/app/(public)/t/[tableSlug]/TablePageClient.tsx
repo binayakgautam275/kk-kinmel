@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import HomepageGate from '@/components/customer/HomepageGate'
 import type { MenuItem, MenuCategory } from '@/types/database'
@@ -10,7 +10,8 @@ import ServiceRequestPanel from '@/components/customer/ServiceRequestPanel'
 import VideoLogo from '@/components/shared/VideoLogo'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
-import { UtensilsCrossed } from 'lucide-react'
+import { UtensilsCrossed, RefreshCw } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 interface TablePageClientProps {
     tableData: {
@@ -43,7 +44,42 @@ export default function TablePageClient({
     translations,
     supportedLanguages,
 }: TablePageClientProps) {
-    const [showMenu, setShowMenu] = useState(!isValidSession)
+    // Live session state — updated by Supabase realtime if a waiter opens a session
+    const [liveSessionToken, setLiveSessionToken] = useState(sessionToken)
+    const [liveSessionUUID, setLiveSessionUUID] = useState(sessionUUID)
+    const hasSession = !!liveSessionToken
+
+    // Always start with menu visible — HomepageGate renders its own homepage layer
+    // on top; onProceed just ensures children are ready once that layer dismisses.
+    const [showMenu, setShowMenu] = useState(true)
+    const supabaseRef = useRef(createClient())
+
+    // Subscribe to session INSERT events for this table so the customer page
+    // enables ordering the moment a waiter opens a session — no refresh needed
+    useEffect(() => {
+        if (hasSession) return
+        const supabase = supabaseRef.current
+        const channel = supabase
+            .channel(`table-session-watch-${tableData.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'sessions',
+                    filter: `table_id=eq.${tableData.id}`,
+                },
+                (payload) => {
+                    const s = payload.new as { status: string; session_token: string; id: string }
+                    if (s.status === 'active' && s.session_token) {
+                        setLiveSessionToken(s.session_token)
+                        setLiveSessionUUID(s.id)
+                    }
+                }
+            )
+            .subscribe()
+        return () => { supabase.removeChannel(channel) }
+    }, [tableData.id, hasSession])
 
     const restaurantName = tableData.restaurants?.name || 'Restaurant'
     const logoUrl = tableData.restaurants?.logo_url
@@ -68,7 +104,7 @@ export default function TablePageClient({
                             <p className="text-sm font-bold text-[var(--color-secondary)] leading-none truncate">{restaurantName}</p>
                             <p className="text-[11px] text-gray-400 mt-0.5">
                                 Table {tableData.label}
-                                {!isValidSession && <span className="ml-1 text-amber-500 font-medium">· View only</span>}
+                                {!hasSession && <span className="ml-1 text-amber-500 font-medium">· View only</span>}
                             </p>
                         </div>
                     </div>
@@ -82,15 +118,19 @@ export default function TablePageClient({
             </header>
 
             <main className="max-w-2xl mx-auto px-4 pt-4">
-                {/* No-session notice */}
-                {!isValidSession && (
+                {/* No-session notice — disappears automatically when waiter opens session */}
+                {!hasSession && (
                     <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
                         <div className="flex items-start gap-3">
                             <span className="text-2xl mt-0.5">👋</span>
-                            <div>
+                            <div className="flex-1">
                                 <p className="font-semibold text-amber-900 text-sm">Welcome to {restaurantName}!</p>
                                 <p className="text-amber-700 text-sm mt-0.5">
                                     Ask your waiter to open a session for Table {tableData.label} so you can place orders.
+                                </p>
+                                <p className="text-amber-600 text-xs mt-2 flex items-center gap-1">
+                                    <RefreshCw size={11} className="animate-spin" />
+                                    Waiting for your session to open…
                                 </p>
                             </div>
                         </div>
@@ -100,22 +140,22 @@ export default function TablePageClient({
                 <MenuSection
                     categories={categories}
                     items={menuItems}
-                    sessionId={sessionToken}
+                    sessionId={liveSessionToken}
                     restaurantSlug={tableData.qr_token}
                     restaurantId={tableData.restaurant_id}
                 />
             </main>
 
             {/* Service request FAB — only when session active */}
-            {isValidSession && sessionUUID && serviceRequestsEnabled && (
+            {hasSession && liveSessionUUID && serviceRequestsEnabled && (
                 <ServiceRequestPanel
-                    sessionId={sessionUUID}
+                    sessionId={liveSessionUUID}
                     restaurantId={tableData.restaurant_id}
                 />
             )}
 
             {/* Sticky cart bar */}
-            <CartSummary sessionId={sessionToken} tableSlug={tableData.qr_token} />
+            <CartSummary sessionId={liveSessionToken} tableSlug={tableData.qr_token} />
         </div>
     )
 

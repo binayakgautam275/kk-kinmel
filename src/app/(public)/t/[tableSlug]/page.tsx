@@ -4,7 +4,7 @@ import { getRestaurantFeatures } from '@/lib/features'
 import type { MenuItem } from '@/types/database'
 import TablePageClient from './TablePageClient'
 
-export const revalidate = 60 // ISR: Revalidate at most every 60 seconds
+export const dynamic = 'force-dynamic'
 
 export default async function CustomerMenuPage(props: {
     params: Promise<{ tableSlug: string }>

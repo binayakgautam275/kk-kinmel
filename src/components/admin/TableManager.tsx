@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { QrCode, Plus, Edit2, Trash2, Check, X, Loader2, Download, Smartphone } from 'lucide-react'
 import type { Table } from '@/types/database'
 import { QRCodeCanvas } from 'qrcode.react'
@@ -33,6 +33,10 @@ export default function TableManager({
     const [previewTable, setPreviewTable] = useState<Table | null>(null)
     const [iframeLoaded, setIframeLoaded] = useState(false)
     const { confirm } = useConfirmStore()
+
+    // Use the actual browser origin so QR codes encode the live URL, not localhost
+    const [baseUrl, setBaseUrl] = useState(appUrl)
+    useEffect(() => { setBaseUrl(window.location.origin) }, [])
 
     const openPreview = useCallback((table: Table) => {
         setIframeLoaded(false)
@@ -164,7 +168,7 @@ export default function TableManager({
             <div className="p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {tables.map(table => {
-                        const menuUrl = `${appUrl}/t/${table.qr_token}`
+                        const menuUrl = `${baseUrl}/t/${table.qr_token}`
 
                         return (
                             <div key={table.id} className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow group flex flex-col bg-white">
@@ -319,7 +323,7 @@ export default function TableManager({
                             <div className="bg-gray-100 px-3 sm:px-4 pb-1.5 sm:pb-2 pt-6 sm:pt-7 border-b border-gray-200 shrink-0 flex items-center gap-2">
                                 <div className="w-4 h-4 text-gray-400"><Smartphone size={14} /></div>
                                 <div className="flex-1 bg-gray-200/80 rounded-lg text-[9px] sm:text-[10px] text-center text-gray-500 py-1 sm:py-1.5 px-2 truncate font-mono">
-                                    {appUrl.replace(/https?:\/\//, '')}/t/{previewTable.qr_token.substring(0, 8)}…
+                                    {baseUrl.replace(/https?:\/\//, '')}/t/{previewTable.qr_token.substring(0, 8)}…
                                 </div>
                             </div>
 
@@ -331,9 +335,9 @@ export default function TableManager({
                                 </div>
                             )}
 
-                            {/* Iframe — customer menu page */}
+                            {/* Iframe — customer menu page (use full origin so it works on any deployment) */}
                             <iframe
-                                src={`/t/${previewTable.qr_token}`}
+                                src={`${baseUrl}/t/${previewTable.qr_token}`}
                                 className={`w-full flex-1 border-none bg-white ${iframeLoaded ? '' : 'sr-only'}`}
                                 title={`Customer menu preview for ${previewTable.label}`}
                                 onLoad={() => setIframeLoaded(true)}

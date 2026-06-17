@@ -30,6 +30,10 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
     const supabaseRef = useRef(createClient())
     const { confirm } = useConfirmStore()
 
+    // Use actual browser origin so QR codes encode the live URL, not localhost
+    const [baseUrl, setBaseUrl] = useState(appUrl)
+    useEffect(() => { setBaseUrl(window.location.origin) }, [])
+
     useEffect(() => {
         const supabase = supabaseRef.current
         const channel = supabase
@@ -175,7 +179,7 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
                                 <div className="space-y-4">
                                     <div className="flex justify-center p-4 bg-gray-50 rounded-xl border border-gray-100">
                                         <QRCodeSVG
-                                            value={`${appUrl}/t/${selectedTable.qr_token}?s=${selectedTable.activeSession.session_token}`}
+                                            value={`${baseUrl}/t/${selectedTable.qr_token}?s=${selectedTable.activeSession.session_token}`}
                                             size={180}
                                             level="Q"
                                             includeMargin

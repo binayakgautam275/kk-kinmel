@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 import SuperAdminSidebar from '@/components/admin/SuperAdminSidebar'
 import AdminOrderNotifier from '@/components/admin/AdminOrderNotifier'
+import SoundEnableButton from '@/components/shared/SoundEnableButton'
 import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -43,13 +44,16 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                     <h2 className="text-sm font-semibold text-gray-800 pl-10 md:pl-0">
                         {isSuperAdmin ? 'SaaS Control Panel' : (restaurantName || 'Management Console')}
                     </h2>
-                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
-                        isSuperAdmin
-                            ? 'bg-[var(--color-primary)]/8 text-[var(--color-primary)] border border-[var(--color-primary)]/20'
-                            : 'bg-gray-100 text-gray-500'
-                    }`}>
-                        {roleDisplay}
-                    </span>
+                    <div className="flex items-center gap-3">
+                        {!isSuperAdmin && <SoundEnableButton variant="light" />}
+                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+                            isSuperAdmin
+                                ? 'bg-[var(--color-primary)]/8 text-[var(--color-primary)] border border-[var(--color-primary)]/20'
+                                : 'bg-gray-100 text-gray-500'
+                        }`}>
+                            {roleDisplay}
+                        </span>
+                    </div>
                 </header>
                 <div className="flex-1 overflow-auto p-4 md:p-8">
                     <div className="max-w-6xl mx-auto">
