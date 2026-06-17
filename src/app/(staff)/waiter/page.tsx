@@ -175,6 +175,7 @@ export default async function WaiterPage() {
                 initialTables={mappedTables as unknown as TableWithSession[]}
                 restaurantId={restaurantId}
                 appUrl={appUrl}
+                initialOrders={(activeOrders || []).map(o => ({ id: o.id, session_id: o.session_id, status: o.status }))}
             />
 
             {/* 7. Shift Clock — used at start/end of shift only */}

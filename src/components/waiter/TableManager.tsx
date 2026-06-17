@@ -23,12 +23,24 @@ function getEffectiveStatus(table: TableWithSession): string {
     return table.table_status || 'available'
 }
 
-export default function TableManager({ initialTables, restaurantId, appUrl }: { initialTables: TableWithSession[]; restaurantId: string; appUrl: string }) {
+export default function TableManager({ initialTables, restaurantId, appUrl, initialOrders = [] }: {
+    initialTables: TableWithSession[]
+    restaurantId: string
+    appUrl: string
+    initialOrders?: { id: string; session_id: string | null; status: string }[]
+}) {
     const [tables, setTables] = useState<TableWithSession[]>(initialTables)
     const [selectedTable, setSelectedTable] = useState<TableWithSession | null>(null)
     const [isProcessing, setIsProcessing] = useState(false)
     const supabaseRef = useRef(createClient())
     const { confirm } = useConfirmStore()
+
+    // Track order statuses per order ID → { session_id, status }
+    const [orderStatuses, setOrderStatuses] = useState<Record<string, { session_id: string | null; status: string }>>(() => {
+        const m: Record<string, { session_id: string | null; status: string }> = {}
+        for (const o of initialOrders) m[o.id] = { session_id: o.session_id, status: o.status }
+        return m
+    })
 
     // Use actual browser origin so QR codes encode the live URL, not localhost
     const [baseUrl, setBaseUrl] = useState(appUrl)
@@ -38,6 +50,22 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
         const supabase = supabaseRef.current
         const channel = supabase
             .channel(`waiter-sessions-${restaurantId}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
+                (payload) => {
+                    const { id, session_id, status } = payload.new
+                    setOrderStatuses(prev => ({ ...prev, [id]: { session_id, status } }))
+                }
+            )
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
+                (payload) => {
+                    const { id, session_id, status } = payload.new
+                    if (status === 'delivered' || status === 'cancelled') {
+                        setOrderStatuses(prev => { const n = { ...prev }; delete n[id]; return n })
+                    } else {
+                        setOrderStatuses(prev => ({ ...prev, [id]: { session_id, status } }))
+                    }
+                }
+            )
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sessions', filter: `restaurant_id=eq.${restaurantId}` },
                 (payload) => {
                     const s = payload.new as Session
@@ -128,6 +156,24 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
                         const cfg = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.available
                         const isSelected = selectedTable?.id === table.id
 
+                        // Traffic light: order pipeline status for this table's session
+                        const sessionId = table.activeSession?.id ?? null
+                        const sessionOrders = sessionId
+                            ? Object.values(orderStatuses).filter(o => o.session_id === sessionId && !['delivered', 'cancelled'].includes(o.status))
+                            : []
+                        const orderLight = sessionOrders.some(o => o.status === 'ready')
+                            ? 'ready'
+                            : sessionOrders.some(o => o.status === 'preparing' || o.status === 'confirmed')
+                                ? 'preparing'
+                                : sessionOrders.length > 0 ? 'pending' : null
+
+                        const trafficLight = {
+                            ready:    { dot: 'bg-emerald-500 animate-pulse', label: '● Ready', cls: 'text-emerald-600' },
+                            preparing:{ dot: 'bg-orange-400 animate-pulse',  label: '● Cooking', cls: 'text-orange-600' },
+                            pending:  { dot: 'bg-amber-300',                 label: '● Waiting', cls: 'text-amber-600' },
+                        }
+                        const tl = orderLight ? trafficLight[orderLight] : null
+
                         return (
                             <button
                                 key={table.id}
@@ -142,10 +188,15 @@ export default function TableManager({ initialTables, restaurantId, appUrl }: { 
                                         <Users size={9} />{table.capacity}
                                     </span>
                                 )}
-                                {cfg.label && (
+                                {tl ? (
+                                    <span className={`text-[9px] font-bold mt-0.5 ${tl.cls}`}>{tl.label}</span>
+                                ) : cfg.label ? (
                                     <span className={`text-[9px] font-bold uppercase tracking-wide mt-0.5 ${cfg.labelCls}`}>{cfg.label}</span>
-                                )}
+                                ) : null}
+                                {/* Session status dot (top-right) */}
                                 <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full ${cfg.dot}`} />
+                                {/* Order traffic light dot (top-left) */}
+                                {tl && <span className={`absolute top-1.5 left-1.5 w-2 h-2 rounded-full ${tl.dot}`} />}
                             </button>
                         )
                     })}

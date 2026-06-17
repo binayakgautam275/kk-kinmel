@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { markOrderDelivered, markDeliveredAndCashPaid } from '@/app/(staff)/waiter/order-actions'
 import { playOrderReady, playNewOrder } from '@/lib/audio'
 import { toast } from 'react-hot-toast'
 import { timeAgo, formatCurrency } from '@/lib/utils'
-import { Package, ChefHat, Clock, Truck, Loader2, Banknote } from 'lucide-react'
+import { Package, ChefHat, Loader2, Banknote, Truck, Clock, CheckCircle } from 'lucide-react'
 import type { Order, OrderItem, MenuItem, Session, Table, OrderStatus } from '@/types/database'
 
 type WaiterOrder = Order & {
@@ -24,7 +24,13 @@ function tableLabel(order: WaiterOrder) {
     return (order.sessions as unknown as { tables?: { label?: string } })?.tables?.label || '?'
 }
 
-export default function WaiterOrderFeed({ initialOrders, restaurantId }: { initialOrders: WaiterOrder[]; restaurantId: string }) {
+const STATUS_ORDER: Record<string, number> = { ready: 3, preparing: 2, confirmed: 1, pending: 1 }
+const STALE_MS = 15 * 60 * 1000
+
+export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
+    initialOrders: WaiterOrder[]
+    restaurantId: string
+}) {
     const [orders, setOrders] = useState<WaiterOrder[]>(initialOrders)
     const ordersRef = useRef(orders)
     const [processingId, setProcessingId] = useState<string | null>(null)
@@ -44,8 +50,9 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: { initi
                     const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
                     if (data) {
                         const order = data as unknown as WaiterOrder
-                        setOrders((prev) => [order, ...prev])
+                        setOrders(prev => [order, ...prev])
                         playNewOrder().catch(() => {})
+                        navigator.vibrate?.(300)
                         const tbl = (order.sessions as unknown as { tables?: { label?: string } })?.tables?.label
                         toast.custom((t) => (
                             <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-xl rounded-xl px-4 py-3 flex items-start gap-3 border border-amber-200`}>
@@ -64,6 +71,7 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: { initi
                     const newStatus = payload.new.status as OrderStatus
                     if (newStatus === 'ready') {
                         playOrderReady().catch(() => {})
+                        navigator.vibrate?.([200, 100, 200])
                         const order = ordersRef.current.find(o => o.id === payload.new.id)
                         const tbl = (order?.sessions as unknown as { tables?: { label?: string } })?.tables?.label
                         toast.custom((t) => (
@@ -76,10 +84,10 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: { initi
                             </div>
                         ), { duration: 8000, position: 'top-right' })
                     }
-                    setOrders((prev) =>
+                    setOrders(prev =>
                         prev
-                            .map((o) => o.id === payload.new.id ? { ...o, status: newStatus, payment_status: payload.new.payment_status } : o)
-                            .filter((o) => !['delivered', 'cancelled'].includes(o.status))
+                            .map(o => o.id === payload.new.id ? { ...o, status: newStatus, payment_status: payload.new.payment_status } : o)
+                            .filter(o => !['delivered', 'cancelled'].includes(o.status))
                     )
                 }
             )
@@ -89,29 +97,35 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: { initi
 
     const handleMarkDelivered = async (orderId: string) => {
         setProcessingId(orderId)
-        setOrders((prev) => prev.filter((o) => o.id !== orderId))
+        setOrders(prev => prev.filter(o => o.id !== orderId))
         await markOrderDelivered(orderId)
         setProcessingId(null)
     }
 
     const handleCashAndDeliver = async (orderId: string) => {
         setCashProcessingId(orderId)
-        setOrders((prev) => prev.filter((o) => o.id !== orderId))
+        setOrders(prev => prev.filter(o => o.id !== orderId))
         const res = await markDeliveredAndCashPaid(orderId)
         if (res.error) toast.error(res.error)
         else toast.success(res.tableClosed ? 'Cash received — table closed ✅' : 'Cash received ✓')
         setCashProcessingId(null)
     }
 
-    const STALE_MS = 15 * 60 * 1000
-    const isStale = (order: WaiterOrder) => {
-        const ts = (order as unknown as { ready_at?: string | null }).ready_at || order.placed_at
-        return now - new Date(ts).getTime() > STALE_MS
-    }
-
-    const readyOrders = orders.filter((o) => o.status === 'ready')
-    const preparingOrders = orders.filter((o) => o.status === 'preparing')
-    const pendingOrders = orders.filter((o) => o.status === 'pending' || o.status === 'confirmed')
+    // Group orders by session/table
+    const tableGroups = useMemo(() => {
+        const groups = new Map<string, { label: string; orders: WaiterOrder[] }>()
+        for (const order of orders) {
+            const key = order.session_id || order.id
+            const label = tableLabel(order)
+            if (!groups.has(key)) groups.set(key, { label, orders: [] })
+            groups.get(key)!.orders.push(order)
+        }
+        // Sort groups: ready first, then preparing, then pending
+        return [...groups.entries()].sort(([, a], [, b]) => {
+            const score = (orders: WaiterOrder[]) => Math.max(...orders.map(o => STATUS_ORDER[o.status] ?? 0))
+            return score(b.orders) - score(a.orders)
+        })
+    }, [orders])
 
     if (orders.length === 0) {
         return (
@@ -122,110 +136,122 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: { initi
         )
     }
 
+    const totalReady = orders.filter(o => o.status === 'ready').length
+
     return (
         <div className="space-y-3">
             <div className="flex items-center gap-2">
                 <Package size={15} className="text-gray-400" />
-                <h2 className="font-semibold text-gray-900 text-sm">Active Orders</h2>
-                {readyOrders.length > 0 && (
+                <h2 className="font-semibold text-gray-900 text-sm">
+                    Active Orders
+                    <span className="ml-2 text-gray-400 font-normal">{tableGroups.length} table{tableGroups.length !== 1 ? 's' : ''}</span>
+                </h2>
+                {totalReady > 0 && (
                     <span className="ml-auto text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full animate-pulse">
-                        {readyOrders.length} ready!
+                        {totalReady} ready!
                     </span>
                 )}
             </div>
 
-            {/* Ready — most urgent */}
-            {readyOrders.map((order) => {
-                const stale = isStale(order)
+            {tableGroups.map(([sessionKey, { label, orders: tableOrders }]) => {
+                const hasReady = tableOrders.some(o => o.status === 'ready')
+                const hasPreparing = tableOrders.some(o => o.status === 'preparing')
+                const sorted = [...tableOrders].sort((a, b) => (STATUS_ORDER[b.status] ?? 0) - (STATUS_ORDER[a.status] ?? 0))
+
+                const headerBg = hasReady ? 'bg-emerald-50 border-emerald-300' : hasPreparing ? 'bg-orange-50 border-orange-200' : 'bg-amber-50 border-amber-200'
+                const headerText = hasReady ? 'text-emerald-700' : hasPreparing ? 'text-orange-700' : 'text-amber-700'
+                const dotColor = hasReady ? 'bg-emerald-500 animate-pulse' : hasPreparing ? 'bg-orange-400' : 'bg-amber-300'
+
                 return (
-                    <div key={order.id} className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden ${stale ? 'border-red-300' : 'border-emerald-300'}`}>
-                        <div className={`px-4 py-2.5 flex items-center justify-between ${stale ? 'bg-red-50' : 'bg-emerald-50'}`}>
-                            <div className="flex items-center gap-2">
-                                <Package size={14} className={stale ? 'text-red-500' : 'text-emerald-600'} />
-                                <span className={`font-bold text-sm ${stale ? 'text-red-700' : 'text-emerald-700'}`}>
-                                    Table {tableLabel(order)} — READY
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {stale && <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full">⚠ Getting cold!</span>}
-                                <span className="text-[10px] text-gray-400">{timeAgo(order.placed_at)}</span>
-                            </div>
+                    <div key={sessionKey} className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden ${hasReady ? 'border-emerald-300' : hasPreparing ? 'border-orange-200' : 'border-amber-100'}`}>
+                        {/* Table header */}
+                        <div className={`px-4 py-2.5 flex items-center gap-2 border-b ${headerBg}`}>
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotColor}`} />
+                            <span className={`font-bold text-sm ${headerText}`}>Table {label}</span>
+                            <span className={`text-[10px] font-semibold ml-1 ${headerText} opacity-70`}>
+                                {hasReady ? '— READY' : hasPreparing ? '— Preparing' : '— Pending'}
+                            </span>
+                            <span className="ml-auto text-[10px] text-gray-400">
+                                {sorted.length} order{sorted.length !== 1 ? 's' : ''}
+                            </span>
                         </div>
-                        <div className="px-4 py-3 space-y-2">
-                            <ul className="text-sm text-gray-700 space-y-0.5">
-                                {order.order_items?.map((item) => (
-                                    <li key={item.id} className="flex items-baseline gap-1.5">
-                                        <span className="text-xs font-semibold text-gray-400 tabular-nums">{item.quantity}×</span>
-                                        <span>{item.menu_items?.name}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                            {order.customer_note && (
-                                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-lg">
-                                    "{order.customer_note}"
-                                </p>
-                            )}
-                            <div className="flex items-center justify-between pt-1 gap-2">
-                                <span className="text-sm font-semibold text-gray-900 tabular-nums">{formatCurrency(order.total_amount)}</span>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => handleCashAndDeliver(order.id)}
-                                        disabled={!!cashProcessingId || !!processingId}
-                                        className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 disabled:opacity-50 transition"
-                                    >
-                                        {cashProcessingId === order.id ? <Loader2 size={13} className="animate-spin" /> : <Banknote size={13} />}
-                                        Cash
-                                    </button>
-                                    <button
-                                        onClick={() => handleMarkDelivered(order.id)}
-                                        disabled={!!processingId || !!cashProcessingId}
-                                        className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 disabled:opacity-50 transition"
-                                    >
-                                        {processingId === order.id ? <Loader2 size={13} className="animate-spin" /> : <Truck size={13} />}
-                                        Deliver
-                                    </button>
-                                </div>
-                            </div>
+
+                        {/* Orders in this table */}
+                        <div className="divide-y divide-gray-50">
+                            {sorted.map((order, idx) => {
+                                const ts = (order as unknown as { ready_at?: string | null }).ready_at || order.placed_at
+                                const isStale = now - new Date(ts).getTime() > STALE_MS
+                                const isReady = order.status === 'ready'
+
+                                return (
+                                    <div key={order.id} className={`px-4 py-3 ${isReady ? 'bg-emerald-50/30' : ''}`}>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <StatusPip status={order.status} />
+                                            <span className="text-xs text-gray-500">{timeAgo(order.placed_at)}</span>
+                                            {isStale && isReady && (
+                                                <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">⚠ Getting cold!</span>
+                                            )}
+                                            <span className="ml-auto text-xs font-semibold text-gray-700 tabular-nums">{formatCurrency(order.total_amount)}</span>
+                                        </div>
+
+                                        <ul className="text-sm text-gray-700 space-y-0.5 mb-2">
+                                            {order.order_items?.map(item => (
+                                                <li key={item.id} className="flex items-baseline gap-1.5">
+                                                    <span className="text-xs font-semibold text-gray-400 tabular-nums shrink-0">{item.quantity}×</span>
+                                                    <span className="truncate">{item.menu_items?.name}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+
+                                        {order.customer_note && (
+                                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-lg mb-2">
+                                                "{order.customer_note}"
+                                            </p>
+                                        )}
+
+                                        {isReady && (
+                                            <div className="flex gap-2 pt-1">
+                                                <button
+                                                    onClick={() => handleCashAndDeliver(order.id)}
+                                                    disabled={!!cashProcessingId || !!processingId}
+                                                    className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 disabled:opacity-50 transition"
+                                                >
+                                                    {cashProcessingId === order.id ? <Loader2 size={13} className="animate-spin" /> : <Banknote size={13} />}
+                                                    Cash
+                                                </button>
+                                                <button
+                                                    onClick={() => handleMarkDelivered(order.id)}
+                                                    disabled={!!processingId || !!cashProcessingId}
+                                                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 disabled:opacity-50 transition"
+                                                >
+                                                    {processingId === order.id ? <Loader2 size={13} className="animate-spin" /> : <Truck size={13} />}
+                                                    Deliver
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })}
                         </div>
                     </div>
                 )
             })}
-
-            {/* Preparing + Pending — compact rows */}
-            {(preparingOrders.length > 0 || pendingOrders.length > 0) && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    {preparingOrders.map((order, i) => (
-                        <div key={order.id} className={`px-4 py-3 flex items-center gap-3 ${i < preparingOrders.length - 1 || pendingOrders.length > 0 ? 'border-b border-gray-50' : ''}`}>
-                            <div className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-sm text-gray-800">Table {tableLabel(order)}</span>
-                                    <span className="text-[10px] text-gray-400">{timeAgo(order.placed_at)}</span>
-                                </div>
-                                <p className="text-xs text-gray-400 mt-0.5 truncate">
-                                    {order.order_items?.map(i => `${i.quantity}× ${i.menu_items?.name}`).join(', ')}
-                                </p>
-                            </div>
-                            <span className="text-[10px] font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg shrink-0">Preparing</span>
-                        </div>
-                    ))}
-                    {pendingOrders.map((order, i) => (
-                        <div key={order.id} className={`px-4 py-3 flex items-center gap-3 ${i < pendingOrders.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                            <div className="w-2 h-2 rounded-full bg-amber-300 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-sm text-gray-800">Table {tableLabel(order)}</span>
-                                    <span className="text-[10px] text-gray-400">{timeAgo(order.placed_at)}</span>
-                                </div>
-                                <p className="text-xs text-gray-400 mt-0.5 truncate">
-                                    {order.order_items?.map(i => `${i.quantity}× ${i.menu_items?.name}`).join(', ')}
-                                </p>
-                            </div>
-                            <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg shrink-0">Pending</span>
-                        </div>
-                    ))}
-                </div>
-            )}
         </div>
+    )
+}
+
+function StatusPip({ status }: { status: string }) {
+    const map: Record<string, { label: string; cls: string; Icon: React.ElementType }> = {
+        ready:     { label: 'Ready',     cls: 'text-emerald-700 bg-emerald-50 border-emerald-200', Icon: CheckCircle },
+        preparing: { label: 'Preparing', cls: 'text-orange-700 bg-orange-50 border-orange-200',   Icon: ChefHat },
+        confirmed: { label: 'Confirmed', cls: 'text-blue-700 bg-blue-50 border-blue-200',          Icon: Clock },
+        pending:   { label: 'Pending',   cls: 'text-amber-700 bg-amber-50 border-amber-200',      Icon: Clock },
+    }
+    const m = map[status] || map.pending
+    return (
+        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${m.cls}`}>
+            <m.Icon size={9} />
+            {m.label}
+        </span>
     )
 }
