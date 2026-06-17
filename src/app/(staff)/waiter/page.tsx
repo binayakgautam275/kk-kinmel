@@ -25,9 +25,12 @@ export default async function WaiterPage() {
         .eq('is_active', true)
         .order('label', { ascending: true })
 
+    const now = new Date().toISOString()
     const mappedTables = tables?.map(table => {
-        const sessions = table.sessions as unknown as { status: string }[]
-        const activeSession = sessions?.find((s) => s.status === 'active')
+        const sessions = table.sessions as unknown as { status: string; expires_at: string }[]
+        const activeSession = sessions?.find(
+            (s) => s.status === 'active' && s.expires_at > now
+        )
         return { ...table, activeSession: activeSession || null }
     }) || []
 

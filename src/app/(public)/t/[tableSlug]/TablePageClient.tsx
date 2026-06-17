@@ -55,10 +55,20 @@ export default function TablePageClient({
     const supabaseRef = useRef(createClient())
 
     // Subscribe to session INSERT events for this table so the customer page
-    // enables ordering the moment a waiter opens a session — no refresh needed
+    // enables ordering the moment a waiter opens a session — no refresh needed.
+    //
+    // Race guard: subscribe() callback fires once the WebSocket handshake
+    // completes. At that point we do a one-shot DB fetch to catch any session
+    // opened in the gap between SSR render and WebSocket ready.
     useEffect(() => {
         if (hasSession) return
         const supabase = supabaseRef.current
+
+        const applySession = (token: string, uuid: string) => {
+            setLiveSessionToken(token)
+            setLiveSessionUUID(uuid)
+        }
+
         const channel = supabase
             .channel(`table-session-watch-${tableData.id}`)
             .on(
@@ -70,14 +80,28 @@ export default function TablePageClient({
                     filter: `table_id=eq.${tableData.id}`,
                 },
                 (payload) => {
-                    const s = payload.new as { status: string; session_token: string; id: string }
-                    if (s.status === 'active' && s.session_token) {
-                        setLiveSessionToken(s.session_token)
-                        setLiveSessionUUID(s.id)
+                    const s = payload.new as { status: string; session_token: string; id: string; expires_at: string }
+                    if (s.status === 'active' && s.session_token && s.expires_at > new Date().toISOString()) {
+                        applySession(s.session_token, s.id)
                     }
                 }
             )
-            .subscribe()
+            .subscribe(async (status) => {
+                if (status !== 'SUBSCRIBED') return
+                // Catch sessions opened between SSR and WebSocket ready
+                const { data } = await supabase
+                    .from('sessions')
+                    .select('id, session_token')
+                    .eq('table_id', tableData.id)
+                    .eq('status', 'active')
+                    .gt('expires_at', new Date().toISOString())
+                    .order('opened_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle()
+                if (data?.session_token) {
+                    applySession(data.session_token, data.id)
+                }
+            })
         return () => { supabase.removeChannel(channel) }
     }, [tableData.id, hasSession])
 

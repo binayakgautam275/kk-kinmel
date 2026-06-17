@@ -14,6 +14,15 @@ export async function openSession(tableId: string, restaurantId: string, guestCo
         return { error: 'Unauthorized' }
     }
 
+    // Expire any stale sessions for this table that passed their expires_at but
+    // were never cleaned up — otherwise the unique-active-per-table index blocks the insert.
+    await adminSupabase
+        .from('sessions')
+        .update({ status: 'expired', closed_at: new Date().toISOString() })
+        .eq('table_id', tableId)
+        .eq('status', 'active')
+        .lt('expires_at', new Date().toISOString())
+
     // Generate a URL-safe session token (avoids DB-level base64url encoding issues)
     const { randomBytes } = await import('crypto')
     const sessionToken = randomBytes(32).toString('base64url')
