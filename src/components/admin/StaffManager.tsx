@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Shield, ChefHat, Users, User, Check, AlertTriangle, Loader2 } from 'lucide-react'
-import { updateStaffRoleAction, toggleStaffStatusAction } from '@/app/(admin)/admin/staff/actions'
+import { Shield, ChefHat, Users, User, Check, AlertTriangle, Loader2, Pencil, Trash2, Eye, EyeOff } from 'lucide-react'
+import { updateStaffRoleAction, toggleStaffStatusAction, updateStaffNameAction, resetStaffPasswordAction, deleteStaffAction } from '@/app/(admin)/admin/staff/actions'
 import { toast } from 'react-hot-toast'
 import { useConfirmStore } from '@/lib/stores/confirm'
 
@@ -56,6 +56,26 @@ export default function StaffManager({
         phone: '',
         roleId: 4, // Default to waiter
         isCreating: false
+    })
+
+    const [editModal, setEditModal] = useState<{
+        isOpen: boolean
+        user: StaffMember | null
+        fullName: string
+        newPassword: string
+        confirmPassword: string
+        showPassword: boolean
+        saving: boolean
+        deletingId: string | null
+    }>({
+        isOpen: false,
+        user: null,
+        fullName: '',
+        newPassword: '',
+        confirmPassword: '',
+        showPassword: false,
+        saving: false,
+        deletingId: null,
     })
 
     const handleRoleChange = async () => {
@@ -155,6 +175,58 @@ export default function StaffManager({
         }
     }
 
+    const openEditModal = (user: StaffMember) => {
+        setEditModal({ isOpen: true, user, fullName: user.full_name, newPassword: '', confirmPassword: '', showPassword: false, saving: false, deletingId: null })
+    }
+
+    const handleSaveName = async () => {
+        if (!editModal.user) return
+        setEditModal(prev => ({ ...prev, saving: true }))
+        const res = await updateStaffNameAction(editModal.user!.id, editModal.fullName)
+        if (res.success) {
+            setStaff(prev => prev.map(s => s.id === editModal.user!.id ? { ...s, full_name: editModal.fullName.trim() } : s))
+            toast.success('Name updated')
+        } else {
+            toast.error(res.error || 'Failed to update name')
+        }
+        setEditModal(prev => ({ ...prev, saving: false }))
+    }
+
+    const handleResetPassword = async () => {
+        if (!editModal.user) return
+        if (editModal.newPassword.length < 8) { toast.error('Password must be at least 8 characters'); return }
+        if (editModal.newPassword !== editModal.confirmPassword) { toast.error('Passwords do not match'); return }
+        setEditModal(prev => ({ ...prev, saving: true }))
+        const res = await resetStaffPasswordAction(editModal.user!.id, editModal.newPassword)
+        if (res.success) {
+            setEditModal(prev => ({ ...prev, newPassword: '', confirmPassword: '', saving: false }))
+            toast.success('Password updated')
+        } else {
+            toast.error(res.error || 'Failed to update password')
+            setEditModal(prev => ({ ...prev, saving: false }))
+        }
+    }
+
+    const handleDeleteStaff = async (user: StaffMember) => {
+        const ok = await confirm({
+            title: 'Permanently Delete Account?',
+            message: `This will permanently delete ${user.full_name}'s account and remove all their access. This cannot be undone.`,
+            confirmText: 'Delete Permanently',
+            isDestructive: true,
+        })
+        if (!ok) return
+        setEditModal(prev => ({ ...prev, deletingId: user.id }))
+        const res = await deleteStaffAction(user.id)
+        if (res.success) {
+            setStaff(prev => prev.filter(s => s.id !== user.id))
+            setEditModal({ isOpen: false, user: null, fullName: '', newPassword: '', confirmPassword: '', showPassword: false, saving: false, deletingId: null })
+            toast.success(`${user.full_name} has been removed`)
+        } else {
+            toast.error(res.error || 'Failed to delete account')
+            setEditModal(prev => ({ ...prev, deletingId: null }))
+        }
+    }
+
     const formatRoleName = (name: string) => {
         return name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
     }
@@ -242,12 +314,15 @@ export default function StaffManager({
                                     </td>
                                     <td className="p-4 text-right pr-6">
                                         {canEdit ? (
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button disabled={submittingId === user.id} onClick={() => setChangeRoleModal({ isOpen: true, user, newRoleId: user.role_id })} className="text-sm font-medium text-primary hover:text-opacity-80 px-3 py-1.5 rounded-md hover:bg-primary/10 transition-colors">
-                                                    Change Role
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <button disabled={submittingId === user.id} onClick={() => openEditModal(user)} className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                                                    <Pencil size={13} /> Edit
                                                 </button>
-                                                <button disabled={submittingId === user.id} onClick={() => handleToggleStatus(user)} className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors ${user.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>
-                                                    {submittingId === user.id ? <Loader2 size={16} className="animate-spin inline" /> : (user.is_active ? 'Suspend' : 'Activate')}
+                                                <button disabled={submittingId === user.id} onClick={() => setChangeRoleModal({ isOpen: true, user, newRoleId: user.role_id })} className="text-sm font-medium text-primary px-2.5 py-1.5 rounded-lg hover:bg-primary/10 transition-colors">
+                                                    Role
+                                                </button>
+                                                <button disabled={submittingId === user.id} onClick={() => handleToggleStatus(user)} className={`text-sm font-medium px-2.5 py-1.5 rounded-lg transition-colors ${user.is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50'}`}>
+                                                    {submittingId === user.id ? <Loader2 size={14} className="animate-spin inline" /> : (user.is_active ? 'Suspend' : 'Activate')}
                                                 </button>
                                             </div>
                                         ) : (
@@ -299,12 +374,15 @@ export default function StaffManager({
                                 </div>
                             </div>
                             {canEdit && (
-                                <div className="grid grid-cols-2 gap-2">
+                                <div className="grid grid-cols-3 gap-2">
+                                    <button disabled={submittingId === user.id} onClick={() => openEditModal(user)} className="py-2 text-sm font-medium text-gray-700 bg-gray-50 rounded-lg border border-gray-200 active:scale-95 transition flex items-center justify-center gap-1">
+                                        <Pencil size={12} /> Edit
+                                    </button>
                                     <button disabled={submittingId === user.id} onClick={() => setChangeRoleModal({ isOpen: true, user, newRoleId: user.role_id })} className="py-2 text-sm font-medium text-primary bg-primary/5 rounded-lg border border-primary/20 active:scale-95 transition">
-                                        Change Role
+                                        Role
                                     </button>
                                     <button disabled={submittingId === user.id} onClick={() => handleToggleStatus(user)} className={`py-2 text-sm font-medium rounded-lg border active:scale-95 transition ${user.is_active ? 'text-red-600 bg-red-50 border-red-200' : 'text-green-600 bg-green-50 border-green-200'}`}>
-                                        {submittingId === user.id ? <Loader2 size={16} className="animate-spin mx-auto" /> : (user.is_active ? 'Suspend' : 'Activate')}
+                                        {submittingId === user.id ? <Loader2 size={14} className="animate-spin mx-auto" /> : (user.is_active ? 'Suspend' : 'Activate')}
                                     </button>
                                 </div>
                             )}
@@ -315,6 +393,100 @@ export default function StaffManager({
                     <div className="p-8 text-center text-gray-500">No staff members found.</div>
                 )}
             </div>
+
+            {/* Edit Staff Modal */}
+            {editModal.isOpen && editModal.user && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
+                        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between shrink-0">
+                            <div>
+                                <h3 className="font-bold text-gray-900">Edit Staff</h3>
+                                <p className="text-xs text-gray-400 mt-0.5">{editModal.user.full_name}</p>
+                            </div>
+                            <button onClick={() => setEditModal(prev => ({ ...prev, isOpen: false }))} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100">×</button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            {/* Name */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-3">Display Name</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={editModal.fullName}
+                                        onChange={e => setEditModal(prev => ({ ...prev, fullName: e.target.value }))}
+                                        className="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                        placeholder="Full name"
+                                    />
+                                    <button
+                                        onClick={handleSaveName}
+                                        disabled={editModal.saving || editModal.fullName.trim() === editModal.user.full_name}
+                                        className="px-4 py-2 text-sm font-semibold text-white bg-primary rounded-xl disabled:opacity-40 hover:opacity-90 transition flex items-center gap-1.5"
+                                    >
+                                        {editModal.saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Password */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-3">Reset Password</label>
+                                <div className="space-y-2">
+                                    <div className="relative">
+                                        <input
+                                            type={editModal.showPassword ? 'text' : 'password'}
+                                            value={editModal.newPassword}
+                                            onChange={e => setEditModal(prev => ({ ...prev, newPassword: e.target.value }))}
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary pr-10"
+                                            placeholder="New password (min 8 chars)"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditModal(prev => ({ ...prev, showPassword: !prev.showPassword }))}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                                        >
+                                            {editModal.showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                                        </button>
+                                    </div>
+                                    <input
+                                        type={editModal.showPassword ? 'text' : 'password'}
+                                        value={editModal.confirmPassword}
+                                        onChange={e => setEditModal(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                                        placeholder="Confirm new password"
+                                    />
+                                    <button
+                                        onClick={handleResetPassword}
+                                        disabled={editModal.saving || !editModal.newPassword || editModal.newPassword !== editModal.confirmPassword}
+                                        className="w-full py-2 text-sm font-semibold text-white bg-primary rounded-xl disabled:opacity-40 hover:opacity-90 transition flex items-center justify-center gap-2"
+                                    >
+                                        {editModal.saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                                        Update Password
+                                    </button>
+                                    {editModal.newPassword && editModal.confirmPassword && editModal.newPassword !== editModal.confirmPassword && (
+                                        <p className="text-xs text-red-500">Passwords do not match</p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Danger zone */}
+                            <div className="border border-red-100 rounded-xl p-4 bg-red-50/50">
+                                <p className="text-sm font-semibold text-red-800 mb-1">Danger Zone</p>
+                                <p className="text-xs text-red-600 mb-3">Permanently deletes the account and revokes all access. This cannot be undone.</p>
+                                <button
+                                    onClick={() => handleDeleteStaff(editModal.user!)}
+                                    disabled={!!editModal.deletingId}
+                                    className="flex items-center gap-2 text-sm font-semibold text-red-600 bg-white border border-red-200 px-4 py-2 rounded-xl hover:bg-red-50 active:scale-95 disabled:opacity-50 transition"
+                                >
+                                    {editModal.deletingId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                    Delete Account Permanently
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Role Change Modal */}
             {changeRoleModal.isOpen && changeRoleModal.user && (

@@ -39,22 +39,75 @@ export async function toggleStaffStatusAction(userId: string, isActive: boolean)
     const currentUser = await getCurrentUser()
     const supabase = await createAdminClient()
 
-    // Verify target user belongs to the same restaurant
     const { data: targetUser } = await supabase
-        .from('users')
-        .select('restaurant_id')
-        .eq('id', userId)
-        .single()
+        .from('users').select('restaurant_id').eq('id', userId).single()
 
-    if (targetUser?.restaurant_id !== currentUser.restaurantId) {
-        return { error: 'Unauthorized' }
+    if (targetUser?.restaurant_id !== currentUser.restaurantId) return { error: 'Unauthorized' }
+
+    const { error } = await supabase.from('users').update({ is_active: isActive }).eq('id', userId)
+    if (error) return { error: error.message }
+
+    revalidatePath('/admin/staff')
+    return { success: true }
+}
+
+export async function updateStaffNameAction(userId: string, fullName: string) {
+    const currentUser = await getCurrentUser()
+    const supabase = await createAdminClient()
+
+    const { data: targetUser } = await supabase
+        .from('users').select('restaurant_id').eq('id', userId).single()
+
+    if (targetUser?.restaurant_id !== currentUser.restaurantId) return { error: 'Unauthorized' }
+
+    const trimmed = fullName.trim()
+    if (!trimmed) return { error: 'Name cannot be empty' }
+
+    // Update display name in both tables
+    const [{ error: dbError }, { error: authError }] = await Promise.all([
+        supabase.from('users').update({ full_name: trimmed }).eq('id', userId),
+        supabase.auth.admin.updateUserById(userId, { user_metadata: { full_name: trimmed } }),
+    ])
+
+    if (dbError || authError) return { error: dbError?.message || authError?.message || 'Failed to update name' }
+
+    revalidatePath('/admin/staff')
+    return { success: true }
+}
+
+export async function resetStaffPasswordAction(userId: string, newPassword: string) {
+    const currentUser = await getCurrentUser()
+    const supabase = await createAdminClient()
+
+    const { data: targetUser } = await supabase
+        .from('users').select('restaurant_id').eq('id', userId).single()
+
+    if (targetUser?.restaurant_id !== currentUser.restaurantId) return { error: 'Unauthorized' }
+
+    if (newPassword.length < 8) return { error: 'Password must be at least 8 characters' }
+
+    const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPassword })
+    if (error) return { error: error.message }
+
+    return { success: true }
+}
+
+export async function deleteStaffAction(userId: string) {
+    const currentUser = await getCurrentUser()
+    const supabase = await createAdminClient()
+
+    const { data: targetUser } = await supabase
+        .from('users').select('restaurant_id, role_id').eq('id', userId).single()
+
+    if (targetUser?.restaurant_id !== currentUser.restaurantId) return { error: 'Unauthorized' }
+    // Managers cannot delete other managers or super admins
+    if (currentUser.role === 'manager' && (targetUser?.role_id === 1 || targetUser?.role_id === 2)) {
+        return { error: 'Insufficient permissions to delete this account' }
     }
 
-    const { error } = await supabase
-        .from('users')
-        .update({ is_active: isActive })
-        .eq('id', userId)
-
+    // Delete from public.users first, then auth
+    await supabase.from('users').delete().eq('id', userId)
+    const { error } = await supabase.auth.admin.deleteUser(userId)
     if (error) return { error: error.message }
 
     revalidatePath('/admin/staff')
