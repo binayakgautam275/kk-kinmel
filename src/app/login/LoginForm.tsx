@@ -137,7 +137,36 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                         </button>
                     </form>
 
-                    <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+                    {/* Quick Demo — fills email+password with one click */}
+                    <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                        <p className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider mb-3">
+                            Demo accounts · password: <span className="font-mono">Password123!</span>
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                            {[
+                                { label: 'Super Admin', email: 'demo@srms.app', color: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
+                                { label: 'Manager',    email: 'manager@srms.app', color: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
+                                { label: 'Kitchen',    email: 'kitchen@srms.app', color: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
+                                { label: 'Waiter',     email: 'waiter@srms.app',  color: 'bg-purple-100 text-purple-700 hover:bg-purple-200' },
+                            ].map(({ label, email, color }) => (
+                                <button
+                                    key={email}
+                                    type="button"
+                                    className={`text-xs font-semibold py-2 px-3 rounded-xl transition ${color}`}
+                                    onClick={() => {
+                                        const f = document.getElementById('email') as HTMLInputElement | null
+                                        const p = document.getElementById('password') as HTMLInputElement | null
+                                        if (f) f.value = email
+                                        if (p) p.value = 'Password123!'
+                                    }}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-gray-200 text-center">
                         <p className="text-sm text-gray-500">
                             New restaurant?{' '}
                             <Link href="/signup" className="text-[var(--color-primary)] font-semibold hover:opacity-80 transition">
