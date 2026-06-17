@@ -1,19 +1,22 @@
 import { ReactNode } from 'react'
 import WaiterLayoutClient from '@/components/waiter/WaiterLayoutClient'
 import { getCurrentUser } from '@/lib/auth'
+import { getRestaurantFeatures } from '@/lib/features'
 import { createAdminClient } from '@/lib/supabase/server'
 
 export default async function WaiterLayout({ children }: { children: ReactNode }) {
     const { id: userId, restaurantId } = await getCurrentUser()
     const adminSupabase = await createAdminClient()
 
-    const [{ data: user }, { data: restaurant }, { data: settings }] = await Promise.all([
+    // Run user/restaurant name lookups and features in parallel.
+    // getRestaurantFeatures is cached (30s) — the page's own call hits the cache.
+    const [{ data: user }, { data: restaurant }, features] = await Promise.all([
         adminSupabase.from('users').select('full_name').eq('id', userId).single(),
         adminSupabase.from('restaurants').select('name').eq('id', restaurantId).single(),
-        adminSupabase.from('settings').select('features_v2').eq('restaurant_id', restaurantId).single(),
+        getRestaurantFeatures(restaurantId),
     ])
 
-    const notificationSoundUrl = (settings?.features_v2 as Record<string, unknown> | null)?.notificationSoundUrl as string | null | undefined
+    const notificationSoundUrl = (features as Record<string, unknown> | null)?.notificationSoundUrl as string | null | undefined
 
     return (
         <WaiterLayoutClient

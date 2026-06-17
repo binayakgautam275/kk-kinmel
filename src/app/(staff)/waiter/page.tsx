@@ -17,10 +17,10 @@ export default async function WaiterPage() {
     const { id: userId, restaurantId } = await getCurrentUser()
     const adminSupabase = await createAdminClient()
 
-    // Fetch tables AND their active sessions
+    // Fetch tables AND only the session fields we actually use
     const { data: tables } = await adminSupabase
         .from('tables')
-        .select(`*, sessions (*)`)
+        .select(`*, sessions ( id, status, session_token, expires_at )`)
         .eq('restaurant_id', restaurantId)
         .eq('is_active', true)
         .order('label', { ascending: true })

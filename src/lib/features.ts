@@ -1,21 +1,27 @@
 'use server'
 
+import { unstable_cache } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/server'
 import type { Settings, Restaurant } from '@/types/database'
 
 /**
  * Fetch features_v2 flags for a restaurant.
- * Used by the FeatureProvider to gate UI.
+ * Cached for 30 seconds across requests — features change rarely and this
+ * was previously hitting the DB on every kitchen/waiter/admin page load.
  */
-export async function getRestaurantFeatures(restaurantId: string): Promise<Settings['features_v2'] | null> {
-    const supabase = await createAdminClient()
-    const { data } = await supabase
-        .from('settings')
-        .select('features_v2')
-        .eq('restaurant_id', restaurantId)
-        .single()
-    return data?.features_v2 ?? null
-}
+export const getRestaurantFeatures = unstable_cache(
+    async (restaurantId: string): Promise<Settings['features_v2'] | null> => {
+        const supabase = await createAdminClient()
+        const { data } = await supabase
+            .from('settings')
+            .select('features_v2')
+            .eq('restaurant_id', restaurantId)
+            .single()
+        return data?.features_v2 ?? null
+    },
+    ['restaurant-features'],
+    { revalidate: 30 }
+)
 
 /**
  * Fetch restaurant with SaaS/Nepal fields for settings pages.

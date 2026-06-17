@@ -7,11 +7,11 @@ import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-    // Only super_admin and manager roles can access admin pages
+    // requireRole() uses the React.cache-wrapped getCurrentUser — no duplicate DB call
+    // when the page also calls getCurrentUser().
     const currentUser = await requireRole('super_admin', 'manager')
     const roleNameRaw = currentUser.role || 'unknown'
 
-    // Format role for display (e.g., "super_admin" -> "Super Admin")
     const roleDisplay = roleNameRaw
         .split('_')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     const isSuperAdmin = roleNameRaw === 'super_admin'
 
-    // Fetch restaurant name for the manager sidebar
+    // Fetch restaurant name for the manager sidebar — only needed for manager role
     let restaurantName: string | undefined
     if (!isSuperAdmin && currentUser.restaurantId) {
         const adminSupabase = await createAdminClient()

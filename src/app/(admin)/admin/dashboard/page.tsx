@@ -1,4 +1,3 @@
-import { createServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { formatCurrency } from '@/lib/utils'
 import { TrendingUp, ShoppingBag, Users, AlertTriangle, Clock, UserCheck, Tag, Package, ArrowRight, CheckCircle2 } from 'lucide-react'
@@ -13,16 +12,16 @@ export default async function AdminDashboardPage() {
     if (currentUser.role === 'super_admin') redirect('/admin/super-admin/dashboard')
     const { restaurantId } = currentUser
 
-    const supabase = await createServerClient()
     const adminSupabase = await createAdminClient()
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
 
+    const now = new Date().toISOString()
     const [
         { count: totalOrdersToday },
-        { data: activeSessions },
+        { count: activeSessionCount },
         { data: recentOrders },
         { data: todayOrders },
         { data: monthOrders },
@@ -33,17 +32,19 @@ export default async function AdminDashboardPage() {
         { data: lowStockIngredients },
         { count: activePromos },
     ] = await Promise.all([
-        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).gte('placed_at', today.toISOString()),
-        supabase.from('sessions').select('id').eq('restaurant_id', restaurantId).eq('status', 'active'),
-        supabase.from('orders').select('id, total_amount, status, placed_at').eq('restaurant_id', restaurantId).order('placed_at', { ascending: false }).limit(8),
-        supabase.from('orders').select('total_amount, status').eq('restaurant_id', restaurantId).gte('placed_at', today.toISOString()),
-        supabase.from('orders').select('total_amount').eq('restaurant_id', restaurantId).gte('placed_at', monthStart.toISOString()).eq('status', 'delivered'),
-        supabase.from('menu_categories').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
-        supabase.from('menu_items').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
-        supabase.from('tables').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).eq('is_active', true),
+        // All queries use adminSupabase (service role) — skips RLS policy evaluation
+        adminSupabase.from('orders').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).gte('placed_at', today.toISOString()),
+        // Count-only: previously fetched all IDs just to get .length
+        adminSupabase.from('sessions').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).eq('status', 'active').gt('expires_at', now),
+        adminSupabase.from('orders').select('id, total_amount, status, placed_at').eq('restaurant_id', restaurantId).order('placed_at', { ascending: false }).limit(8),
+        adminSupabase.from('orders').select('total_amount, status').eq('restaurant_id', restaurantId).gte('placed_at', today.toISOString()),
+        adminSupabase.from('orders').select('total_amount').eq('restaurant_id', restaurantId).gte('placed_at', monthStart.toISOString()).eq('status', 'delivered'),
+        adminSupabase.from('menu_categories').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
+        adminSupabase.from('menu_items').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
+        adminSupabase.from('tables').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).eq('is_active', true),
         adminSupabase.from('staff_shifts').select('id, clock_in, users(full_name, roles(name))').eq('restaurant_id', restaurantId).is('clock_out', null).order('clock_in', { ascending: false }),
-        supabase.from('ingredients').select('id, name, stock_quantity, reorder_level, unit').eq('restaurant_id', restaurantId).eq('is_active', true).not('reorder_level', 'is', null),
-        supabase.from('promo_codes').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).eq('is_active', true),
+        adminSupabase.from('ingredients').select('id, name, stock_quantity, reorder_level, unit').eq('restaurant_id', restaurantId).eq('is_active', true).not('reorder_level', 'is', null),
+        adminSupabase.from('promo_codes').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).eq('is_active', true),
     ])
 
     const totalRevenueToday = (todayOrders || []).filter(o => o.status === 'delivered').reduce((s, o) => s + (o.total_amount || 0), 0)
@@ -115,7 +116,7 @@ export default async function AdminDashboardPage() {
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 <KpiCard icon={TrendingUp}  bg="bg-[var(--color-primary)]/8"  ic="text-[var(--color-primary)]" label="Revenue Today"        value={formatCurrency(totalRevenueToday)} />
                 <KpiCard icon={ShoppingBag} bg="bg-emerald-50" ic="text-emerald-600" label="Orders Today"          value={String(totalOrdersToday || 0)} />
-                <KpiCard icon={Users}       bg="bg-blue-50"    ic="text-blue-600"    label="Active Tables"          value={String(activeSessions?.length || 0)} />
+                <KpiCard icon={Users}       bg="bg-blue-50"    ic="text-blue-600"    label="Active Tables"          value={String(activeSessionCount || 0)} />
                 <KpiCard icon={TrendingUp}  bg="bg-indigo-50"  ic="text-indigo-600"  label="Revenue This Month"     value={formatCurrency(totalRevenueMonth)} />
                 <KpiCard icon={UserCheck}   bg="bg-teal-50"    ic="text-teal-600"    label="Staff On Shift"         value={String(shifts.length)} />
                 <KpiCard

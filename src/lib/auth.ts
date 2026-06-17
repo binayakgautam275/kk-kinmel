@@ -3,6 +3,8 @@
 // duplicated across every admin/staff page.
 'use server'
 
+import { cache } from 'react'
+import { unstable_cache } from 'next/cache'
 import { createServerClient, createAdminClient } from '@/lib/supabase/server'
 import { getJwtClaims } from '@/lib/supabase/jwt'
 import { redirect } from 'next/navigation'
@@ -15,17 +17,24 @@ export interface CurrentUser {
     role: RoleName
 }
 
-/**
- * Get the current authenticated user with role and restaurant_id.
- *
- * Strategy:
- *  1. First try JWT custom claims (no DB roundtrip — set by 004_jwt_claims_hook.sql)
- *  2. Fall back to admin DB lookup if claims are missing (e.g. token not yet refreshed)
- *
- * Redirects to /login if not authenticated, /unauthorized if no restaurant,
- * /suspended if the restaurant has been auto-suspended.
- */
-export async function getCurrentUser(): Promise<CurrentUser> {
+// Cache the restaurant suspension status across requests (30s TTL).
+// This is the single most expensive call in getCurrentUser — a full DB
+// round-trip that previously ran on *every* page request for every staff user.
+const getCachedRestaurantStatus = unstable_cache(
+    async (restaurantId: string) => {
+        const adminSupabase = await createAdminClient()
+        const { data } = await adminSupabase
+            .from('restaurants')
+            .select('is_suspended, subscription_expires_at, subscription_status')
+            .eq('id', restaurantId)
+            .single()
+        return data
+    },
+    ['restaurant-status'],
+    { revalidate: 30 }
+)
+
+async function _getCurrentUser(): Promise<CurrentUser> {
     const supabase = await createServerClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -38,11 +47,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
     // Try JWT claims first (fast path — no DB call for role)
     const claims = await getJwtClaims()
     if (claims?.restaurant_id && claims?.app_role) {
-        const { data: rest } = await adminSupabase
-            .from('restaurants')
-            .select('is_suspended, subscription_expires_at, subscription_status')
-            .eq('id', claims.restaurant_id)
-            .single()
+        const rest = await getCachedRestaurantStatus(claims.restaurant_id)
 
         // Lazy auto-suspend: if subscription lapsed and not yet suspended, do it now
         if (
@@ -115,6 +120,10 @@ export async function getCurrentUser(): Promise<CurrentUser> {
         role: roleName as RoleName,
     }
 }
+
+// React.cache deduplicates within a single render tree: layout + page both call
+// getCurrentUser() but with this wrapper, the DB call only runs once per request.
+export const getCurrentUser = cache(_getCurrentUser)
 
 /**
  * Require a specific role (or set of roles).
