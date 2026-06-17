@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, GripVertical, Check, X, Tag, Loader2, Image as ImageIcon, Globe } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Edit2, Trash2, GripVertical, Check, X, Tag, Loader2, Image as ImageIcon, Globe, Upload, Link } from 'lucide-react'
 import type { MenuCategory, MenuItem } from '@/types/database'
+import { createClient } from '@/lib/supabase/client'
 import {
     addCategoryAction, updateCategoryAction, deleteCategoryAction,
     addItemAction, updateItemAction, deleteItemAction
@@ -44,6 +45,9 @@ export default function MenuManager({
     })
 
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [imageUploading, setImageUploading] = useState(false)
+    const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload')
+    const imageInputRef = useRef<HTMLInputElement>(null)
 
     // Translation modal state
     const [translations, setTranslations] = useState<TranslationRow[]>([])
@@ -120,6 +124,25 @@ export default function MenuManager({
             toast.success('Category deleted')
         } else {
             toast.error(res.error || 'Failed to delete category')
+        }
+    }
+
+    // --- Image Upload Handler ---
+    const uploadMenuImage = async (file: File) => {
+        setImageUploading(true)
+        try {
+            const supabase = createClient()
+            const ext = file.name.split('.').pop()
+            const path = `${restaurantId}/${Date.now()}.${ext}`
+            const { error } = await supabase.storage.from('menu-images').upload(path, file, { upsert: true })
+            if (error) throw error
+            const { data: urlData } = supabase.storage.from('menu-images').getPublicUrl(path)
+            setItemFormData(prev => ({ ...prev, image_url: urlData.publicUrl }))
+            toast.success('Image uploaded')
+        } catch {
+            toast.error('Failed to upload image')
+        } finally {
+            setImageUploading(false)
         }
     }
 
@@ -450,14 +473,62 @@ export default function MenuManager({
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Image URL (Optional)</label>
-                                <input
-                                    type="url"
-                                    value={itemFormData.image_url || ''}
-                                    onChange={e => setItemFormData({ ...itemFormData, image_url: e.target.value })}
-                                    className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border"
-                                    placeholder="https://example.com/image.jpg"
-                                />
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="block text-sm font-medium text-gray-700">Image (Optional)</label>
+                                    <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                                        <button type="button" onClick={() => setImageMode('upload')} className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${imageMode === 'upload' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+                                            <Upload size={11} /> Upload
+                                        </button>
+                                        <button type="button" onClick={() => setImageMode('url')} className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all ${imageMode === 'url' ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+                                            <Link size={11} /> URL
+                                        </button>
+                                    </div>
+                                </div>
+                                {imageMode === 'upload' ? (
+                                    <div>
+                                        <input
+                                            ref={imageInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={e => { const f = e.target.files?.[0]; if (f) uploadMenuImage(f) }}
+                                        />
+                                        {itemFormData.image_url ? (
+                                            <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50" style={{ height: 140 }}>
+                                                <img src={itemFormData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                    <button type="button" onClick={() => imageInputRef.current?.click()} className="bg-white text-gray-900 text-xs font-medium px-3 py-1.5 rounded-lg shadow flex items-center gap-1">
+                                                        <Upload size={12} /> Change
+                                                    </button>
+                                                    <button type="button" onClick={() => setItemFormData(prev => ({ ...prev, image_url: '' }))} className="bg-red-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow flex items-center gap-1">
+                                                        <X size={12} /> Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button type="button" onClick={() => imageInputRef.current?.click()} disabled={imageUploading} className="w-full border-2 border-dashed border-gray-200 rounded-xl h-28 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors disabled:opacity-50">
+                                                {imageUploading ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
+                                                <span className="text-xs font-medium">{imageUploading ? 'Uploading…' : 'Click to upload photo'}</span>
+                                                {!imageUploading && <span className="text-xs text-gray-300">JPG, PNG, WEBP up to 5MB</span>}
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <input
+                                            type="url"
+                                            value={itemFormData.image_url || ''}
+                                            onChange={e => setItemFormData({ ...itemFormData, image_url: e.target.value })}
+                                            className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border"
+                                            placeholder="https://example.com/image.jpg"
+                                        />
+                                        {itemFormData.image_url && (
+                                            <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50" style={{ height: 120 }}>
+                                                <img src={itemFormData.image_url} alt="Preview" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mt-2">
                                 <div>
