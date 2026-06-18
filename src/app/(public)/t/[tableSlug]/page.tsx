@@ -5,7 +5,28 @@ import { getCachedMenuData } from '@/lib/menu-cache'
 import type { MenuItem } from '@/types/database'
 import TablePageClient from './TablePageClient'
 
+import type { Metadata } from 'next'
+
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(props: {
+    params: Promise<{ tableSlug: string }>
+}): Promise<Metadata> {
+    const params = await props.params;
+    const supabase = await createAdminClient()
+    const { data: tableData } = await supabase
+        .from('tables')
+        .select('restaurant_id')
+        .eq('qr_token', params.tableSlug)
+        .single()
+
+    if (tableData?.restaurant_id) {
+        return {
+            manifest: `/api/manifest/${tableData.restaurant_id}?start_url=${encodeURIComponent(`/t/${params.tableSlug}`)}`
+        }
+    }
+    return {}
+}
 
 export default async function CustomerMenuPage(props: {
     params: Promise<{ tableSlug: string }>
