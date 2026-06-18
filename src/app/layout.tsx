@@ -2,7 +2,8 @@ import { Inter, Playfair_Display, Roboto, Lato } from 'next/font/google'
 import { Toaster } from 'react-hot-toast'
 import { ConfirmModal } from '@/components/shared/ConfirmModal'
 import type { Viewport } from 'next'
-import { createServerClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { unstable_cache } from 'next/cache'
 import PwaInstallPrompt from '@/components/shared/PwaInstallPrompt'
 import './globals.css'
 
@@ -29,23 +30,27 @@ export const metadata = {
 }
 
 // Fetch theme from settings or use defaults
-async function getThemeConfig() {
-  try {
-    const supabase = await createServerClient()
-    // Use ORDER BY for deterministic result in single-tenant,
-    // and updated_at desc to prefer the most recently edited restaurant's theme
-    const { data } = await supabase
-      .from('settings')
-      .select('theme')
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+const getThemeConfig = unstable_cache(
+  async () => {
+    try {
+      const supabase = await createAdminClient()
+      // Use ORDER BY for deterministic result in single-tenant,
+      // and updated_at desc to prefer the most recently edited restaurant's theme
+      const { data } = await supabase
+        .from('settings')
+        .select('theme')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-    return data?.theme || {}
-  } catch {
-    return {}
-  }
-}
+      return data?.theme || {}
+    } catch {
+      return {}
+    }
+  },
+  ['global-theme-config'],
+  { revalidate: 60 }
+)
 
 function themeToCSS(theme: Record<string, string>): string {
   const fontMap: Record<string, string> = {

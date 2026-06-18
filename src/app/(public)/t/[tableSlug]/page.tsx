@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { getRestaurantFeatures } from '@/lib/features'
+import { getCachedMenuData } from '@/lib/menu-cache'
 import type { MenuItem } from '@/types/database'
 import TablePageClient from './TablePageClient'
 
@@ -69,50 +70,16 @@ export default async function CustomerMenuPage(props: {
 
     const isValidSession = !!sessionToken
 
-    // 2. Fetch Menu Data + Feature Flags + Translations in parallel
-    const [{ data: categories }, { data: rawMenuItems }, features, { data: rawTranslations }, { data: rawLangs }] = await Promise.all([
-        supabase
-            .from('menu_categories')
-            .select('*')
-            .eq('restaurant_id', restaurantId)
-            .eq('is_visible', true)
-            .order('sort_order', { ascending: true }),
-
-        supabase
-            .from('menu_items')
-            .select('*, menu_item_modifier_groups(*, menu_item_modifiers(*))')
-            .eq('restaurant_id', restaurantId)
-            .eq('is_available', true),
-
+    // 2. Fetch Menu Data + Feature Flags in parallel
+    const [
+        features,
+        menuData
+    ] = await Promise.all([
         getRestaurantFeatures(restaurantId),
-
-        supabase
-            .from('translations')
-            .select('language_code, entity_type, entity_id, translated_text')
-            .eq('restaurant_id', restaurantId),
-
-        supabase
-            .from('supported_languages')
-            .select('language_code, language_name')
-            .eq('restaurant_id', restaurantId)
-            .eq('is_active', true)
-            .order('sort_order'),
+        getCachedMenuData(restaurantId)
     ])
 
-    // Normalize DB field names → client-side field names
-    // menu_item_modifier_groups → modifier_groups, menu_item_modifiers → modifiers
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const menuItems = (rawMenuItems || []).map((item: Record<string, any>) => ({
-        ...item,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        modifier_groups: (item.menu_item_modifier_groups || []).map((g: Record<string, any>) => ({
-            ...g,
-            modifiers: g.menu_item_modifiers || [],
-        })),
-    })) as MenuItem[]
-
-    const translations = (rawTranslations || []) as { language_code: string; entity_type: string; entity_id: string; translated_text: string }[]
-    const supportedLanguages = (rawLangs || []).map(l => ({ code: l.language_code, name: l.language_name }))
+    const { categories, menuItems, translations, supportedLanguages } = menuData
 
     // Always include English as first option if there are other languages
     const langs = supportedLanguages.length > 0
