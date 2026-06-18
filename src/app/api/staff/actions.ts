@@ -9,15 +9,19 @@ export async function clockIn(
 ): Promise<{ shift?: StaffShift; error?: string }> {
     const supabase = await createAdminClient()
 
-    // Check if already clocked in
-    const { data: active } = await supabase
+    // Check if already clocked in (maybeSingle avoids PGRST116 on 0 rows)
+    const { data: active, error: preCheckError } = await supabase
         .from('staff_shifts')
         .select('id')
         .eq('user_id', userId)
         .is('clock_out', null)
         .limit(1)
-        .single()
+        .maybeSingle()
 
+    if (preCheckError) {
+        console.error('Clock in pre-check error:', preCheckError)
+        return { error: 'Failed to clock in. Please try again.' }
+    }
     if (active) {
         return { error: 'Already clocked in. Please clock out first.' }
     }
@@ -30,6 +34,9 @@ export async function clockIn(
 
     if (error) {
         console.error('Clock in error:', error)
+        if (error.message.includes('ALREADY_CLOCKED_IN')) {
+            return { error: 'Already clocked in. Please clock out first.' }
+        }
         return { error: 'Failed to clock in. Please try again.' }
     }
 

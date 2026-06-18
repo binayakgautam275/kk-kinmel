@@ -91,6 +91,26 @@ export async function closeSession(sessionId: string) {
 }
 
 /**
+ * Opens a session for a table AND completes the open_session service request in one action.
+ */
+export async function openSessionFromRequest(
+    requestId: string,
+    tableId: string,
+    restaurantId: string
+): Promise<{ error?: string; success?: boolean }> {
+    const result = await openSession(tableId, restaurantId)
+    if (result.error) return { error: result.error }
+
+    const adminSupabase = await createAdminClient()
+    await adminSupabase
+        .from('service_requests')
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', requestId)
+
+    return { success: true }
+}
+
+/**
  * Waiter marks a table as dirty (needs cleaning) or reserved.
  * Clears back to 'available' once actioned.
  */

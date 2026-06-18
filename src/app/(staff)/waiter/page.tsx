@@ -8,6 +8,7 @@ import WaiterOrderFeed from '@/components/waiter/WaiterOrderFeed'
 import WaiterTakeoutFeed from '@/components/waiter/WaiterTakeoutFeed'
 import FloorStats from '@/components/waiter/FloorStats'
 import CashPaymentFeed from '@/components/waiter/CashPaymentFeed'
+import ActiveSessionsList from '@/components/waiter/ActiveSessionsList'
 import { getRestaurantFeatures } from '@/lib/features'
 import { Users, Package, Bell, ChefHat } from 'lucide-react'
 
@@ -17,22 +18,32 @@ export default async function WaiterPage() {
     const { id: userId, restaurantId } = await getCurrentUser()
     const adminSupabase = await createAdminClient()
 
-    // Fetch tables AND only the session fields we actually use
-    const { data: tables } = await adminSupabase
-        .from('tables')
-        .select(`*, sessions ( id, status, session_token, expires_at )`)
-        .eq('restaurant_id', restaurantId)
-        .eq('is_active', true)
-        .order('label', { ascending: true })
-
     const now = new Date().toISOString()
-    const mappedTables = tables?.map(table => {
-        const sessions = table.sessions as unknown as { status: string; expires_at: string }[]
-        const activeSession = sessions?.find(
-            (s) => s.status === 'active' && s.expires_at > now
-        )
-        return { ...table, activeSession: activeSession || null }
-    }) || []
+
+    // Fetch tables and active sessions separately — more reliable than a nested join
+    const [{ data: tables }, { data: activeSessions }] = await Promise.all([
+        adminSupabase
+            .from('tables')
+            .select('*')
+            .eq('restaurant_id', restaurantId)
+            .eq('is_active', true)
+            .order('label', { ascending: true }),
+        adminSupabase
+            .from('sessions')
+            .select('id, table_id, restaurant_id, opened_by, session_token, status, opened_at, closed_at, expires_at, guest_count, max_seats, notes')
+            .eq('restaurant_id', restaurantId)
+            .eq('status', 'active')
+            .gt('expires_at', now),
+    ])
+
+    const activeSessionByTable = Object.fromEntries(
+        (activeSessions || []).map(s => [s.table_id, s])
+    )
+
+    const mappedTables = (tables || []).map(table => ({
+        ...table,
+        activeSession: activeSessionByTable[table.id] || null,
+    }))
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
@@ -49,7 +60,7 @@ export default async function WaiterPage() {
         getRestaurantFeatures(restaurantId),
         adminSupabase
             .from('service_requests')
-            .select('*, sessions(tables(label))')
+            .select('*, sessions(tables(label)), direct_table:tables(label)')
             .eq('restaurant_id', restaurantId)
             .in('status', ['pending', 'acknowledged'])
             .order('created_at', { ascending: false })
@@ -112,6 +123,30 @@ export default async function WaiterPage() {
     const kitchenOrders = (activeOrders || []).filter(o => o.status === 'preparing' || o.status === 'confirmed' || o.status === 'pending').length
     const pendingRequests = (serviceRequests || []).filter(r => r.status === 'pending').length
 
+    // Active sessions list data
+    const tablesMap: Record<string, string> = Object.fromEntries(mappedTables.map(t => [t.id, t.label]))
+    const activeSessionEntries = mappedTables
+        .filter(t => t.activeSession)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map(t => {
+            const session = t.activeSession as any
+            const sessionOrders = (activeOrders || []).filter(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (o: any) => o.session_id === session.id && !['delivered', 'cancelled'].includes(o.status)
+            )
+            return {
+                tableId: t.id,
+                tableLabel: t.label,
+                sessionId: session.id as string,
+                openedAt: (session.opened_at ?? session.created_at ?? now) as string,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                orderCount: sessionOrders.length,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                totalAmount: sessionOrders.reduce((sum: number, o: any) => sum + (Number(o.total_amount) || 0), 0),
+            }
+        })
+        .sort((a, b) => a.tableLabel.localeCompare(b.tableLabel, undefined, { numeric: true }))
+
     return (
         <div className="space-y-4 md:space-y-5">
 
@@ -122,6 +157,13 @@ export default async function WaiterPage() {
                 readyOrders={readyOrders}
                 kitchenOrders={kitchenOrders}
                 pendingRequests={pendingRequests}
+                restaurantId={restaurantId}
+            />
+
+            {/* Active sessions list — quick overview of occupied tables */}
+            <ActiveSessionsList
+                initialEntries={activeSessionEntries}
+                tablesMap={tablesMap}
                 restaurantId={restaurantId}
             />
 

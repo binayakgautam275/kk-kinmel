@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { acknowledgeServiceRequest, completeServiceRequest } from '@/app/api/service-requests/actions'
-import { Bell, Droplets, Receipt, Sparkles, MessageCircle, Check, Clock } from 'lucide-react'
+import { Bell, Droplets, Receipt, Sparkles, MessageCircle, LogIn } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 import { playServiceRequest } from '@/lib/audio'
 import { toast } from 'react-hot-toast'
 import type { ServiceRequest, ServiceRequestType } from '@/types/database'
+import { openSessionFromRequest } from '@/app/(staff)/waiter/actions'
 
 const ICON_MAP: Record<ServiceRequestType, typeof Bell> = {
     call_waiter: Bell,
@@ -15,6 +16,7 @@ const ICON_MAP: Record<ServiceRequestType, typeof Bell> = {
     need_water: Droplets,
     clean_table: Sparkles,
     other: MessageCircle,
+    open_session: LogIn,
 }
 
 const LABEL_MAP: Record<ServiceRequestType, string> = {
@@ -23,6 +25,7 @@ const LABEL_MAP: Record<ServiceRequestType, string> = {
     need_water: 'Need Water',
     clean_table: 'Clean Table',
     other: 'Other',
+    open_session: 'Ready to Order',
 }
 
 const COLOR_MAP: Record<ServiceRequestType, string> = {
@@ -31,11 +34,16 @@ const COLOR_MAP: Record<ServiceRequestType, string> = {
     need_water: 'bg-cyan-100 text-cyan-600',
     clean_table: 'bg-amber-100 text-amber-600',
     other: 'bg-gray-100 text-gray-600',
+    open_session: 'bg-violet-100 text-violet-600',
 }
 
 type ServiceRequestWithTable = ServiceRequest & {
     sessions?: { tables?: { label?: string } }
+    direct_table?: { label?: string }
 }
+
+const getTableLabel = (req: ServiceRequestWithTable) =>
+    req.sessions?.tables?.label ?? req.direct_table?.label ?? '?'
 
 export default function ServiceRequestFeed({
     initialRequests,
@@ -47,6 +55,7 @@ export default function ServiceRequestFeed({
     userId: string
 }) {
     const [requests, setRequests] = useState<ServiceRequestWithTable[]>(initialRequests)
+    const [openingSession, setOpeningSession] = useState<string | null>(null)
     const supabaseRef = useRef(createClient())
 
     useEffect(() => {
@@ -58,21 +67,22 @@ export default function ServiceRequestFeed({
                 async (payload) => {
                     const { data } = await supabase
                         .from('service_requests')
-                        .select('*, sessions ( tables ( label ) )')
+                        .select('*, sessions ( tables ( label ) ), direct_table:tables ( label )')
                         .eq('id', payload.new.id)
                         .single()
                     if (data) {
                         const req = data as unknown as ServiceRequestWithTable
                         setRequests((prev) => [req, ...prev])
                         playServiceRequest().catch(() => {})
-                        const tableLabel = req.sessions?.tables?.label
+                        const tableLabel = getTableLabel(req)
                         const label = LABEL_MAP[req.request_type as ServiceRequestType] || 'Service Request'
+                        const isOpenSession = req.request_type === 'open_session'
                         toast.custom((t) => (
-                            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-gray-900 text-white shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 border border-amber-500/30`}>
-                                <span className="text-xl mt-0.5">🔔</span>
+                            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-gray-900 text-white shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 ${isOpenSession ? 'border border-violet-500/40' : 'border border-amber-500/30'}`}>
+                                <span className="text-xl mt-0.5">{isOpenSession ? '🪑' : '🔔'}</span>
                                 <div>
-                                    <p className="font-bold text-sm text-amber-400">{label}</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">Table {tableLabel || '?'}{req.message ? ` — ${req.message}` : ''}</p>
+                                    <p className={`font-bold text-sm ${isOpenSession ? 'text-violet-400' : 'text-amber-400'}`}>{label}</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">Table {tableLabel}{req.message ? ` — ${req.message}` : ''}</p>
                                 </div>
                             </div>
                         ), { duration: 7000, position: 'top-right' })
@@ -103,6 +113,19 @@ export default function ServiceRequestFeed({
         await completeServiceRequest(id)
     }
 
+    const handleOpenSession = async (req: ServiceRequestWithTable) => {
+        if (!req.table_id) return
+        setOpeningSession(req.id)
+        const res = await openSessionFromRequest(req.id, req.table_id, restaurantId)
+        setOpeningSession(null)
+        if (res.error) {
+            toast.error(res.error)
+        } else {
+            setRequests((prev) => prev.filter((r) => r.id !== req.id))
+            toast.success(`Session opened for Table ${getTableLabel(req)}`)
+        }
+    }
+
     const pending = requests.filter((r) => r.status === 'pending')
     const acknowledged = requests.filter((r) => r.status === 'acknowledged')
 
@@ -124,15 +147,16 @@ export default function ServiceRequestFeed({
                 {/* Pending — urgent */}
                 {pending.map((req) => {
                     const Icon = ICON_MAP[req.request_type as ServiceRequestType]
+                    const isOpenSession = req.request_type === 'open_session'
                     return (
-                        <div key={req.id} className="px-4 py-3 flex items-center gap-3 bg-amber-50/50">
+                        <div key={req.id} className={`px-4 py-3 flex items-center gap-3 ${isOpenSession ? 'bg-violet-50/60' : 'bg-amber-50/50'}`}>
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${COLOR_MAP[req.request_type as ServiceRequestType]}`}>
                                 <Icon size={16} />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                     <span className="font-semibold text-sm text-gray-900">
-                                        Table {req.sessions?.tables?.label || '?'}
+                                        Table {getTableLabel(req)}
                                     </span>
                                     <span className="text-[10px] text-gray-400">{timeAgo(req.created_at)}</span>
                                 </div>
@@ -141,12 +165,22 @@ export default function ServiceRequestFeed({
                                     {req.message && <span className="text-gray-400"> — {req.message}</span>}
                                 </p>
                             </div>
-                            <button
-                                onClick={() => handleAcknowledge(req.id)}
-                                className="bg-[var(--color-primary)] text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition"
-                            >
-                                On it
-                            </button>
+                            {isOpenSession ? (
+                                <button
+                                    onClick={() => handleOpenSession(req)}
+                                    disabled={openingSession === req.id}
+                                    className="bg-violet-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition disabled:opacity-60"
+                                >
+                                    {openingSession === req.id ? '…' : 'Open'}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => handleAcknowledge(req.id)}
+                                    className="bg-[var(--color-primary)] text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition"
+                                >
+                                    On it
+                                </button>
+                            )}
                         </div>
                     )
                 })}
@@ -154,6 +188,7 @@ export default function ServiceRequestFeed({
                 {/* Acknowledged — in progress */}
                 {acknowledged.map((req) => {
                     const Icon = ICON_MAP[req.request_type as ServiceRequestType]
+                    const isOpenSession = req.request_type === 'open_session'
                     return (
                         <div key={req.id} className="px-4 py-3 flex items-center gap-3 opacity-60">
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${COLOR_MAP[req.request_type as ServiceRequestType]}`}>
@@ -161,16 +196,26 @@ export default function ServiceRequestFeed({
                             </div>
                             <div className="flex-1 min-w-0">
                                 <span className="font-medium text-sm text-gray-700">
-                                    Table {req.sessions?.tables?.label || '?'}
+                                    Table {getTableLabel(req)}
                                 </span>
                                 <p className="text-xs text-gray-400">{LABEL_MAP[req.request_type as ServiceRequestType]}</p>
                             </div>
-                            <button
-                                onClick={() => handleComplete(req.id)}
-                                className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition"
-                            >
-                                Done
-                            </button>
+                            {isOpenSession ? (
+                                <button
+                                    onClick={() => handleOpenSession(req)}
+                                    disabled={openingSession === req.id}
+                                    className="bg-violet-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition disabled:opacity-60"
+                                >
+                                    {openingSession === req.id ? '…' : 'Open'}
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => handleComplete(req.id)}
+                                    className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition"
+                                >
+                                    Done
+                                </button>
+                            )}
                         </div>
                     )
                 })}

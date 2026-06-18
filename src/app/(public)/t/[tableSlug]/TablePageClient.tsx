@@ -10,9 +10,10 @@ import ServiceRequestPanel from '@/components/customer/ServiceRequestPanel'
 import VideoLogo from '@/components/shared/VideoLogo'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
-import { UtensilsCrossed, RefreshCw } from 'lucide-react'
+import { UtensilsCrossed, RefreshCw, Bell, Check, Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCartStore } from '@/lib/stores/cart'
+import { requestSessionOpen } from '@/app/api/service-requests/actions'
 
 interface TablePageClientProps {
     tableData: {
@@ -50,9 +51,9 @@ export default function TablePageClient({
     const [liveSessionUUID, setLiveSessionUUID] = useState(sessionUUID)
     const hasSession = !!liveSessionToken
 
-    // Always start with menu visible — HomepageGate renders its own homepage layer
-    // on top; onProceed just ensures children are ready once that layer dismisses.
     const [showMenu, setShowMenu] = useState(true)
+    const [requestSent, setRequestSent] = useState(false)
+    const [requestLoading, setRequestLoading] = useState(false)
     const supabaseRef = useRef(createClient())
 
     // Keep the Zustand cart store in sync with the live session so checkout
@@ -127,7 +128,7 @@ export default function TablePageClient({
                 },
                 (payload) => {
                     const s = payload.new as { status: string; session_token: string; id: string; expires_at: string }
-                    if (s.status === 'active' && s.session_token && s.expires_at > new Date().toISOString()) {
+                    if (s.status === 'active' && s.session_token && new Date(s.expires_at) > new Date()) {
                         applySession(s.session_token, s.id)
                     }
                 }
@@ -186,12 +187,34 @@ export default function TablePageClient({
                             <div className="flex-1">
                                 <p className="font-semibold text-amber-900 text-sm">Welcome to {restaurantName}!</p>
                                 <p className="text-amber-700 text-sm mt-0.5">
-                                    Ask your waiter to open a session for Table {tableData.label} so you can place orders.
+                                    Your waiter will open a session for Table {tableData.label} so you can place orders.
                                 </p>
-                                <p className="text-amber-600 text-xs mt-2 flex items-center gap-1">
-                                    <RefreshCw size={11} className="animate-spin" />
-                                    Waiting for your session to open…
-                                </p>
+                                {requestSent ? (
+                                    <p className="text-emerald-600 text-xs mt-3 flex items-center gap-1.5 font-medium">
+                                        <Check size={13} />
+                                        Waiter notified! They&apos;ll be right with you.
+                                    </p>
+                                ) : (
+                                    <div className="flex items-center justify-between mt-3">
+                                        <p className="text-amber-600 text-xs flex items-center gap-1">
+                                            <RefreshCw size={11} className="animate-spin" />
+                                            Waiting for session…
+                                        </p>
+                                        <button
+                                            onClick={async () => {
+                                                setRequestLoading(true)
+                                                const res = await requestSessionOpen(tableData.id, tableData.restaurant_id)
+                                                setRequestLoading(false)
+                                                if (res.success || res.error?.includes('already')) setRequestSent(true)
+                                            }}
+                                            disabled={requestLoading}
+                                            className="flex items-center gap-1.5 text-xs font-semibold bg-amber-600 text-white px-3 py-1.5 rounded-lg active:scale-95 transition disabled:opacity-60"
+                                        >
+                                            {requestLoading ? <Loader2 size={12} className="animate-spin" /> : <Bell size={12} />}
+                                            Ring for Service
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

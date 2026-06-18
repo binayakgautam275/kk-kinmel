@@ -39,6 +39,41 @@ export async function createServiceRequest(
     return { success: true }
 }
 
+export async function requestSessionOpen(
+    tableId: string,
+    restaurantId: string
+): Promise<{ success: boolean; error?: string }> {
+    const supabase = await createAdminClient()
+
+    // Rate limit: 1 pending open_session request per table at a time
+    const { count } = await supabase
+        .from('service_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('table_id', tableId)
+        .eq('request_type', 'open_session')
+        .eq('status', 'pending')
+
+    if (count && count >= 1) {
+        return { success: false, error: 'Request already sent. Your waiter is on the way!' }
+    }
+
+    const { error } = await supabase
+        .from('service_requests')
+        .insert({
+            session_id: null,
+            table_id: tableId,
+            restaurant_id: restaurantId,
+            request_type: 'open_session',
+        })
+
+    if (error) {
+        console.error('Request session open error:', error)
+        return { success: false, error: 'Failed to send request. Please try again.' }
+    }
+
+    return { success: true }
+}
+
 export async function acknowledgeServiceRequest(
     requestId: string,
     userId: string

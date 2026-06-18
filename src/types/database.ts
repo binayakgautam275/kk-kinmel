@@ -9,7 +9,7 @@ export type RoleName = 'super_admin' | 'manager' | 'kitchen' | 'waiter' | 'custo
 export type PricingRuleType = 'percentage_off' | 'fixed_price' | 'amount_off'
 export type PromoType = 'percentage_off' | 'amount_off' | 'free_item' | 'bogo'
 export type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum'
-export type ServiceRequestType = 'call_waiter' | 'request_bill' | 'need_water' | 'clean_table' | 'other'
+export type ServiceRequestType = 'call_waiter' | 'request_bill' | 'need_water' | 'clean_table' | 'other' | 'open_session'
 export type ServiceRequestStatus = 'pending' | 'acknowledged' | 'completed' | 'cancelled'
 export type SplitType = 'by_seat' | 'even' | 'custom' | 'full'
 export type TakeoutStatus = 'placed' | 'confirmed' | 'preparing' | 'ready_for_pickup' | 'picked_up' | 'cancelled'
@@ -439,7 +439,8 @@ export interface EodReport {
 // ============================================================
 export interface ServiceRequest {
     id: string
-    session_id: string
+    session_id: string | null
+    table_id: string | null
     restaurant_id: string
     request_type: ServiceRequestType
     message: string | null
