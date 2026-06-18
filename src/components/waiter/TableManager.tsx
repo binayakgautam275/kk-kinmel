@@ -94,8 +94,18 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
 
     const handleOpenSession = async (tableId: string) => {
         setIsProcessing(true)
-        await openSession(tableId, restaurantId)
+        const res = await openSession(tableId, restaurantId)
+        if (res.error || !res.session) {
+            toast.error(res.error || 'Failed to open session')
+            setIsProcessing(false)
+            return
+        }
+        // Optimistically flip the table to active so the card updates instantly,
+        // even if the Realtime INSERT event is delayed or never arrives.
+        const session = res.session as Session
         await setTableStatus(tableId, 'available')
+        setTables(prev => prev.map(t => t.id === tableId ? { ...t, activeSession: session } : t))
+        setSelectedTable(prev => prev?.id === tableId ? { ...prev, activeSession: session } : prev)
         toast.success('Session opened')
         setIsProcessing(false)
     }

@@ -36,7 +36,7 @@ export async function openSession(tableId: string, restaurantId: string, guestCo
             guest_count: guestCount || null,
             session_token: sessionToken,
         })
-        .select('id')
+        .select('*')
         .single()
 
     if (error) {
@@ -55,7 +55,7 @@ export async function openSession(tableId: string, restaurantId: string, guestCo
     })
 
     revalidatePath('/waiter')
-    return { success: true }
+    return { success: true, session: data }
 }
 
 export async function closeSession(sessionId: string) {
