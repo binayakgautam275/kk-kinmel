@@ -1,7 +1,7 @@
 // src/lib/audio.ts — notification sound system
 
 let audioCtx: AudioContext | null = null
-let customSoundUrl: string | null = null
+let customSoundUrl: string | null = '/sounds/kkkhane.mp3'
 
 // ─── AudioContext lifecycle ───────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ export function isAudioLocked(): boolean {
  * When set, all notification functions play this file instead of synthesised tones.
  */
 export function setCustomNotificationSound(url: string | null) {
-    customSoundUrl = url || null
+    customSoundUrl = url || '/sounds/kkkhane.mp3'
 }
 
 async function playCustomSound(): Promise<boolean> {
