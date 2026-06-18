@@ -61,9 +61,9 @@ export const useCartStore = create<CartState>()(
 
             setSession: (sessionId, restaurantSlug, restaurantId) =>
                 set((state) => {
-                    // If switching to a different restaurant, clear the cart
-                    const isSameRestaurant = state.restaurantId === (restaurantId || null)
-                    if (!isSameRestaurant && state.items.length > 0) {
+                    // If switching to a different session, clear the cart
+                    const isSameSession = state.sessionId === sessionId
+                    if (!isSameSession && state.items.length > 0) {
                         return {
                             sessionId,
                             restaurantSlug,

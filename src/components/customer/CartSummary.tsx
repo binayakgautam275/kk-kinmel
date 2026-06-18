@@ -7,12 +7,14 @@ import { ShoppingBag, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
 export default function CartSummary({ sessionId, tableSlug }: { sessionId?: string; tableSlug?: string }) {
-    const totalItems = useHydratedStore(useCartStore, (s) => s.totalItems)
-    const totalAmount = useHydratedStore(useCartStore, (s) => s.totalAmount)
+    const items = useHydratedStore(useCartStore, (s) => s.items)
     const storeSlug = useHydratedStore(useCartStore, (s) => s.restaurantSlug)
 
-    const count = totalItems()
-    const amount = totalAmount()
+    const count = items?.reduce((acc, item) => acc + item.quantity, 0) || 0
+    const amount = items?.reduce((total, item) => {
+        const modifierTotal = (item.modifiers || []).reduce((sum, mod) => sum + mod.priceAdjustment, 0)
+        return total + (item.price + modifierTotal) * item.quantity
+    }, 0) || 0
     const slug = tableSlug || storeSlug || 'menu'
 
     if (count === 0 || !sessionId) return null
