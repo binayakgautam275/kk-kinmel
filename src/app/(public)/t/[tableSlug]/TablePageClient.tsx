@@ -12,6 +12,7 @@ import { TranslationProvider } from '@/lib/contexts/TranslationContext'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
 import { UtensilsCrossed, RefreshCw } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { useCartStore } from '@/lib/stores/cart'
 
 interface TablePageClientProps {
     tableData: {
@@ -54,6 +55,56 @@ export default function TablePageClient({
     const [showMenu, setShowMenu] = useState(true)
     const supabaseRef = useRef(createClient())
 
+    // Keep the Zustand cart store in sync with the live session so checkout
+    // always sees a non-null sessionId regardless of how the session arrived
+    // (SSR prop vs Realtime INSERT vs race-condition one-shot fetch).
+    useEffect(() => {
+        if (liveSessionToken) {
+            useCartStore.getState().setSession(
+                liveSessionToken,
+                tableData.qr_token,
+                tableData.restaurant_id,
+            )
+        }
+    }, [liveSessionToken, tableData.qr_token, tableData.restaurant_id])
+
+    // Helper — shared by Realtime handler, one-shot fetch, and polling
+    const applySession = (token: string, uuid: string) => {
+        setLiveSessionToken(token)
+        setLiveSessionUUID(uuid)
+    }
+
+    // Direct DB fetch for the active session on this table (used by both the
+    // one-shot Realtime race-guard and the 3-second polling fallback).
+    const fetchActiveSession = async () => {
+        const { data } = await supabaseRef.current
+            .from('sessions')
+            .select('id, session_token')
+            .eq('table_id', tableData.id)
+            .eq('status', 'active')
+            .gt('expires_at', new Date().toISOString())
+            .order('opened_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+        if (data?.session_token) {
+            applySession(data.session_token, data.id)
+            return true
+        }
+        return false
+    }
+
+    // Polling fallback — runs every 3 s when no session is detected.
+    // This catches the case where Supabase Realtime fails to deliver the INSERT
+    // event (WebSocket not yet established, publication lag, etc.).
+    useEffect(() => {
+        if (hasSession) return
+        // Immediate check first, then poll
+        fetchActiveSession()
+        const timer = setInterval(fetchActiveSession, 3000)
+        return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tableData.id, hasSession])
+
     // Subscribe to session INSERT events for this table so the customer page
     // enables ordering the moment a waiter opens a session — no refresh needed.
     //
@@ -63,11 +114,6 @@ export default function TablePageClient({
     useEffect(() => {
         if (hasSession) return
         const supabase = supabaseRef.current
-
-        const applySession = (token: string, uuid: string) => {
-            setLiveSessionToken(token)
-            setLiveSessionUUID(uuid)
-        }
 
         const channel = supabase
             .channel(`table-session-watch-${tableData.id}`)
@@ -89,20 +135,10 @@ export default function TablePageClient({
             .subscribe(async (status) => {
                 if (status !== 'SUBSCRIBED') return
                 // Catch sessions opened between SSR and WebSocket ready
-                const { data } = await supabase
-                    .from('sessions')
-                    .select('id, session_token')
-                    .eq('table_id', tableData.id)
-                    .eq('status', 'active')
-                    .gt('expires_at', new Date().toISOString())
-                    .order('opened_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle()
-                if (data?.session_token) {
-                    applySession(data.session_token, data.id)
-                }
+                await fetchActiveSession()
             })
         return () => { supabase.removeChannel(channel) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tableData.id, hasSession])
 
     const restaurantName = tableData.restaurants?.name || 'Restaurant'
