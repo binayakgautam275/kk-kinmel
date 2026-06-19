@@ -106,7 +106,7 @@ export default async function CustomerMenuPage(props: {
 
     // Always include English as first option if there are other languages
     const langs = supportedLanguages.length > 0
-        ? [{ code: 'en', name: 'EN' }, ...supportedLanguages]
+        ? [{ code: 'en', name: 'EN' }, ...supportedLanguages.filter(l => l.code !== 'en')]
         : []
 
     return (
