@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { playStatusUpdate } from '@/lib/audio'
+import { playVoice } from '@/lib/voice'
 import { toast } from 'react-hot-toast'
 import { formatCurrency, timeAgo } from '@/lib/utils'
 import { CheckCircle2, ChefHat, Package, CheckCircle, Clock, XCircle } from 'lucide-react'
@@ -48,6 +49,11 @@ export default function OrderTracker({ orderId, initialOrder }: { orderId: strin
                     const info = newStatus ? STATUS_TOAST[newStatus] : null
                     if (info) {
                         playStatusUpdate().catch(() => {})
+                        if (newStatus === 'preparing') {
+                            playVoice('customer_order_preparing')
+                        } else if (newStatus === 'ready') {
+                            playVoice('customer_order_ready')
+                        }
                         toast.custom((t) => (
                             <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-xl rounded-2xl px-4 py-3 flex items-center gap-3 border border-gray-100`}>
                                 <span className="text-2xl">{info.emoji}</span>

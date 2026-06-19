@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { markOrderDelivered, markDeliveredAndCashPaid } from '@/app/(staff)/waiter/order-actions'
 import { playOrderReady, playNewOrder } from '@/lib/audio'
+import { playVoice } from '@/lib/voice'
 import { toast } from 'react-hot-toast'
 import { timeAgo, formatCurrency } from '@/lib/utils'
 import { Package, ChefHat, Loader2, Banknote, Truck, Clock, CheckCircle } from 'lucide-react'
@@ -56,6 +57,7 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                         if (ordersRef.current.some(o => o.id === order.id)) return
                         setOrders(prev => prev.some(o => o.id === order.id) ? prev : [order, ...prev])
                         playNewOrder().catch(() => {})
+                        playVoice('waiter_new_order')
                         navigator.vibrate?.(300)
                         const tbl = order.sessions?.tables?.label
                         toast.custom((t) => (
@@ -89,6 +91,7 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
 
                     if (newStatus === 'ready') {
                         playOrderReady().catch(() => {})
+                        playVoice('waiter_order_ready')
                         navigator.vibrate?.([200, 100, 200])
                         const order = fetched ?? ordersRef.current.find(o => o.id === payload.new.id)
                         const tbl = order?.sessions?.tables?.label

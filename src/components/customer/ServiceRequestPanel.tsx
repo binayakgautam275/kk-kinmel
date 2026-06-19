@@ -7,6 +7,7 @@ import { useCartStore } from '@/lib/stores/cart'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
 import type { ServiceRequestType } from '@/types/database'
 import { toast } from 'react-hot-toast'
+import { playVoice } from '@/lib/voice'
 
 type RequestOption = {
     id: string            // unique key (may differ from DB type for presets that use 'other')
@@ -58,6 +59,7 @@ export default function ServiceRequestPanel({
             toast.error(res.error)
         } else {
             toast.success(`${option.label} requested!`)
+            playVoice('customer_service_notified')
             setSuccess(option.id)
             setTimeout(() => setSuccess(null), 3000)
         }
@@ -79,6 +81,7 @@ export default function ServiceRequestPanel({
             toast.error(res.error)
         } else {
             toast.success("Request sent!")
+            playVoice('customer_service_notified')
             setSuccess('custom')
             setCustomMessage('')
             setTimeout(() => setSuccess(null), 3000)

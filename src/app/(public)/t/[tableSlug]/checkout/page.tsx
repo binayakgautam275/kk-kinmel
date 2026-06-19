@@ -13,6 +13,7 @@ import SplitBillModal from '@/components/customer/SplitBillModal'
 import { useFeatures } from '@/lib/contexts/FeatureContext'
 import { useParams } from 'next/navigation'
 import { toast } from 'react-hot-toast'
+import { playVoice } from '@/lib/voice'
 
 export default function CheckoutPage() {
     const params = useParams<{ tableSlug: string }>()
@@ -104,6 +105,7 @@ export default function CheckoutPage() {
             setIsSubmitting(false)
         } else if (res.orderId) {
             toast.success("Order placed successfully!")
+            playVoice('customer_order_placed')
             clearCart()
             router.push(`/t/${params.tableSlug}/order/${res.orderId}`)
         }

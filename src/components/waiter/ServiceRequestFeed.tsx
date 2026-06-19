@@ -6,6 +6,7 @@ import { acknowledgeServiceRequest, completeServiceRequest } from '@/app/api/ser
 import { Bell, Droplets, Receipt, Sparkles, MessageCircle, LogIn } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 import { playServiceRequest } from '@/lib/audio'
+import { playVoice } from '@/lib/voice'
 import { toast } from 'react-hot-toast'
 import type { ServiceRequest, ServiceRequestType } from '@/types/database'
 import { openSessionFromRequest } from '@/app/(staff)/waiter/actions'
@@ -74,6 +75,13 @@ export default function ServiceRequestFeed({
                         const req = data as unknown as ServiceRequestWithTable
                         setRequests((prev) => [req, ...prev])
                         playServiceRequest().catch(() => {})
+                        
+                        if (req.request_type === 'request_bill') {
+                            playVoice('waiter_bill_request')
+                        } else {
+                            playVoice('waiter_service_ring')
+                        }
+                        
                         const tableLabel = getTableLabel(req)
                         const label = LABEL_MAP[req.request_type as ServiceRequestType] || 'Service Request'
                         const isOpenSession = req.request_type === 'open_session'
