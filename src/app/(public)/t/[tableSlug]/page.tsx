@@ -102,7 +102,7 @@ export default async function CustomerMenuPage(props: {
         getMenuLayout(restaurantId)
     ])
 
-    const { categories, menuItems, translations, supportedLanguages } = menuData
+    const { categories, menuItems, translations, supportedLanguages, comboItems } = menuData
 
     // Always include English as first option if there are other languages
     const langs = supportedLanguages.length > 0
@@ -122,6 +122,7 @@ export default async function CustomerMenuPage(props: {
             }}
             categories={categories || []}
             menuItems={menuItems}
+            comboItems={comboItems || []}
             sessionToken={sessionToken}
             sessionUUID={sessionUUID}
             isValidSession={isValidSession}

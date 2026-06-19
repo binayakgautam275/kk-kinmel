@@ -37,9 +37,10 @@ export default async function KitchenPage() {
                 sessions ( tables ( label ) ),
                 order_items (
                     id,
+                    menu_item_id,
                     quantity,
                     special_request,
-                    menu_items ( name ),
+                    menu_items ( name, is_combo ),
                     order_item_modifiers ( modifier_name, price_adjustment )
                 )
             `)
@@ -78,6 +79,18 @@ export default async function KitchenPage() {
             .limit(5),
     ])
 
+    // Fetch combo items safely (without breaking kitchen display if table is missing)
+    let comboItems: any[] = []
+    try {
+        const { data: rawComboItems, error: comboErr } = await adminSupabase
+            .from('combo_items')
+            .select('id, combo_id, item_id, quantity, menu_items!item_id(name)')
+        if (comboErr) throw comboErr
+        comboItems = rawComboItems || []
+    } catch (err) {
+        console.warn('Could not fetch combo_items in KitchenPage:', err)
+    }
+
     // Kitchen stats for the top bar
     const queuedOrders = (activeOrders || []).filter(o => o.status === 'pending' || o.status === 'confirmed').length
     const preparingOrders = (activeOrders || []).filter(o => o.status === 'preparing').length
@@ -115,6 +128,7 @@ export default async function KitchenPage() {
                     <OrderQueue
                         initialOrders={(activeOrders || []) as unknown as KitchenOrder[]}
                         restaurantId={restaurantId}
+                        comboItems={comboItems}
                     />
                 </div>
 

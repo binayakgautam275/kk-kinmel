@@ -10,7 +10,8 @@ export const getCachedMenuData = unstable_cache(
             { data: categories },
             { data: rawMenuItems },
             { data: rawTranslations },
-            { data: rawLangs }
+            { data: rawLangs },
+            comboItemsResult
         ] = await Promise.all([
             supabase
                 .from('menu_categories')
@@ -36,6 +37,10 @@ export const getCachedMenuData = unstable_cache(
                 .eq('restaurant_id', restaurantId)
                 .eq('is_active', true)
                 .order('sort_order'),
+
+            supabase
+                .from('combo_items')
+                .select('id, combo_id, item_id, quantity')
         ])
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -50,12 +55,14 @@ export const getCachedMenuData = unstable_cache(
 
         const translations = (rawTranslations || []) as { language_code: string; entity_type: string; entity_id: string; translated_text: string }[]
         const supportedLanguages = (rawLangs || []).map(l => ({ code: l.language_code, name: l.language_name }))
+        const comboItems = comboItemsResult?.data || []
 
         return {
             categories: categories || [],
             menuItems,
             translations,
-            supportedLanguages
+            supportedLanguages,
+            comboItems
         }
     },
     ['restaurant-menu-data'],

@@ -111,6 +111,7 @@ export interface MenuItem {
     preparation_min: number | null
     allergens: string[] | null
     tags: string[] | null
+    is_combo?: boolean
     created_at: string
     updated_at: string
     // Joined fields

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useCartStore, getCartItemKey } from '@/lib/stores/cart'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
 import { formatCurrency } from '@/lib/utils'
-import { Plus, Minus, X, Check, Clock, Flame, Leaf } from 'lucide-react'
+import { Plus, Minus, X, Check, Clock, Flame, Leaf, Sparkles } from 'lucide-react'
 import Image from 'next/image'
 import type { MenuItem, CartItemModifier } from '@/types/database'
 import { useTranslation } from '@/lib/contexts/TranslationContext'
@@ -27,8 +27,10 @@ const ALLERGEN_ICONS: Record<string, string> = {
     soy: '🫘', fish: '🐟', shellfish: '🦐', sesame: '🫙',
 }
 
-export default function MenuItemCard({ item, sessionId, restaurantSlug, restaurantId }: {
+export default function MenuItemCard({ item, comboItems = [], menuItems = [], sessionId, restaurantSlug, restaurantId }: {
     item: MenuItem
+    comboItems?: any[]
+    menuItems?: MenuItem[]
     sessionId?: string
     restaurantSlug: string
     restaurantId?: string
@@ -148,13 +150,19 @@ export default function MenuItemCard({ item, sessionId, restaurantSlug, restaura
                 )}
 
                 {/* Tag pill */}
-                {tagStyle && firstTag && (
+                {item.is_combo ? (
+                    <div className="absolute bottom-2 left-2 z-10">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200/50 flex items-center gap-0.5 shadow-sm">
+                            ★ Combo Deal
+                        </span>
+                    </div>
+                ) : tagStyle && firstTag ? (
                     <div className="absolute bottom-2 left-2 z-10">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${tagStyle.cls}`}>
                             {tagStyle.icon && <span className="mr-0.5">{tagStyle.icon}</span>}{firstTag}
                         </span>
                     </div>
-                )}
+                ) : null}
             </div>
 
             {/* Body */}
@@ -170,6 +178,28 @@ export default function MenuItemCard({ item, sessionId, restaurantSlug, restaura
 
                 {displayDesc && (
                     <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">{displayDesc}</p>
+                )}
+
+                {item.is_combo && (
+                    <div className="mt-2 pt-2 border-t border-dashed border-gray-100 space-y-1 shrink-0">
+                        <p className="text-[9px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1 leading-none">
+                            <Sparkles size={9} className="text-amber-500" /> Includes:
+                        </p>
+                        <div className="space-y-0.5">
+                            {comboItems
+                                .filter(c => c.combo_id === item.id)
+                                .map(c => {
+                                    const componentItem = menuItems.find(m => m.id === c.item_id)
+                                    return (
+                                        <div key={c.id} className="flex justify-between text-[10px] text-gray-400 font-medium leading-normal">
+                                            <span className="truncate pr-1">{componentItem?.name || 'Item'}</span>
+                                            <span className="tabular-nums font-semibold text-gray-500">×{c.quantity}</span>
+                                        </div>
+                                    )
+                                })
+                            }
+                        </div>
+                    </div>
                 )}
 
                 {(item.preparation_min || displayAllergens.length > 0) && (
