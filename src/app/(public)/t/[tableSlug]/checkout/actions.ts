@@ -44,7 +44,8 @@ export async function placeOrder(
     items: CartItem[],
     customerNote?: string,
     promoCode?: string | null,
-    loyaltyMemberId?: string | null
+    loyaltyMemberId?: string | null,
+    clientRequestId?: string | null
 ): Promise<{
     orderId?: string
     subtotal?: number
@@ -60,7 +61,8 @@ export async function placeOrder(
         items: z.array(OrderItemSchema).min(1, 'At least one item required'),
         customerNote: z.string().max(500).nullable().optional(),
         promoCode: z.string().max(50).nullable().optional(),
-        loyaltyMemberId: z.string().uuid().nullable().optional()
+        loyaltyMemberId: z.string().uuid().nullable().optional(),
+        clientRequestId: z.string().min(1).max(100).nullable().optional()
     })
 
     // Format items payload for the place_order RPC (includes modifiers)
@@ -79,7 +81,8 @@ export async function placeOrder(
         items: payload,
         customerNote,
         promoCode,
-        loyaltyMemberId
+        loyaltyMemberId,
+        clientRequestId
     })
 
     if (!validation.success) {
@@ -125,6 +128,7 @@ export async function placeOrder(
         p_customer_note: customerNote || null,
         p_promo_code: promoCode || null,
         p_loyalty_member_id: loyaltyMemberId || null,
+        p_client_request_id: clientRequestId || null,
     })
 
     if (error) {
@@ -150,7 +154,8 @@ export async function placeOrder(
             payload,
             customerNote || null,
             loyaltyMemberId || null,
-            promoCode || null
+            promoCode || null,
+            clientRequestId || null
         )
 
         if (fallback) {
@@ -247,7 +252,8 @@ async function placeOrderFallback(
     payload: PlaceOrderItemPayload[],
     customerNote: string | null,
     loyaltyMemberId: string | null,
-    promoCode: string | null = null
+    promoCode: string | null = null,
+    clientRequestId: string | null = null
 ): Promise<{
     orderId: string
     subtotal: number
@@ -268,6 +274,27 @@ async function placeOrderFallback(
 
     const restaurantId = sessionRow.restaurant_id as string
 
+    // Idempotency: if this exact request already produced an order, return it
+    // rather than placing a duplicate on the kitchen queue.
+    if (clientRequestId) {
+        const { data: existing } = await supabase
+            .from('orders')
+            .select('id, subtotal_amount, discount_amount, tax_amount, total_amount')
+            .eq('client_request_id', clientRequestId)
+            .maybeSingle()
+
+        if (existing?.id) {
+            return {
+                orderId: existing.id,
+                subtotal: Number(existing.subtotal_amount ?? 0),
+                discount: Number(existing.discount_amount ?? 0),
+                tax: Number(existing.tax_amount ?? 0),
+                total: Number(existing.total_amount ?? 0),
+                pointsEarned: 0,
+            }
+        }
+    }
+
     // Create pending order first
     const { data: orderRow, error: orderInsertError } = await supabase
         .from('orders')
@@ -278,6 +305,7 @@ async function placeOrderFallback(
             loyalty_member_id: loyaltyMemberId,
             status: 'pending',
             payment_status: 'unpaid',
+            client_request_id: clientRequestId,
         })
         .select('id')
         .single()

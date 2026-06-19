@@ -186,6 +186,7 @@ export interface Order {
     promo_code_id: string | null
     loyalty_member_id: string | null
     refunded_amount: number
+    client_request_id: string | null
     placed_at: string
     confirmed_at: string | null
     ready_at: string | null
