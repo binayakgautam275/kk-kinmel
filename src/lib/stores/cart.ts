@@ -45,6 +45,10 @@ interface CartState {
     totalAmount: () => number
     totalItems: () => number
     finalTotal: () => number
+
+    // Idempotency
+    idempotencyKey: string
+    regenerateIdempotencyKey: () => void
 }
 
 export const useCartStore = create<CartState>()(
@@ -58,6 +62,12 @@ export const useCartStore = create<CartState>()(
             promoDiscount: 0,
             loyaltyMember: null,
             loyaltyDiscount: 0,
+            idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cr-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+
+            regenerateIdempotencyKey: () =>
+                set({
+                    idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cr-${Date.now()}-${Math.random().toString(36).slice(2)}`
+                }),
 
             setSession: (sessionId, restaurantSlug, restaurantId) =>
                 set((state) => {
@@ -80,6 +90,7 @@ export const useCartStore = create<CartState>()(
 
             addItem: (item) =>
                 set((state) => {
+                    const newIdempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cr-${Date.now()}-${Math.random().toString(36).slice(2)}`
                     // Build a unique key from menuItemId + sorted modifier IDs
                     // so "Latte + Oat Milk" and "Latte + Almond Milk" are separate items
                     const itemKey = getCartItemKey(item)
@@ -88,6 +99,7 @@ export const useCartStore = create<CartState>()(
                     )
                     if (existing) {
                         return {
+                            idempotencyKey: newIdempotencyKey,
                             items: state.items.map((i) =>
                                 getCartItemKey(i) === itemKey
                                     ? { ...i, quantity: Math.min(i.quantity + 1, MAX_QUANTITY_PER_ITEM) }
@@ -95,23 +107,27 @@ export const useCartStore = create<CartState>()(
                             ),
                         }
                     }
-                    return { items: [...state.items, { ...item, quantity: 1 }] }
+                    return { idempotencyKey: newIdempotencyKey, items: [...state.items, { ...item, quantity: 1 }] }
                 }),
 
             removeItem: (cartItemKey) =>
                 set((state) => ({
+                    idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cr-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                     items: state.items.filter((i) => getCartItemKey(i) !== cartItemKey),
                 })),
 
             updateQuantity: (cartItemKey, quantity) =>
                 set((state) => {
+                    const newIdempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cr-${Date.now()}-${Math.random().toString(36).slice(2)}`
                     if (quantity <= 0) {
                         return {
+                            idempotencyKey: newIdempotencyKey,
                             items: state.items.filter((i) => getCartItemKey(i) !== cartItemKey),
                         }
                     }
                     const capped = Math.min(quantity, MAX_QUANTITY_PER_ITEM)
                     return {
+                        idempotencyKey: newIdempotencyKey,
                         items: state.items.map((i) =>
                             getCartItemKey(i) === cartItemKey ? { ...i, quantity: capped } : i
                         ),
@@ -120,6 +136,7 @@ export const useCartStore = create<CartState>()(
 
             updateSpecialRequest: (cartItemKey, request) =>
                 set((state) => ({
+                    idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cr-${Date.now()}-${Math.random().toString(36).slice(2)}`,
                     items: state.items.map((i) =>
                         getCartItemKey(i) === cartItemKey
                             ? { ...i, specialRequest: request }
@@ -136,6 +153,7 @@ export const useCartStore = create<CartState>()(
                 promoDiscount: 0,
                 loyaltyMember: null,
                 loyaltyDiscount: 0,
+                idempotencyKey: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cr-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             }),
 
             setPromo: (promo, discount) =>
@@ -180,6 +198,7 @@ export const useCartStore = create<CartState>()(
                 promoDiscount: state.promoDiscount,
                 loyaltyMember: state.loyaltyMember,
                 loyaltyDiscount: state.loyaltyDiscount,
+                idempotencyKey: state.idempotencyKey,
             }),
         }
     )

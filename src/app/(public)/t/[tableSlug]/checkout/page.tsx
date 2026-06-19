@@ -35,6 +35,7 @@ export default function CheckoutPage() {
     const setLoyaltyDiscount = useCartStore((s) => s.setLoyaltyDiscount)
     const [note, setNote] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const isSubmittingRef = useRef(false)
     const [errorMsg, setErrorMsg] = useState('')
     const [showSplit, setShowSplit] = useState(false)
     const router = useRouter()
@@ -42,13 +43,7 @@ export default function CheckoutPage() {
     // Stable idempotency key for this checkout attempt. Sent with the order so a
     // double-tap / retry / second tab can't create a duplicate order in the
     // kitchen — the server returns the already-placed order instead.
-    const idempotencyKeyRef = useRef<string>('')
-    if (!idempotencyKeyRef.current) {
-        idempotencyKeyRef.current =
-            typeof crypto !== 'undefined' && crypto.randomUUID
-                ? crypto.randomUUID()
-                : `cr-${Date.now()}-${Math.random().toString(36).slice(2)}`
-    }
+    const idempotencyKey = useHydratedStore(useCartStore, (s) => s.idempotencyKey) || `fallback-cr-${Date.now()}`
 
     if (items.length === 0) {
         return (
@@ -72,13 +67,14 @@ export default function CheckoutPage() {
     const handleCheckout = async () => {
         // Re-entrancy guard: the disabled state only applies on the next render,
         // so a rapid double-tap could otherwise fire two orders before then.
-        if (isSubmitting) return
+        if (isSubmittingRef.current) return
 
         if (!sessionId) {
             setErrorMsg("No active session found. Please scan the QR code again.")
             return
         }
 
+        isSubmittingRef.current = true
         setIsSubmitting(true)
         setErrorMsg('')
 
@@ -89,11 +85,12 @@ export default function CheckoutPage() {
             note,
             promoCode?.code || null,
             loyaltyMember?.id || null,
-            idempotencyKeyRef.current
+            idempotencyKey
         )
 
         if (res.error) {
             setErrorMsg(res.error)
+            isSubmittingRef.current = false
             setIsSubmitting(false)
         } else if (res.orderId) {
             clearCart()
