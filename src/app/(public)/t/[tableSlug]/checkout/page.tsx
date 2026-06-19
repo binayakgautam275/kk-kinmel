@@ -5,7 +5,7 @@ import { useHydratedStore } from '@/lib/stores/useHydratedStore'
 import { formatCurrency } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { placeOrder } from './actions'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { ArrowLeft, Trash2, Plus, Minus, Loader2 } from 'lucide-react'
 import PromoCodeInput from '@/components/customer/PromoCodeInput'
 import LoyaltyPanel from '@/components/customer/LoyaltyPanel'
@@ -39,6 +39,17 @@ export default function CheckoutPage() {
     const [showSplit, setShowSplit] = useState(false)
     const router = useRouter()
 
+    // Stable idempotency key for this checkout attempt. Sent with the order so a
+    // double-tap / retry / second tab can't create a duplicate order in the
+    // kitchen — the server returns the already-placed order instead.
+    const idempotencyKeyRef = useRef<string>('')
+    if (!idempotencyKeyRef.current) {
+        idempotencyKeyRef.current =
+            typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `cr-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    }
+
     if (items.length === 0) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -59,6 +70,10 @@ export default function CheckoutPage() {
     }
 
     const handleCheckout = async () => {
+        // Re-entrancy guard: the disabled state only applies on the next render,
+        // so a rapid double-tap could otherwise fire two orders before then.
+        if (isSubmitting) return
+
         if (!sessionId) {
             setErrorMsg("No active session found. Please scan the QR code again.")
             return
@@ -73,7 +88,8 @@ export default function CheckoutPage() {
             items,
             note,
             promoCode?.code || null,
-            loyaltyMember?.id || null
+            loyaltyMember?.id || null,
+            idempotencyKeyRef.current
         )
 
         if (res.error) {
