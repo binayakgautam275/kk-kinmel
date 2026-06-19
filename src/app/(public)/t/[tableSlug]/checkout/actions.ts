@@ -96,10 +96,15 @@ export async function placeOrder(
 
     const ratelimit = getRatelimit()
     if (ratelimit) {
-        const { success, remaining } = await ratelimit.limit(ip)
-        if (!success) {
-            console.warn(`Rate limit exceeded for IP: ${ip} (remaining: ${remaining})`)
-            return { error: 'You are placing orders too quickly. Please wait a minute and try again.' }
+        try {
+            const { success, remaining } = await ratelimit.limit(ip)
+            if (!success) {
+                console.warn(`Rate limit exceeded for IP: ${ip} (remaining: ${remaining})`)
+                return { error: 'You are placing orders too quickly. Please wait a minute and try again.' }
+            }
+        } catch (err) {
+            console.error('Rate limiting failed (Upstash Redis unreachable):', err)
+            // Allow the request through gracefully if Redis is down
         }
     }
 
