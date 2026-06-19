@@ -2,7 +2,26 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import TakeoutPageClient from './TakeoutPageClient'
 
+import type { Metadata } from 'next'
+
 export const revalidate = 0
+
+export async function generateMetadata({ params }: { params: Promise<{ restaurantSlug: string }> }): Promise<Metadata> {
+    const { restaurantSlug } = await params
+    const supabase = await createAdminClient()
+    const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('id')
+        .eq('slug', restaurantSlug)
+        .single()
+
+    if (restaurant?.id) {
+        return {
+            manifest: `/api/manifest/${restaurant.id}?start_url=${encodeURIComponent(`/takeout/${restaurantSlug}`)}`
+        }
+    }
+    return {}
+}
 
 export default async function TakeoutPage({ params }: { params: Promise<{ restaurantSlug: string }> }) {
     const { restaurantSlug } = await params

@@ -54,7 +54,6 @@ export async function placeOrder(
     pointsEarned?: number
     error?: string
 }> {
-    // Validate all inputs before processing
     const PlaceOrderInputSchema = z.object({
         sessionId: z.string().min(1, 'Session ID required'),
         restaurantSlug: z.string().min(1).max(100),
@@ -64,10 +63,20 @@ export async function placeOrder(
         loyaltyMemberId: z.string().uuid().nullable().optional()
     })
 
+    // Format items payload for the place_order RPC (includes modifiers)
+    const payload: PlaceOrderItemPayload[] = items.map((i) => ({
+        menu_item_id: i.menuItemId,
+        quantity: i.quantity,
+        special_request: i.specialRequest || null,
+        modifiers: (i.modifiers || []).map((m) => ({
+            modifier_id: m.modifierId,
+        })),
+    }))
+
     const validation = validateInput(PlaceOrderInputSchema, {
         sessionId,
         restaurantSlug,
-        items,
+        items: payload,
         customerNote,
         promoCode,
         loyaltyMemberId
@@ -108,16 +117,6 @@ export async function placeOrder(
     }
 
     const sessionUuid = sessionData.id
-
-    // Format items payload for the place_order RPC (includes modifiers)
-    const payload: PlaceOrderItemPayload[] = items.map((i) => ({
-        menu_item_id: i.menuItemId,
-        quantity: i.quantity,
-        special_request: i.specialRequest || null,
-        modifiers: (i.modifiers || []).map((m) => ({
-            modifier_id: m.modifierId,
-        })),
-    }))
 
     // Call the ACID-safe RPC (returns JSONB with breakdown)
     const { data, error } = await supabase.rpc('place_order', {

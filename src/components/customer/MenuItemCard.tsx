@@ -105,9 +105,9 @@ export default function MenuItemCard({ item, sessionId, restaurantSlug, restaura
 
     return (
         <>
-        <div className={`group relative bg-white rounded-[var(--border-radius)] overflow-hidden border border-gray-100 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 flex flex-col ${!item.is_available ? 'opacity-70' : ''}`}>
+        <div className={`group relative bg-white rounded-[var(--border-radius)] overflow-hidden border border-gray-100 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 flex flex-row sm:flex-col ${!item.is_available ? 'opacity-70' : ''}`}>
             {/* Image */}
-            <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden shrink-0">
+            <div className="relative w-[110px] shrink-0 min-h-[110px] sm:w-full sm:min-h-0 sm:aspect-[4/3] bg-gray-100 overflow-hidden">
                 {item.image_url ? (
                     <Image
                         src={item.image_url}
@@ -150,7 +150,7 @@ export default function MenuItemCard({ item, sessionId, restaurantSlug, restaura
             </div>
 
             {/* Body */}
-            <div className="p-3 flex flex-col flex-1 gap-1">
+            <div className="p-3 flex flex-col flex-1 min-w-0 gap-1">
                 <div className="flex justify-between items-start gap-1.5">
                     <h3 className="font-semibold text-[13px] text-gray-900 leading-snug line-clamp-2 flex-1">
                         {displayName}
