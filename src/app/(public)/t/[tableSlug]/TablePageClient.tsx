@@ -26,6 +26,7 @@ interface TablePageClientProps {
     }
     categories: MenuCategory[]
     menuItems: MenuItem[]
+    comboItems: any[]
     sessionToken: string | undefined
     sessionUUID: string | undefined
     isValidSession: boolean
@@ -40,6 +41,7 @@ export default function TablePageClient({
     tableData,
     categories,
     menuItems,
+    comboItems,
     sessionToken,
     sessionUUID,
     isValidSession,
@@ -241,6 +243,7 @@ export default function TablePageClient({
                 <MenuSection
                     categories={categories}
                     items={menuItems}
+                    comboItems={comboItems}
                     sessionId={liveSessionToken}
                     restaurantSlug={tableData.qr_token}
                     restaurantId={tableData.restaurant_id}

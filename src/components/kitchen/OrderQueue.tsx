@@ -12,6 +12,7 @@ import { updateOrderStatus } from '@/app/(staff)/kitchen/actions'
 export type KitchenOrder = Order & {
     sessions?: Session & { tables?: Partial<Table> }
     order_items?: (OrderItem & {
+        menu_item_id?: string
         menu_items?: Partial<MenuItem>
         order_item_modifiers?: Partial<OrderItemModifier>[]
     })[]
@@ -21,15 +22,16 @@ const ORDER_SELECT = `
   id, status, total_amount, placed_at, customer_note,
   sessions ( tables ( label ) ),
   order_items (
-    id, quantity, special_request,
-    menu_items ( name ),
+    id, menu_item_id, quantity, special_request,
+    menu_items ( id, name, is_combo ),
     order_item_modifiers ( modifier_name, price_adjustment )
   )
 ` as const
 
-export default function OrderQueue({ initialOrders, restaurantId }: {
+export default function OrderQueue({ initialOrders, restaurantId, comboItems = [] }: {
     initialOrders: KitchenOrder[]
     restaurantId: string
+    comboItems?: any[]
 }) {
     const [orders, setOrders] = useState<KitchenOrder[]>(initialOrders)
     const supabaseRef = useRef(createClient())
@@ -97,7 +99,8 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
             name: string,
             quantity: number,
             modifiers: string,
-            special_request: string | null
+            special_request: string | null,
+            constituents?: { name: string; quantity: number }[]
         }>()
 
         for (const item of items) {
@@ -110,20 +113,38 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
             
             const key = `${item.menu_items.name}|${mods}|${item.special_request || ''}`
             
+            // Resolve constituents if it is a combo
+            const constituents = item.menu_items?.is_combo
+                ? comboItems
+                    .filter(c => c.combo_id === item.menu_item_id)
+                    .map(c => ({
+                        name: c.menu_items?.name || 'Item',
+                        quantity: c.quantity
+                    }))
+                : undefined
+            
             if (!grouped.has(key)) {
                 grouped.set(key, {
                     name: item.menu_items.name,
                     quantity: item.quantity,
                     modifiers: mods,
-                    special_request: item.special_request
+                    special_request: item.special_request,
+                    constituents: constituents ? constituents.map(c => ({ ...c, quantity: c.quantity * item.quantity })) : undefined
                 })
             } else {
-                grouped.get(key)!.quantity += item.quantity
+                const entry = grouped.get(key)!
+                entry.quantity += item.quantity
+                if (entry.constituents && constituents) {
+                    entry.constituents = entry.constituents.map(c => {
+                        const match = constituents.find(mc => mc.name === c.name)
+                        return match ? { ...c, quantity: c.quantity + (match.quantity * item.quantity) } : c
+                    })
+                }
             }
         }
 
         return Array.from(grouped.values()).sort((a, b) => b.quantity - a.quantity)
-    }, [newOrders, preparingOrders])
+    }, [newOrders, preparingOrders, comboItems])
 
     const [activeTab, setActiveTab] = useState<'new' | 'preparing' | 'pass' | 'toc'>('new')
     const [showTOCDesktop, setShowTOCDesktop] = useState(false)
@@ -253,6 +274,7 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
                                     <OrderTicket
                                         key={order.id}
                                         order={order}
+                                        comboItems={comboItems}
                                         onAction={!col.readOnly ? () => updateStatus(order.id, order.status) : undefined}
                                         actionLabel={col.actionLabel}
                                         accentColor={col.color}
@@ -302,6 +324,15 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
                                     {item.special_request && (
                                         <p className="text-xs text-yellow-400/80 italic mt-0.5 font-medium print:text-black/80">↳ {item.special_request}</p>
                                     )}
+                                    {item.constituents && (
+                                        <div className="mt-1 pl-3 border-l border-white/10 text-xs text-white/40 space-y-0.5 print:text-black/70 print:border-black/20">
+                                            {item.constituents.map((c, idx) => (
+                                                <div key={idx}>
+                                                    • {c.quantity}× {c.name}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -318,8 +349,9 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
     )
 }
 
-function OrderTicket({ order, onAction, actionLabel, accentColor, borderColor, bgColor, readOnly }: {
+function OrderTicket({ order, comboItems = [], onAction, actionLabel, accentColor, borderColor, bgColor, readOnly }: {
     order: KitchenOrder
+    comboItems?: any[]
     onAction?: () => void
     actionLabel?: string
     accentColor: string
@@ -363,6 +395,18 @@ function OrderTicket({ order, onAction, actionLabel, accentColor, borderColor, b
                         </span>
                         <div className="flex-1 min-w-0">
                             <p className="font-semibold text-white/90 text-[15px] leading-snug">{item.menu_items?.name}</p>
+                            {item.menu_items?.is_combo && (
+                                <div className="mt-1 pl-3 border-l-2 border-white/10 text-xs text-white/40 space-y-0.5">
+                                    {comboItems
+                                        .filter(c => c.combo_id === item.menu_item_id)
+                                        .map(c => (
+                                            <div key={c.id}>
+                                                • {c.quantity * item.quantity}× {c.menu_items?.name || 'Item'}
+                                            </div>
+                                        ))
+                                    }
+                                </div>
+                            )}
                             {item.order_item_modifiers && item.order_item_modifiers.length > 0 && (
                                 <p className="text-xs text-white/35 mt-0.5">
                                     {item.order_item_modifiers.map((m, i) => (

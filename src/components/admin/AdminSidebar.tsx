@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import {
     Users, UtensilsCrossed, Settings, LogOut, BarChart3, Palette, Grid3X3,
     Menu, X, TrendingUp, ShoppingBag, Tag, Heart, DollarSign, Package,
-    FileText, Truck, Clock, CreditCard,
+    FileText, Truck, Clock, CreditCard, Sparkles,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -54,6 +54,7 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
             <nav className="flex-1 overflow-y-auto py-3 px-2.5 scrollbar-thin space-y-0.5">
                 <NavItem href="/admin/dashboard"  icon={BarChart3}       label="Overview"        path={pathname} />
                 <NavItem href="/admin/menu"        icon={UtensilsCrossed} label="Menu"            path={pathname} />
+                <NavItem href="/admin/combos"      icon={Sparkles}        label="Combo Offers"    path={pathname} />
                 <NavItem href="/admin/orders"      icon={ShoppingBag}     label="Orders"         path={pathname} />
                 <NavItem href="/admin/payments"    icon={CreditCard}      label="Payments"       path={pathname} />
                 <NavItem href="/admin/takeout"     icon={Truck}           label="Takeout"        path={pathname} />

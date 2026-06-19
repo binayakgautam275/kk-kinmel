@@ -10,6 +10,7 @@ import { Search, X } from 'lucide-react'
 export default function MenuSection({
     categories,
     items,
+    comboItems = [],
     sessionId,
     restaurantSlug,
     restaurantId,
@@ -17,6 +18,7 @@ export default function MenuSection({
 }: {
     categories: MenuCategory[]
     items: MenuItem[]
+    comboItems?: any[]
     sessionId?: string
     restaurantSlug: string
     restaurantId?: string
@@ -52,8 +54,8 @@ export default function MenuSection({
                 if (isScrollingRef.current) return
                 // Pick the topmost visible section
                 const visible = entries
-                    .filter(e => e.isIntersecting)
-                    .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
+                .filter(e => e.isIntersecting)
+                .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)
                 if (visible.length > 0) {
                     const id = visible[0].target.getAttribute('data-category-id')
                     if (id) setActiveCategory(id)
@@ -137,6 +139,8 @@ export default function MenuSection({
                     <section>
                         <ItemGrid
                             items={uncategorised}
+                            comboItems={comboItems}
+                            menuItems={items}
                             sessionId={sessionId}
                             restaurantSlug={restaurantSlug}
                             restaurantId={restaurantId}
@@ -162,6 +166,8 @@ export default function MenuSection({
 
                         <ItemGrid
                             items={catItems}
+                            comboItems={comboItems}
+                            menuItems={items}
                             sessionId={sessionId}
                             restaurantSlug={restaurantSlug}
                             restaurantId={restaurantId}
@@ -180,8 +186,10 @@ export default function MenuSection({
     )
 }
 
-function ItemGrid({ items, sessionId, restaurantSlug, restaurantId, layout = 'grid' }: {
+function ItemGrid({ items, comboItems, menuItems, sessionId, restaurantSlug, restaurantId, layout = 'grid' }: {
     items: MenuItem[]
+    comboItems: any[]
+    menuItems: MenuItem[]
     sessionId?: string
     restaurantSlug: string
     restaurantId?: string
@@ -196,6 +204,8 @@ function ItemGrid({ items, sessionId, restaurantSlug, restaurantId, layout = 'gr
                 <MenuItemCard
                     key={item.id}
                     item={item}
+                    comboItems={comboItems}
+                    menuItems={menuItems}
                     sessionId={sessionId}
                     restaurantSlug={restaurantSlug}
                     restaurantId={restaurantId}
