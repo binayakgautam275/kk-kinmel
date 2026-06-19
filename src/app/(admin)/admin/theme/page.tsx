@@ -11,7 +11,7 @@ export default async function AdminThemePage() {
     // Fetch settings + restaurant branding scoped to this restaurant only
     const [{ data: settings }, { data: restaurant }] = await Promise.all([
         supabase.from('settings').select('*').eq('restaurant_id', restaurantId).limit(1).single(),
-        supabase.from('restaurants').select('name, logo_url').eq('id', restaurantId).single(),
+        supabase.from('restaurants').select('name, slug, logo_url').eq('id', restaurantId).single(),
     ])
 
     if (!settings) {
@@ -23,6 +23,7 @@ export default async function AdminThemePage() {
         <ThemeCustomizer
             initialSettings={settings}
             restaurantName={restaurant?.name}
+            restaurantSlug={restaurant?.slug ?? null}
             initialLogoUrl={restaurant?.logo_url ?? null}
         />
     )

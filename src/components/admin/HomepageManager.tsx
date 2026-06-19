@@ -449,12 +449,24 @@ export default function HomepageManager({ restaurantId }: HomepageManagerProps) 
                         <label className="flex items-center gap-2 px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition w-fit">
                             <Upload size={15} className="text-gray-500" />
                             <span className="text-sm font-medium text-gray-600">Add Media</span>
-                            <input type="file" accept="image/*,video/*" onChange={async (e) => { 
-                                if (e.target.files?.[0]) { 
-                                    const file = e.target.files[0];
-                                    const type = file.type.startsWith('video/') ? 'video' : 'image';
-                                    const url = await uploadFile(file, type); 
-                                    if (url) await patchAndSave({ gallery: [...gallery, { image_url: url, caption: '', media_type: type }] }) 
+                            <input type="file" accept="image/*,video/*" multiple onChange={async (e) => { 
+                                if (e.target.files && e.target.files.length > 0) { 
+                                    const files = Array.from(e.target.files);
+                                    
+                                    const uploadPromises = files.map(async (file) => {
+                                        const type = file.type.startsWith('video/') ? 'video' : 'image';
+                                        const url = await uploadFile(file, type);
+                                        if (url) {
+                                            return { image_url: url, caption: '', media_type: type as 'image' | 'video' };
+                                        }
+                                        return null;
+                                    });
+
+                                    const newItems = (await Promise.all(uploadPromises)).filter((item) => item !== null);
+                                    
+                                    if (newItems.length > 0) {
+                                        await patchAndSave({ gallery: [...gallery, ...newItems] });
+                                    }
                                 } 
                             }} className="hidden" />
                         </label>

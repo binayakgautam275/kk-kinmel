@@ -1,24 +1,81 @@
 'use client'
 
-import { useState } from 'react'
-import { Save, Type, Palette, Image as ImageIcon, Upload, X } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Save, Type, Palette, Image as ImageIcon, Upload, X, RefreshCw, ExternalLink, Smartphone } from 'lucide-react'
 import type { Settings } from '@/types/database'
 import { toast } from 'react-hot-toast'
 import { updateThemeAction, updateBrandingAction } from '@/app/(admin)/admin/theme/actions'
 
+// Mirror the font/radius mapping used by the root layout (src/app/layout.tsx)
+// so the live preview matches exactly what customers will see once published.
+const FONT_MAP: Record<string, string> = {
+    Inter: 'var(--font-inter), sans-serif',
+    Playfair: 'var(--font-playfair), serif',
+    Roboto: 'var(--font-roboto), sans-serif',
+    Lato: 'var(--font-lato), sans-serif',
+}
+
+const RADIUS_MAP: Record<string, string> = {
+    none: '0px', sm: '4px', md: '8px', lg: '12px', xl: '20px', full: '9999px',
+}
+
+function resolveRadius(val: string | undefined): string {
+    if (!val) return RADIUS_MAP.lg
+    if (RADIUS_MAP[val]) return RADIUS_MAP[val]
+    if (/^\d+(\.\d+)?(px|rem|em)$/.test(val)) return val
+    return RADIUS_MAP.lg
+}
+
+function themeToCSS(theme: Partial<Settings['theme']> = {}): string {
+    return `:root {
+        --color-primary: ${theme.primaryColor || '#E85D04'};
+        --color-secondary: ${theme.secondaryColor || '#1B263B'};
+        --color-accent: ${theme.accentColor || '#EC4899'};
+        --font-family: ${FONT_MAP[theme.fontFamily || 'Inter'] || FONT_MAP.Inter};
+        --border-radius: ${resolveRadius(theme.borderRadius)};
+    }`
+}
+
 export default function ThemeCustomizer({
     initialSettings,
     restaurantName,
+    restaurantSlug = null,
     initialLogoUrl = null,
 }: {
     initialSettings: Partial<Settings>
     restaurantName?: string
+    restaurantSlug?: string | null
     initialLogoUrl?: string | null
 }) {
     const [settings, setSettings] = useState(initialSettings)
     const [logoUrl, setLogoUrl] = useState<string | null>(initialLogoUrl)
     const [isSaving, setIsSaving] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
+
+    const iframeRef = useRef<HTMLIFrameElement>(null)
+    const [previewLoading, setPreviewLoading] = useState(true)
+    const [previewKey, setPreviewKey] = useState(0)
+    const previewUrl = restaurantSlug ? `/takeout/${restaurantSlug}` : null
+
+    // Inject (or update) a <style> override inside the same-origin preview iframe
+    // so colour/font/radius tweaks render instantly — before the admin publishes.
+    const applyPreviewOverride = useCallback(() => {
+        const doc = iframeRef.current?.contentDocument
+        if (!doc?.head) return
+        let style = doc.getElementById('__theme_preview_override') as HTMLStyleElement | null
+        if (!style) {
+            style = doc.createElement('style')
+            style.id = '__theme_preview_override'
+            doc.head.appendChild(style)
+        }
+        // Appended last in <head>, so it wins over the layout's :root rule.
+        style.textContent = themeToCSS(settings.theme)
+    }, [settings.theme])
+
+    // Re-apply whenever the theme changes or the iframe reloads.
+    useEffect(() => {
+        applyPreviewOverride()
+    }, [applyPreviewOverride, previewKey])
 
     const handleSave = async () => {
         if (!settings.id || !settings.theme) return
@@ -27,6 +84,10 @@ export default function ThemeCustomizer({
         setIsSaving(false)
         if (!result.error) {
             toast.success('Theme saved — changes are now live.')
+            // Reload the preview so server-rendered structural changes (e.g. menu
+            // layout) reflect the freshly published settings, not just the overlay.
+            setPreviewLoading(true)
+            setPreviewKey((k) => k + 1)
         } else {
             toast.error('Failed to save: ' + result.error)
         }
@@ -239,48 +300,61 @@ export default function ThemeCustomizer({
             </div>
 
             {/* Live Preview Embed */}
-            <h3 className="font-semibold text-gray-900 mt-8 mb-4">Live Customer App Preview</h3>
-            <div className="bg-gray-200 p-4 rounded-2xl flex justify-center">
-                <div
-                    className="w-[375px] h-[750px] bg-white rounded-[32px] overflow-hidden shadow-2xl border-8 border-gray-900 relative"
-                    style={{
-                        '--color-primary': settings.theme?.primaryColor || '#ff6b00',
-                        '--color-secondary': settings.theme?.secondaryColor || '#1a1a1a',
-                        '--font-family': settings.theme?.fontFamily ? `var(--font-${settings.theme.fontFamily.toLowerCase()})` : 'sans-serif',
-                        '--border-radius': settings.theme?.borderRadius || '12px',
-                    } as React.CSSProperties}
-                >
-                    {/* Mock App Header */}
-                    <div className="bg-[var(--color-secondary)] h-48 w-full p-6 text-white flex flex-col justify-end relative">
-                        <h1 className="text-3xl font-bold font-[family-name:var(--font-family)] tracking-tight relative z-10">
-                            {restaurantName || 'Smart Cafe'}
-                        </h1>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
-                    </div>
-
-                    <div className="p-4 -mt-6 relative z-20">
-                        <div className="bg-white rounded-[var(--border-radius)] shadow-lg p-4 flex justify-between items-center mb-6">
-                            <span className="font-semibold text-gray-800">Your Table</span>
-                            <span className="text-[var(--color-primary)] font-bold text-lg border-2 border-[var(--color-primary)]/20 px-3 py-1 rounded-full">4</span>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="h-6 w-32 bg-gray-200 rounded"></div>
-                            <div className="flex gap-4">
-                                <div className="w-24 h-24 bg-gray-100 rounded-[calc(var(--border-radius)-4px)] shrink-0"></div>
-                                <div className="flex-1 space-y-2 py-1">
-                                    <div className="h-4 w-3/4 bg-gray-200 rounded"></div>
-                                    <div className="h-3 w-1/2 bg-gray-100 rounded"></div>
-                                    <div className="h-5 w-16 bg-[var(--color-primary)]/20 rounded mt-2"></div>
-                                </div>
-                            </div>
-
-                            <button className="w-full mt-4 bg-[var(--color-primary)] text-white font-medium py-3 rounded-[var(--border-radius)]">
-                                Add to Cart
-                            </button>
-                        </div>
-                    </div>
+            <div className="flex items-center justify-between mt-8 mb-4">
+                <div>
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <Smartphone size={18} className="text-gray-400" />
+                        Live Customer App Preview
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                        Colors, fonts and corners update instantly. Click <span className="font-medium">Publish Changes</span> to make them live for customers.
+                    </p>
                 </div>
+                {previewUrl && (
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => { setPreviewLoading(true); setPreviewKey((k) => k + 1) }}
+                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                        >
+                            <RefreshCw size={14} /> Refresh
+                        </button>
+                        <a
+                            href={previewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                        >
+                            <ExternalLink size={14} /> Open
+                        </a>
+                    </div>
+                )}
+            </div>
+            <div className="bg-gray-200 p-4 rounded-2xl flex justify-center">
+                {previewUrl ? (
+                    <div className="w-[375px] h-[750px] bg-white rounded-[32px] overflow-hidden shadow-2xl border-8 border-gray-900 relative">
+                        {previewLoading && (
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white">
+                                <RefreshCw size={28} className="text-gray-300 animate-spin" />
+                                <span className="text-sm text-gray-400">Loading preview…</span>
+                            </div>
+                        )}
+                        <iframe
+                            key={previewKey}
+                            ref={iframeRef}
+                            src={previewUrl}
+                            title="Live customer app preview"
+                            className="w-full h-full border-0"
+                            onLoad={() => { setPreviewLoading(false); applyPreviewOverride() }}
+                        />
+                    </div>
+                ) : (
+                    <div className="w-[375px] h-[750px] bg-white rounded-[32px] shadow-2xl border-8 border-gray-900 flex flex-col items-center justify-center text-center p-8 gap-3">
+                        <Smartphone size={32} className="text-gray-300" />
+                        <p className="text-sm text-gray-500">
+                            Live preview unavailable — this restaurant doesn’t have a public URL configured yet.
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     )

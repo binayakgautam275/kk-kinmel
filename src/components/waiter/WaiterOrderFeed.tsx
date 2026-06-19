@@ -112,19 +112,13 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
         setCashProcessingId(null)
     }
 
-    // Group orders by session/table
-    const tableGroups = useMemo(() => {
-        const groups = new Map<string, { label: string; orders: WaiterOrder[] }>()
-        for (const order of orders) {
-            const key = order.session_id || order.id
-            const label = tableLabel(order)
-            if (!groups.has(key)) groups.set(key, { label, orders: [] })
-            groups.get(key)!.orders.push(order)
-        }
-        // Sort groups: ready first, then preparing, then pending
-        return [...groups.entries()].sort(([, a], [, b]) => {
-            const score = (orders: WaiterOrder[]) => Math.max(...orders.map(o => STATUS_ORDER[o.status] ?? 0))
-            return score(b.orders) - score(a.orders)
+    // Sort all orders: Ready first, then Preparing, then Pending
+    const sortedOrders = useMemo(() => {
+        return [...orders].sort((a, b) => {
+            const scoreA = STATUS_ORDER[a.status] ?? 0
+            const scoreB = STATUS_ORDER[b.status] ?? 0
+            if (scoreA !== scoreB) return scoreB - scoreA
+            return new Date(b.placed_at).getTime() - new Date(a.placed_at).getTime()
         })
     }, [orders])
 
@@ -140,103 +134,90 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
     const totalReady = orders.filter(o => o.status === 'ready').length
 
     return (
-        <div className="space-y-3">
-            <div className="flex items-center gap-2">
-                <Package size={15} className="text-gray-400" />
-                <h2 className="font-semibold text-gray-900 text-sm">
-                    Active Orders
-                    <span className="ml-2 text-gray-400 font-normal">{tableGroups.length} table{tableGroups.length !== 1 ? 's' : ''}</span>
+        <div className="space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+                <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                    <Package className="text-emerald-500" />
+                    Live Orders
+                    <span className="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full text-xs font-semibold">{orders.length}</span>
                 </h2>
                 {totalReady > 0 && (
-                    <span className="ml-auto text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full animate-pulse">
-                        {totalReady} ready!
+                    <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse shadow-sm border border-emerald-200">
+                        {totalReady} Ready
                     </span>
                 )}
             </div>
 
-            {tableGroups.map(([sessionKey, { label, orders: tableOrders }]) => {
-                const hasReady = tableOrders.some(o => o.status === 'ready')
-                const hasPreparing = tableOrders.some(o => o.status === 'preparing')
-                const sorted = [...tableOrders].sort((a, b) => (STATUS_ORDER[b.status] ?? 0) - (STATUS_ORDER[a.status] ?? 0))
+            <div className="grid gap-4">
+                {sortedOrders.map((order) => {
+                    const label = tableLabel(order)
+                    const isReady = order.status === 'ready'
+                    const isPreparing = order.status === 'preparing'
+                    const ts = (order as unknown as { ready_at?: string | null }).ready_at || order.placed_at
+                    const isStale = now - new Date(ts).getTime() > STALE_MS
 
-                const headerBg = hasReady ? 'bg-emerald-50 border-emerald-300' : hasPreparing ? 'bg-orange-50 border-orange-200' : 'bg-amber-50 border-amber-200'
-                const headerText = hasReady ? 'text-emerald-700' : hasPreparing ? 'text-orange-700' : 'text-amber-700'
-                const dotColor = hasReady ? 'bg-emerald-500 animate-pulse' : hasPreparing ? 'bg-orange-400' : 'bg-amber-300'
-
-                return (
-                    <div key={sessionKey} className={`bg-white rounded-2xl border-2 shadow-sm overflow-hidden ${hasReady ? 'border-emerald-300' : hasPreparing ? 'border-orange-200' : 'border-amber-100'}`}>
-                        {/* Table header */}
-                        <div className={`px-4 py-2.5 flex items-center gap-2 border-b ${headerBg}`}>
-                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotColor}`} />
-                            <span className={`font-bold text-sm ${headerText}`}>Table {label}</span>
-                            <span className={`text-[10px] font-semibold ml-1 ${headerText} opacity-70`}>
-                                {hasReady ? '— READY' : hasPreparing ? '— Preparing' : '— Pending'}
-                            </span>
-                            <span className="ml-auto text-[10px] text-gray-400">
-                                {sorted.length} order{sorted.length !== 1 ? 's' : ''}
-                            </span>
-                        </div>
-
-                        {/* Orders in this table */}
-                        <div className="divide-y divide-gray-50">
-                            {sorted.map((order, idx) => {
-                                const ts = (order as unknown as { ready_at?: string | null }).ready_at || order.placed_at
-                                const isStale = now - new Date(ts).getTime() > STALE_MS
-                                const isReady = order.status === 'ready'
-
-                                return (
-                                    <div key={order.id} className={`px-4 py-3 ${isReady ? 'bg-emerald-50/30' : ''}`}>
-                                        <div className="flex items-center gap-2 mb-2">
+                    return (
+                        <div key={order.id} className={`bg-white rounded-2xl border-2 shadow-sm transition-all duration-200 ${isReady ? 'border-emerald-400 bg-emerald-50/10 shadow-emerald-100' : isPreparing ? 'border-amber-200' : 'border-gray-100 hover:border-gray-200'}`}>
+                            <div className="p-4 md:p-5">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <div className="flex items-center gap-3 mb-1">
+                                            <span className="text-xl font-bold text-gray-900 bg-gray-100 px-3 py-1 rounded-lg">Tbl {label}</span>
                                             <StatusPip status={order.status} />
-                                            <span className="text-xs text-gray-500">{timeAgo(order.placed_at)}</span>
-                                            {isStale && isReady && (
-                                                <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">⚠ Getting cold!</span>
-                                            )}
-                                            <span className="ml-auto text-xs font-semibold text-gray-700 tabular-nums">{formatCurrency(order.total_amount)}</span>
+                                            {isStale && isReady && <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-md animate-pulse">Cold warning!</span>}
                                         </div>
-
-                                        <ul className="text-sm text-gray-700 space-y-0.5 mb-2">
-                                            {order.order_items?.map(item => (
-                                                <li key={item.id} className="flex items-baseline gap-1.5">
-                                                    <span className="text-xs font-semibold text-gray-400 tabular-nums shrink-0">{item.quantity}×</span>
-                                                    <span className="truncate">{item.menu_items?.name}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-
-                                        {order.customer_note && (
-                                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 px-3 py-1.5 rounded-lg mb-2">
-                                                "{order.customer_note}"
-                                            </p>
-                                        )}
-
-                                        {isReady && (
-                                            <div className="flex gap-2 pt-1">
-                                                <button
-                                                    onClick={() => handleCashAndDeliver(order.id)}
-                                                    disabled={!!cashProcessingId || !!processingId}
-                                                    className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 disabled:opacity-50 transition"
-                                                >
-                                                    {cashProcessingId === order.id ? <Loader2 size={13} className="animate-spin" /> : <Banknote size={13} />}
-                                                    Cash
-                                                </button>
-                                                <button
-                                                    onClick={() => handleMarkDelivered(order.id)}
-                                                    disabled={!!processingId || !!cashProcessingId}
-                                                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-xl active:scale-95 disabled:opacity-50 transition"
-                                                >
-                                                    {processingId === order.id ? <Loader2 size={13} className="animate-spin" /> : <Truck size={13} />}
-                                                    Deliver
-                                                </button>
-                                            </div>
-                                        )}
+                                        <div className="text-sm text-gray-500 flex items-center gap-2">
+                                            <Clock size={14} /> {timeAgo(order.placed_at)}
+                                        </div>
                                     </div>
-                                )
-                            })}
+                                    <div className="text-right">
+                                        <span className="text-xl font-bold text-gray-900 block">{formatCurrency(order.total_amount)}</span>
+                                        <span className="text-xs font-medium text-gray-400">{order.payment_status}</span>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-xl p-3 mb-4">
+                                    <ul className="space-y-1.5 text-sm">
+                                        {order.order_items?.map(item => (
+                                            <li key={item.id} className="flex gap-3 text-gray-800">
+                                                <span className="font-bold text-gray-400 w-6 text-right">{item.quantity}×</span>
+                                                <span className="font-medium">{item.menu_items?.name}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+
+                                {order.customer_note && (
+                                    <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 p-3 rounded-xl mb-4 italic">
+                                        "{order.customer_note}"
+                                    </p>
+                                )}
+
+                                {isReady && (
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            onClick={() => handleCashAndDeliver(order.id)}
+                                            disabled={!!cashProcessingId || !!processingId}
+                                            className="flex-1 flex justify-center items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl active:scale-[0.98] transition shadow-sm"
+                                        >
+                                            {cashProcessingId === order.id ? <Loader2 size={18} className="animate-spin" /> : <Banknote size={18} />}
+                                            Take Cash
+                                        </button>
+                                        <button
+                                            onClick={() => handleMarkDelivered(order.id)}
+                                            disabled={!!processingId || !!cashProcessingId}
+                                            className="flex-1 flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl active:scale-[0.98] transition shadow-sm shadow-emerald-200"
+                                        >
+                                            {processingId === order.id ? <Loader2 size={18} className="animate-spin" /> : <Truck size={18} />}
+                                            Deliver
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )
-            })}
+                    )
+                })}
+            </div>
         </div>
     )
 }
