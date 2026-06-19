@@ -81,6 +81,7 @@ function themeToCSS(theme: Record<string, string>): string {
     :root {
       --color-primary: ${theme.primaryColor || '#E85D04'};
       --color-secondary: ${theme.secondaryColor || '#1B263B'};
+      --color-accent: ${theme.accentColor || '#EC4899'};
       --font-family: ${fontMap[theme.fontFamily] || fontMap.Inter};
       --border-radius: ${resolveRadius(theme.borderRadius)};
     }

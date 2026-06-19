@@ -24,6 +24,24 @@ export const getRestaurantFeatures = unstable_cache(
 )
 
 /**
+ * Fetch the customer-facing menu layout ('grid' | 'list') from settings.theme.
+ * Cached for 30 seconds — changes rarely and rides a hot customer page path.
+ */
+export const getMenuLayout = unstable_cache(
+    async (restaurantId: string): Promise<'grid' | 'list'> => {
+        const supabase = await createAdminClient()
+        const { data } = await supabase
+            .from('settings')
+            .select('theme')
+            .eq('restaurant_id', restaurantId)
+            .single()
+        return (data?.theme as { menuLayout?: string } | null)?.menuLayout === 'list' ? 'list' : 'grid'
+    },
+    ['restaurant-menu-layout'],
+    { revalidate: 30 }
+)
+
+/**
  * Fetch restaurant with SaaS/Nepal fields for settings pages.
  */
 export async function getRestaurantFull(restaurantId: string): Promise<Restaurant | null> {

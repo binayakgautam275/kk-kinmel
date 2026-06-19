@@ -7,15 +7,15 @@ export async function GET(
 ) {
     const { restaurantId } = await context.params
     const { searchParams } = new URL(request.url)
-    const startUrl = searchParams.get('start_url') || '/'
-    
     const supabase = await createAdminClient()
     
     const { data: restaurant } = await supabase
         .from('restaurants')
-        .select('name, logo_url')
+        .select('name, logo_url, slug')
         .eq('id', restaurantId)
         .single()
+        
+    const startUrl = searchParams.get('start_url') || (restaurant?.slug ? `/r/${restaurant.slug}` : '/')
         
     // Fetch theme config (if it's tied to the restaurant, although currently it seems global/single-tenant)
     // We will just fetch the latest theme settings

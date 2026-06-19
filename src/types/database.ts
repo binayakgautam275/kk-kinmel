@@ -59,6 +59,7 @@ export interface Restaurant {
     max_staff: number
     max_menu_items: number
     max_tables: number
+    physical_menu_urls: string[] | null
 }
 
 export interface User {
@@ -226,6 +227,7 @@ export interface Settings {
     theme: {
         primaryColor: string
         secondaryColor: string
+        accentColor?: string
         fontFamily: string
         borderRadius: string
         menuLayout: string
@@ -667,7 +669,12 @@ export interface HomepageConfig {
     theme_primary: string
     theme_secondary: string
     theme_accent: string
-    
+
+    // Branding
+    logo_url?: string | null
+    // Restaurant name, hydrated by the GET route for the navbar/footer (not a column)
+    restaurant_name?: string
+
     // Content Sections (JSONB)
     about?: {
         enabled: boolean
@@ -685,6 +692,25 @@ export interface HomepageConfig {
         description: string
         button_text: string
     }
+    gallery?: Array<{
+        image_url: string
+        caption?: string
+        media_type?: 'image' | 'video'
+    }>
+    social?: {
+        facebook?: string
+        instagram?: string
+        whatsapp?: string
+        tiktok?: string
+    }
+    contact?: {
+        enabled?: boolean
+        review_link?: string
+        map_address?: string
+        map_embed_url?: string
+        phone?: string
+        email?: string
+    }
     footer?: {
         enabled: boolean
         copyright: string
@@ -693,7 +719,7 @@ export interface HomepageConfig {
             url: string
         }>
     }
-    
+
     // Metadata
     created_at?: string
     updated_at?: string

@@ -34,3 +34,21 @@ export async function updateThemeAction(
 
     return {}
 }
+
+export async function updateBrandingAction(
+    logoUrl: string | null
+): Promise<{ error?: string }> {
+    const { restaurantId } = await getCurrentUser()
+    const supabase = await createAdminClient()
+
+    const { error } = await supabase
+        .from('restaurants')
+        .update({ logo_url: logoUrl })
+        .eq('id', restaurantId)
+
+    if (error) return { error: error.message }
+
+    revalidatePath('/', 'layout')
+
+    return {}
+}

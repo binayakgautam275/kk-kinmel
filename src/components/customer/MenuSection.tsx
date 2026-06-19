@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import CategoryNav from './CategoryNav'
 import MenuItemCard from './MenuItemCard'
 import type { MenuCategory, MenuItem } from '@/types/database'
 import { useTranslation } from '@/lib/contexts/TranslationContext'
+import { Search, X } from 'lucide-react'
 
 export default function MenuSection({
     categories,
@@ -12,15 +13,18 @@ export default function MenuSection({
     sessionId,
     restaurantSlug,
     restaurantId,
+    layout = 'grid',
 }: {
     categories: MenuCategory[]
     items: MenuItem[]
     sessionId?: string
     restaurantSlug: string
     restaurantId?: string
+    layout?: 'grid' | 'list'
 }) {
     const { t } = useTranslation()
     const [activeCategory, setActiveCategory] = useState('all')
+    const [searchQuery, setSearchQuery] = useState('')
     const observerRef = useRef<IntersectionObserver | null>(null)
     // Track whether a programmatic scroll is in progress to suppress spy updates
     const isScrollingRef = useRef(false)
@@ -70,25 +74,60 @@ export default function MenuSection({
         if (allEl) observerRef.current!.observe(allEl)
 
         return () => observerRef.current?.disconnect()
-    }, [categories])
+    }, [categories, searchQuery]) // Re-run when categories or search changes
+
+    // Filter items based on search query
+    const filteredItems = useMemo(() => {
+        if (!searchQuery.trim()) return items
+        const query = searchQuery.toLowerCase()
+        return items.filter(item => 
+            item.name.toLowerCase().includes(query) || 
+            (item.description && item.description.toLowerCase().includes(query))
+        )
+    }, [items, searchQuery])
 
     // Items grouped by category in display order
     const categoriesWithItems = categories
         .map(c => ({
             category: c,
-            items: items.filter(item => item.category_id === c.id),
+            items: filteredItems.filter(item => item.category_id === c.id),
         }))
         .filter(g => g.items.length > 0)
 
-    const uncategorised = items.filter(item => !item.category_id || !categories.find(c => c.id === item.category_id))
+    const uncategorised = filteredItems.filter(item => !item.category_id || !categories.find(c => c.id === item.category_id))
 
     return (
         <>
-            <CategoryNav
-                categories={categories}
-                activeCategory={activeCategory}
-                onCategoryChange={handleCategoryChange}
-            />
+            <div className="sticky top-[56px] md:top-[64px] z-40 bg-gray-50/80 backdrop-blur-md pb-2 px-4 md:px-0">
+                <div className="relative max-w-3xl mx-auto mt-2">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Search className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search menu items..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="block w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary sm:text-sm transition-all"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery('')}
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {!searchQuery && (
+                <CategoryNav
+                    categories={categories}
+                    activeCategory={activeCategory}
+                    onCategoryChange={handleCategoryChange}
+                />
+            )}
 
             <div className="pt-4 pb-12 space-y-8">
                 {/* "All" sentinel — invisible element for scroll-spy when scrolled to very top */}
@@ -101,6 +140,7 @@ export default function MenuSection({
                             sessionId={sessionId}
                             restaurantSlug={restaurantSlug}
                             restaurantId={restaurantId}
+                            layout={layout}
                         />
                     </section>
                 )}
@@ -125,6 +165,7 @@ export default function MenuSection({
                             sessionId={sessionId}
                             restaurantSlug={restaurantSlug}
                             restaurantId={restaurantId}
+                            layout={layout}
                         />
                     </section>
                 ))}
@@ -139,14 +180,18 @@ export default function MenuSection({
     )
 }
 
-function ItemGrid({ items, sessionId, restaurantSlug, restaurantId }: {
+function ItemGrid({ items, sessionId, restaurantSlug, restaurantId, layout = 'grid' }: {
     items: MenuItem[]
     sessionId?: string
     restaurantSlug: string
     restaurantId?: string
+    layout?: 'grid' | 'list'
 }) {
+    const containerCls = layout === 'list'
+        ? 'flex flex-col gap-3'
+        : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4'
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        <div className={containerCls}>
             {items.map((item) => (
                 <MenuItemCard
                     key={item.id}

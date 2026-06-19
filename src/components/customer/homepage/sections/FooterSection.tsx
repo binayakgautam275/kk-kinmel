@@ -1,0 +1,34 @@
+'use client'
+import { HomepageConfig } from '@/types/database'
+import SocialLinks from './SocialLinks'
+
+export default function FooterSection({
+    footer,
+    social,
+    logoUrl,
+    restaurantName,
+}: {
+    footer: HomepageConfig['footer']
+    social: HomepageConfig['social']
+    logoUrl?: string | null
+    restaurantName?: string
+}) {
+    if (footer?.enabled === false) return null
+
+    const copyright =
+        footer?.copyright || `© ${new Date().getFullYear()} ${restaurantName || 'Your Restaurant'}`
+
+    return (
+        <footer className="bg-gray-900 text-white py-10 px-4">
+            <div className="max-w-6xl mx-auto flex flex-col items-center gap-5 text-center">
+                {logoUrl ? (
+                    <img src={logoUrl} alt={restaurantName || 'Logo'} className="h-12 w-auto object-contain" />
+                ) : (
+                    restaurantName && <p className="text-lg font-semibold">{restaurantName}</p>
+                )}
+                <SocialLinks social={social} />
+                <p className="text-gray-400 text-sm">{copyright}</p>
+            </div>
+        </footer>
+    )
+}

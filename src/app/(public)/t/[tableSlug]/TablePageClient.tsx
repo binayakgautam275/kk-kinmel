@@ -8,9 +8,10 @@ import MenuSection from '@/components/customer/MenuSection'
 import CartSummary from '@/components/customer/CartSummary'
 import ServiceRequestPanel from '@/components/customer/ServiceRequestPanel'
 import VideoLogo from '@/components/shared/VideoLogo'
+import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
-import { UtensilsCrossed, RefreshCw, Bell, Check, Loader2 } from 'lucide-react'
+import { UtensilsCrossed, RefreshCw, Bell, Check, Loader2, Home } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useCartStore } from '@/lib/stores/cart'
 import { requestSessionOpen } from '@/app/api/service-requests/actions'
@@ -21,7 +22,7 @@ interface TablePageClientProps {
         label: string
         qr_token: string
         restaurant_id: string
-        restaurants: { name: string; logo_url: string | null } | null
+        restaurants: { name: string; logo_url: string | null; physical_menu_urls: string[] | null } | null
     }
     categories: MenuCategory[]
     menuItems: MenuItem[]
@@ -30,6 +31,7 @@ interface TablePageClientProps {
     isValidSession: boolean
     serviceRequestsEnabled: boolean
     multiLanguageEnabled: boolean
+    menuLayout?: 'grid' | 'list'
     translations: { language_code: string; entity_type: string; entity_id: string; translated_text: string }[]
     supportedLanguages: { code: string; name: string }[]
 }
@@ -43,6 +45,7 @@ export default function TablePageClient({
     isValidSession,
     serviceRequestsEnabled,
     multiLanguageEnabled,
+    menuLayout = 'grid',
     translations,
     supportedLanguages,
 }: TablePageClientProps) {
@@ -145,13 +148,23 @@ export default function TablePageClient({
     const restaurantName = tableData.restaurants?.name || 'Restaurant'
     const logoUrl = tableData.restaurants?.logo_url
 
-    const menuContent = (
+    const menuContent = (onBackToHome: (() => void) | null) => (
         <div className="min-h-screen bg-gray-50 pb-28">
             {/* Sticky header — compact, restaurant-branded */}
             <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
                     {/* Restaurant identity */}
                     <div className="flex items-center gap-2.5 min-w-0">
+                        {onBackToHome && (
+                            <button
+                                onClick={onBackToHome}
+                                aria-label="Back to homepage"
+                                title="Back to homepage"
+                                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shrink-0 transition active:scale-95"
+                            >
+                                <Home size={16} className="text-[var(--color-secondary)]" />
+                            </button>
+                        )}
                         {logoUrl ? (
                             <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 shrink-0">
                                 <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="32px" />
@@ -220,12 +233,18 @@ export default function TablePageClient({
                     </div>
                 )}
 
+                <PhysicalMenuGallery 
+                    images={tableData.restaurants?.physical_menu_urls || []} 
+                    restaurantName={restaurantName} 
+                />
+
                 <MenuSection
                     categories={categories}
                     items={menuItems}
                     sessionId={liveSessionToken}
                     restaurantSlug={tableData.qr_token}
                     restaurantId={tableData.restaurant_id}
+                    layout={menuLayout}
                 />
             </main>
 
@@ -252,7 +271,7 @@ export default function TablePageClient({
                 restaurantId={tableData.restaurant_id}
                 onProceed={() => setShowMenu(true)}
             >
-                {showMenu && menuContent}
+                {({ backToHome }) => showMenu && menuContent(backToHome)}
             </HomepageGate>
         </TranslationProvider>
     )

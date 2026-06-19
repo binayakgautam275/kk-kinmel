@@ -248,7 +248,9 @@ function StatusPip({ status }: { status: string }) {
         confirmed: { label: 'Confirmed', cls: 'text-blue-700 bg-blue-50 border-blue-200',          Icon: Clock },
         pending:   { label: 'Pending',   cls: 'text-amber-700 bg-amber-50 border-amber-200',      Icon: Clock },
     }
-    const m = map[status] || map.pending
+    const m = map[status
+        
+    ] || map.pending
     return (
         <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${m.cls}`}>
             <m.Icon size={9} />

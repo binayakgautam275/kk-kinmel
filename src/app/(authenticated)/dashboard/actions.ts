@@ -26,9 +26,49 @@ export async function updateRestaurantSettings(
 
     if (!name) return { error: 'Restaurant name is required.' }
 
+    // Handle physical menu uploads
+    const physicalMenuFiles = formData.getAll('physical_menus') as File[]
+    const validFiles = physicalMenuFiles.filter(f => f.size > 0 && f.name !== 'undefined')
+    let physical_menu_urls: string[] | undefined = undefined
+
+    if (validFiles.length > 0) {
+        physical_menu_urls = []
+        for (const file of validFiles) {
+            const ext = file.name.split('.').pop()
+            const fileName = `${restaurantId}/physical-menus/${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`
+            
+            const { error: uploadError } = await adminSupabase.storage
+                .from('public_assets')
+                .upload(fileName, file, { upsert: true })
+
+            if (!uploadError) {
+                const { data: publicUrlData } = adminSupabase.storage
+                    .from('public_assets')
+                    .getPublicUrl(fileName)
+                if (publicUrlData?.publicUrl) {
+                    physical_menu_urls.push(publicUrlData.publicUrl)
+                }
+            }
+        }
+    }
+
+    // Prepare update payload
+    const updatePayload: Record<string, any> = { 
+        name, address, contact_phone, contact_email, pan_number, vat_registered, payment_qr_label 
+    }
+    
+    // If we successfully uploaded new ones, optionally we append them. 
+    // Here we'll append to existing or replace depending on what we want. 
+    // For simplicity, let's just append to existing if they uploaded new ones.
+    if (physical_menu_urls && physical_menu_urls.length > 0) {
+        const { data: currentData } = await adminSupabase.from('restaurants').select('physical_menu_urls').eq('id', restaurantId).single()
+        const existingUrls = currentData?.physical_menu_urls || []
+        updatePayload.physical_menu_urls = [...existingUrls, ...physical_menu_urls]
+    }
+
     const { error } = await adminSupabase
         .from('restaurants')
-        .update({ name, address, contact_phone, contact_email, pan_number, vat_registered, payment_qr_label })
+        .update(updatePayload)
         .eq('id', restaurantId)
 
     if (error) return { error: error.message }

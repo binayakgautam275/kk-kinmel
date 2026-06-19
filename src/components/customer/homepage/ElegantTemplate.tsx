@@ -56,15 +56,6 @@ export default function ElegantTemplate({ config, onMenuClick }: { config: Homep
                     </div>
                 </>
             )}
-
-            {config.footer?.enabled && (
-                <>
-                    <div className="h-px" style={{ backgroundColor: config.theme_primary }} />
-                    <footer className="py-8 px-4 text-center text-gray-600">
-                        <p>{config.footer.copyright}</p>
-                    </footer>
-                </>
-            )}
         </div>
     )
 }

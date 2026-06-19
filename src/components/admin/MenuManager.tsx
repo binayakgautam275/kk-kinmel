@@ -426,7 +426,7 @@ export default function MenuManager({
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label>
                                 <input
                                     type="text"
-                                    value={itemFormData.name}
+                                    value={itemFormData.name ?? ''}
                                     onChange={e => setItemFormData({ ...itemFormData, name: e.target.value })}
                                     className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border"
                                     placeholder="e.g. Classic Cheeseburger"
@@ -442,8 +442,8 @@ export default function MenuManager({
                                         <input
                                             type="number"
                                             step="0.01"
-                                            value={itemFormData.price}
-                                            onChange={e => setItemFormData({ ...itemFormData, price: Number(e.target.value) })}
+                                            value={itemFormData.price ?? ''}
+                                            onChange={e => setItemFormData({ ...itemFormData, price: e.target.value === '' ? undefined : Number(e.target.value) })}
                                             className="w-full pl-7 border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border"
                                         />
                                     </div>

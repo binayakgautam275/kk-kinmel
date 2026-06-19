@@ -1,14 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { Save, Type, Palette } from 'lucide-react'
+import { Save, Type, Palette, Image as ImageIcon, Upload, X } from 'lucide-react'
 import type { Settings } from '@/types/database'
 import { toast } from 'react-hot-toast'
-import { updateThemeAction } from '@/app/(admin)/admin/theme/actions'
+import { updateThemeAction, updateBrandingAction } from '@/app/(admin)/admin/theme/actions'
 
-export default function ThemeCustomizer({ initialSettings, restaurantName }: { initialSettings: Partial<Settings>, restaurantName?: string }) {
+export default function ThemeCustomizer({
+    initialSettings,
+    restaurantName,
+    initialLogoUrl = null,
+}: {
+    initialSettings: Partial<Settings>
+    restaurantName?: string
+    initialLogoUrl?: string | null
+}) {
     const [settings, setSettings] = useState(initialSettings)
+    const [logoUrl, setLogoUrl] = useState<string | null>(initialLogoUrl)
     const [isSaving, setIsSaving] = useState(false)
+    const [isUploading, setIsUploading] = useState(false)
 
     const handleSave = async () => {
         if (!settings.id || !settings.theme) return
@@ -22,6 +32,43 @@ export default function ThemeCustomizer({ initialSettings, restaurantName }: { i
         }
     }
 
+    const handleLogoUpload = async (file: File) => {
+        setIsUploading(true)
+        try {
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('type', 'image')
+            formData.append('folder', 'branding')
+            const res = await fetch('/api/upload', { method: 'POST', body: formData })
+            const data = await res.json()
+            if (!res.ok) {
+                toast.error(data.error || 'Upload failed')
+                return
+            }
+            const result = await updateBrandingAction(data.url)
+            if (result.error) {
+                toast.error('Failed to save logo: ' + result.error)
+                return
+            }
+            setLogoUrl(data.url)
+            toast.success('Logo updated — now live.')
+        } catch {
+            toast.error('Network error during upload')
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    const handleLogoRemove = async () => {
+        const result = await updateBrandingAction(null)
+        if (result.error) {
+            toast.error('Failed to remove logo: ' + result.error)
+            return
+        }
+        setLogoUrl(null)
+        toast.success('Logo removed.')
+    }
+
     const updateTheme = (key: string, value: string) => {
         setSettings((prev: Partial<Settings>) => ({
             ...prev,
@@ -29,6 +76,7 @@ export default function ThemeCustomizer({ initialSettings, restaurantName }: { i
                 ...prev.theme,
                 primaryColor: prev.theme?.primaryColor || '',
                 secondaryColor: prev.theme?.secondaryColor || '',
+                accentColor: prev.theme?.accentColor || '',
                 fontFamily: prev.theme?.fontFamily || '',
                 borderRadius: prev.theme?.borderRadius || '',
                 menuLayout: prev.theme?.menuLayout || '',
@@ -54,6 +102,42 @@ export default function ThemeCustomizer({ initialSettings, restaurantName }: { i
                 </button>
             </div>
 
+            {/* Logo */}
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                    <ImageIcon className="text-gray-400" />
+                    <h2 className="text-lg font-semibold">Brand Logo</h2>
+                </div>
+                <div className="flex items-center gap-5">
+                    <div className="w-24 h-24 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
+                        {logoUrl ? (
+                            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
+                        ) : (
+                            <ImageIcon className="text-gray-300" size={32} />
+                        )}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                        <label className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition w-fit text-sm font-medium text-gray-700">
+                            <Upload size={15} />
+                            {isUploading ? 'Uploading…' : logoUrl ? 'Replace Logo' : 'Upload Logo'}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                disabled={isUploading}
+                                onChange={(e) => { if (e.target.files?.[0]) handleLogoUpload(e.target.files[0]) }}
+                                className="hidden"
+                            />
+                        </label>
+                        {logoUrl && (
+                            <button onClick={handleLogoRemove} className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600 w-fit">
+                                <X size={14} /> Remove
+                            </button>
+                        )}
+                        <p className="text-xs text-gray-400">Shown in your customer ordering app header. PNG with transparent background recommended.</p>
+                    </div>
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Colors */}
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-6">
@@ -66,6 +150,7 @@ export default function ThemeCustomizer({ initialSettings, restaurantName }: { i
                         {([
                             { key: 'primaryColor',   label: 'Primary Color',   def: '#E85D04' },
                             { key: 'secondaryColor', label: 'Secondary Color', def: '#1B263B' },
+                            { key: 'accentColor',    label: 'Accent Color',    def: '#EC4899' },
                         ] as const).map(({ key, label, def }) => {
                             const val = settings.theme?.[key] || def
                             return (
@@ -136,6 +221,18 @@ export default function ThemeCustomizer({ initialSettings, restaurantName }: { i
                             <div className="text-right text-sm text-gray-500 font-mono mt-1">
                                 {settings.theme?.borderRadius || '12px'}
                             </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Menu Layout</label>
+                            <select
+                                value={settings.theme?.menuLayout || 'grid'}
+                                onChange={(e) => updateTheme('menuLayout', e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+                            >
+                                <option value="grid">Grid (cards side by side)</option>
+                                <option value="list">List (full-width rows)</option>
+                            </select>
                         </div>
                     </div>
                 </div>

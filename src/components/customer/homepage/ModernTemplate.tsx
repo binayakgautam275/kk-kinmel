@@ -61,14 +61,6 @@ export default function ModernTemplate({ config, onMenuClick }: { config: Homepa
                     </div>
                 </div>
             )}
-
-            {config.footer?.enabled && (
-                <footer className="bg-gray-900 text-white py-8 px-4">
-                    <div className="max-w-6xl mx-auto text-center">
-                        <p className="text-gray-400">{config.footer.copyright}</p>
-                    </div>
-                </footer>
-            )}
         </div>
     )
 }

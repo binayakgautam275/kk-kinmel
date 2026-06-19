@@ -11,11 +11,12 @@ const DEFAULT_HOMEPAGE = {
     theme_primary: '#E85D04',
     theme_secondary: '#1B263B',
     theme_accent: '#EC4899',
+    logo_url: null,
     about: {
         enabled: true,
         title: 'About Us',
         description: 'Quality food and excellent service since day one.',
-        image_url: ''
+        image_url: '',
     },
     features: [
         { title: 'Fresh Ingredients', description: 'Sourced daily' },
@@ -28,20 +29,14 @@ const DEFAULT_HOMEPAGE = {
         description: 'Get your favorite meal delivered',
         button_text: 'View Menu',
     },
+    gallery: [],
+    social: {},
+    contact: { enabled: true },
     footer: {
         enabled: true,
         copyright: `© ${new Date().getFullYear()} Your Restaurant`,
         social_links: [],
     },
-}
-
-/** Hydrate hero_cta_text from cta.button_text for client-side compatibility */
-function hydrate(row: Record<string, unknown>) {
-    if (!row.hero_cta_text && row.cta && typeof row.cta === 'object') {
-        const cta = row.cta as Record<string, unknown>
-        row.hero_cta_text = cta.button_text || 'View Menu'
-    }
-    return row
 }
 
 export async function GET(req: NextRequest) {
@@ -54,24 +49,42 @@ export async function GET(req: NextRequest) {
         }
 
         const supabase = await createServerClient()
-        const { data: config, error } = await supabase
-            .from('homepage_configs')
-            .select('*')
-            .eq('restaurant_id', restaurantId)
-            .single()
+        const [{ data: config, error }, { data: restaurant }] = await Promise.all([
+            supabase.from('homepage_configs').select('*').eq('restaurant_id', restaurantId).single(),
+            supabase.from('restaurants').select('name, logo_url').eq('id', restaurantId).single(),
+        ])
 
         if (error) {
             if (error.code === 'PGRST116') {
                 // No config yet — return typed default so client has the right shape
                 return NextResponse.json(
-                    { ...DEFAULT_HOMEPAGE, restaurant_id: restaurantId },
+                    {
+                        ...DEFAULT_HOMEPAGE,
+                        restaurant_id: restaurantId,
+                        restaurant_name: restaurant?.name,
+                        logo_url: restaurant?.logo_url ?? null,
+                    },
                     { status: 404 }  // 404 so HomepageGate skips rendering
                 )
             }
             return NextResponse.json({ error: error.message }, { status: 400 })
         }
 
-        return NextResponse.json(hydrate(config as Record<string, unknown>))
+        // Defensive: features/gallery must be arrays for the templates & manager.
+        // Tolerates legacy rows where features was stored as { enabled, items: [] }.
+        const row = config as Record<string, unknown>
+        if (!Array.isArray(row.features)) {
+            const f = row.features as { items?: unknown } | null
+            row.features = Array.isArray(f?.items) ? f!.items : []
+        }
+        if (!Array.isArray(row.gallery)) row.gallery = []
+
+        // Hydrate restaurant name + fall back to the app logo so the homepage
+        // shows the same logo set in Brand & Theme until a homepage-specific one is set.
+        row.restaurant_name = restaurant?.name
+        if (!row.logo_url) row.logo_url = restaurant?.logo_url ?? null
+
+        return NextResponse.json(row)
     } catch (error) {
         console.error('Homepage GET error:', error)
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

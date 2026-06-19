@@ -8,7 +8,9 @@ import { ChevronRight } from 'lucide-react'
 interface HomepageGateProps {
     restaurantId: string
     onProceed: () => void
-    children: React.ReactNode
+    // Function-as-child: receives a `backToHome` callback (null when there is
+    // no homepage to return to) so the menu can offer a "back to homepage" action.
+    children: (opts: { backToHome: (() => void) | null }) => React.ReactNode
 }
 
 function LoadingSkeleton() {
@@ -76,7 +78,8 @@ export default function HomepageGate({ restaurantId, onProceed, children }: Home
     }
 
     if (!showHomepage || !homepageConfig) {
-        return <>{children}</>
+        // Only offer "back to homepage" when a homepage config actually exists.
+        return <>{children({ backToHome: homepageConfig ? () => setShowHomepage(true) : null })}</>
     }
 
     return (

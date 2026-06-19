@@ -38,9 +38,5 @@ export default function VibrantTemplate({ config, onMenuClick }: { config: Homep
                 <button onClick={onMenuClick} className="px-8 py-3 rounded-lg text-white font-bold hover:scale-105" style={{ backgroundColor: config.theme_accent }}>{config.cta.button_text}</button>
             </div>
         </div>}
-
-        {config.footer?.enabled && <footer className="py-8 px-4 text-center text-white">
-            <p>{config.footer.copyright}</p>
-        </footer>}
     </div>
 }

@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { getRestaurantFeatures } from '@/lib/features'
+import { getRestaurantFeatures, getMenuLayout } from '@/lib/features'
 import { getCachedMenuData } from '@/lib/menu-cache'
 import type { MenuItem } from '@/types/database'
 import TablePageClient from './TablePageClient'
@@ -43,7 +43,7 @@ export default async function CustomerMenuPage(props: {
     // Find the table and restaurant ID
     const { data: tableData } = await supabase
         .from('tables')
-        .select('id, restaurant_id, label, restaurants(name, logo_url)')
+        .select('id, restaurant_id, label, restaurants(name, logo_url, physical_menu_urls)')
         .eq('qr_token', tableToken)
         .single()
 
@@ -94,10 +94,12 @@ export default async function CustomerMenuPage(props: {
     // 2. Fetch Menu Data + Feature Flags in parallel
     const [
         features,
-        menuData
+        menuData,
+        menuLayout
     ] = await Promise.all([
         getRestaurantFeatures(restaurantId),
-        getCachedMenuData(restaurantId)
+        getCachedMenuData(restaurantId),
+        getMenuLayout(restaurantId)
     ])
 
     const { categories, menuItems, translations, supportedLanguages } = menuData
@@ -116,7 +118,7 @@ export default async function CustomerMenuPage(props: {
                 restaurant_id: tableData.restaurant_id,
                 restaurants: Array.isArray(tableData.restaurants)
                     ? tableData.restaurants[0] || null
-                    : (tableData.restaurants as unknown as { name: string; logo_url: string | null } | null),
+                    : (tableData.restaurants as unknown as { name: string; logo_url: string | null; physical_menu_urls: string[] | null } | null),
             }}
             categories={categories || []}
             menuItems={menuItems}
@@ -125,6 +127,7 @@ export default async function CustomerMenuPage(props: {
             isValidSession={isValidSession}
             serviceRequestsEnabled={features?.serviceRequestsEnabled !== false}
             multiLanguageEnabled={features?.multiLanguageEnabled === true}
+            menuLayout={menuLayout}
             translations={translations}
             supportedLanguages={langs}
         />

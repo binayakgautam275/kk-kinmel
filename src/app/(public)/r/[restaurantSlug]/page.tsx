@@ -1,0 +1,59 @@
+import { createAdminClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
+import RestaurantMainClient from './RestaurantMainClient'
+
+import type { Metadata } from 'next'
+
+export const dynamic = 'force-dynamic'
+
+export async function generateMetadata(props: {
+    params: Promise<{ restaurantSlug: string }>
+}): Promise<Metadata> {
+    const params = await props.params;
+    const supabase = await createAdminClient()
+    const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('id, name')
+        .eq('slug', params.restaurantSlug)
+        .single()
+
+    if (restaurant) {
+        return {
+            title: restaurant.name,
+            manifest: `/api/manifest/${restaurant.id}?start_url=${encodeURIComponent(`/r/${params.restaurantSlug}`)}`
+        }
+    }
+    return {}
+}
+
+export default async function RestaurantMainPage(props: {
+    params: Promise<{ restaurantSlug: string }>
+}) {
+    const params = await props.params;
+    const supabase = await createAdminClient()
+
+    // 1. Fetch Restaurant Info
+    const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('id, name, logo_url, physical_menu_urls')
+        .eq('slug', params.restaurantSlug)
+        .single()
+
+    if (!restaurant) return notFound()
+
+    // 2. Fetch Active Tables
+    const { data: tables } = await supabase
+        .from('tables')
+        .select('id, label, qr_token')
+        .eq('restaurant_id', restaurant.id)
+        .eq('is_active', true)
+        .order('label', { ascending: true })
+
+    return (
+        <RestaurantMainClient 
+            restaurant={restaurant}
+            tables={tables || []}
+            restaurantSlug={params.restaurantSlug}
+        />
+    )
+}

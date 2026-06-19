@@ -2,14 +2,48 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getCurrentUser } from '@/lib/auth'
 
+// Columns the manager is allowed to write. Anything else in the request body
+// (id, created_at, computed fields, …) is ignored to prevent both
+// "column not found" errors and mass-assignment.
+const WRITABLE_COLUMNS = [
+    'template',
+    'hero_title',
+    'hero_subtitle',
+    'hero_image_url',
+    'hero_video_url',
+    'hero_cta_text',
+    'theme_primary',
+    'theme_secondary',
+    'theme_accent',
+    'logo_url',
+    'about',
+    'features',
+    'cta',
+    'gallery',
+    'social',
+    'contact',
+    'footer',
+] as const
+
+function pickWritable(body: Record<string, unknown>): Record<string, unknown> {
+    const out: Record<string, unknown> = {}
+    for (const key of WRITABLE_COLUMNS) {
+        if (key in body) out[key] = body[key]
+    }
+    return out
+}
+
 export async function POST(req: NextRequest) {
     try {
         const user = await getCurrentUser()
         const supabase = await createAdminClient()
 
         const body = await req.json()
-        // hero_cta_text is not a DB column — it lives inside the cta JSONB field as cta.button_text
-        const { restaurant_id, hero_cta_text, ...configData } = body
+        const { restaurant_id } = body
+
+        if (!restaurant_id) {
+            return NextResponse.json({ error: 'restaurant_id is required' }, { status: 400 })
+        }
 
         // Verify user has access to this restaurant
         const { data: userData } = await supabase
@@ -19,19 +53,10 @@ export async function POST(req: NextRequest) {
             .single()
 
         if (userData?.restaurant_id !== restaurant_id) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 403 }
-            )
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
         }
 
-        // Merge hero_cta_text into cta.button_text so nothing is lost
-        if (hero_cta_text) {
-            configData.cta = {
-                ...(configData.cta || {}),
-                button_text: hero_cta_text,
-            }
-        }
+        const configData = pickWritable(body)
 
         // Check if homepage config exists
         const { data: existing } = await supabase
@@ -41,12 +66,11 @@ export async function POST(req: NextRequest) {
             .single()
 
         if (existing) {
-            // Update existing
             const { data: updatedConfig, error } = await supabase
                 .from('homepage_configs')
                 .update({
                     ...configData,
-                    updated_at: new Date().toISOString()
+                    updated_at: new Date().toISOString(),
                 })
                 .eq('restaurant_id', restaurant_id)
                 .select()
@@ -54,47 +78,30 @@ export async function POST(req: NextRequest) {
 
             if (error) {
                 console.error('Homepage update error:', error)
-                return NextResponse.json(
-                    { error: error.message },
-                    { status: 400 }
-                )
+                return NextResponse.json({ error: error.message }, { status: 400 })
             }
 
-            return NextResponse.json({
-                success: true,
-                config: updatedConfig
-            })
+            return NextResponse.json({ success: true, config: updatedConfig })
         } else {
-            // Create new
             const { data: newConfig, error } = await supabase
                 .from('homepage_configs')
                 .insert({
                     restaurant_id,
                     ...configData,
-                    created_at: new Date().toISOString(),
-                    updated_at: new Date().toISOString()
                 })
                 .select()
                 .single()
 
             if (error) {
                 console.error('Homepage create error:', error)
-                return NextResponse.json(
-                    { error: error.message },
-                    { status: 400 }
-                )
+                return NextResponse.json({ error: error.message }, { status: 400 })
             }
 
-            return NextResponse.json({
-                success: true,
-                config: newConfig
-            }, { status: 201 })
+            return NextResponse.json({ success: true, config: newConfig }, { status: 201 })
         }
     } catch (error) {
         console.error('Homepage endpoint error:', error)
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        )
+        const message = error instanceof Error ? error.message : 'Internal server error'
+        return NextResponse.json({ error: message }, { status: 500 })
     }
 }
