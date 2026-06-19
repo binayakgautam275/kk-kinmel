@@ -103,7 +103,7 @@ export async function submitPaymentClaim(formData: FormData): Promise<{ error?: 
 
     if (error) {
         console.error('Payment claim insert failed:', error)
-        return { error: 'Failed to submit payment claim. Please try again.' }
+        return { error: `Failed to submit payment claim. Please try again. Details: ${error.message}` }
     }
 
     return { success: true }
