@@ -43,7 +43,16 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
                     const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
                     if (data) {
                         const order = data as unknown as KitchenOrder
-                        setOrders(prev => [...prev, order])
+                        // Realtime can replay an INSERT (reconnect, multiple tabs) or
+                        // deliver one already present in initialOrders — guard against
+                        // duplicate rows and duplicate React keys.
+                        let isNew = false
+                        setOrders(prev => {
+                            if (prev.some(o => o.id === order.id)) return prev
+                            isNew = true
+                            return [...prev, order]
+                        })
+                        if (!isNew) return
                         playNewOrder().catch(() => {})
                         const tbl = order.sessions?.tables?.label
                         toast.custom((t) => (

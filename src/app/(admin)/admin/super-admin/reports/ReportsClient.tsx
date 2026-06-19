@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { FileText } from 'lucide-react'
 
-type Report = {
+export type Report = {
     id: string
     restaurant_id: string
     report_date: string

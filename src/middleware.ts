@@ -50,19 +50,6 @@ function getRequestIp(request: NextRequest): string {
     )
 }
 
-// Decode the app_role claim from the Supabase JWT without a network call.
-// The claim is injected by the custom_access_token_hook (004_jwt_claims_hook.sql).
-function getRoleFromToken(accessToken: string): string | null {
-    try {
-        // JWT is base64url-encoded — replace URL-safe chars before atob()
-        const base64 = accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
-        const payload = JSON.parse(atob(base64))
-        return typeof payload.app_role === 'string' ? payload.app_role : null
-    } catch {
-        return null
-    }
-}
-
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
 
@@ -110,9 +97,13 @@ export async function middleware(request: NextRequest) {
 
     // ── Role check ──────────────────────────────────────────────────────────────
     if (rule.allowedRoles) {
-        // getSession() reads from the cookie — no extra network call after getUser()
-        const { data: { session } } = await supabase.auth.getSession()
-        const role = session?.access_token ? getRoleFromToken(session.access_token) : null
+        // getClaims() verifies the JWT signature and returns its decoded claims —
+        // including the app_role injected by the custom_access_token_hook
+        // (004_jwt_claims_hook.sql). Unlike decoding the raw cookie, a tampered
+        // token is rejected here instead of being trusted.
+        const { data: claimsData } = await supabase.auth.getClaims()
+        const claims = claimsData?.claims as { app_role?: unknown } | undefined
+        const role = typeof claims?.app_role === 'string' ? claims.app_role : null
 
         // If we have a role and it's not allowed for this route, redirect the user
         // to their correct landing page instead of showing an error.

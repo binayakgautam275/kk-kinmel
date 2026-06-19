@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { HomepageConfig } from '@/types/database'
 
 export default function ModernTemplate({ config, onMenuClick }: { config: HomepageConfig; onMenuClick: () => void }) {
@@ -6,7 +7,7 @@ export default function ModernTemplate({ config, onMenuClick }: { config: Homepa
         <div className="min-h-screen bg-white">
             <div className="relative h-96 md:h-[32rem] overflow-hidden" style={{ backgroundColor: config.theme_primary }}>
                 {config.hero_video_url && <video src={config.hero_video_url} autoPlay muted loop className="absolute inset-0 w-full h-full object-cover opacity-30" />}
-                {config.hero_image_url && !config.hero_video_url && <img src={config.hero_image_url} alt="Hero" className="absolute inset-0 w-full h-full object-cover opacity-30" />}
+                {config.hero_image_url && !config.hero_video_url && <Image src={config.hero_image_url} alt="Hero" fill className="object-cover opacity-30" sizes="100vw" />}
                 <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
                 <div className="relative h-full flex flex-col items-center justify-center text-center px-4 z-10 animate-fade-up">
                     <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 drop-shadow-xl tracking-tight">{config.hero_title}</h1>
@@ -21,7 +22,7 @@ export default function ModernTemplate({ config, onMenuClick }: { config: Homepa
                 <div className="py-16 md:py-24 px-4 bg-gray-50">
                     <div className="max-w-6xl mx-auto">
                         <div className="grid md:grid-cols-2 gap-12 items-center">
-                            {config.about.image_url && <div className="animate-fade-up"><img src={config.about.image_url} alt={config.about.title} className="rounded-2xl h-96 w-full object-cover shadow-2xl card-hover" /></div>}
+                            {config.about.image_url && <div className="animate-fade-up relative h-96 w-full rounded-2xl overflow-hidden shadow-2xl card-hover"><Image src={config.about.image_url} alt={config.about.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" /></div>}
                             <div className="animate-fade-up delay-100">
                                 <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 tracking-tight">{config.about.title}</h2>
                                 <p className="text-gray-600 text-lg md:text-xl leading-relaxed font-light">{config.about.description}</p>

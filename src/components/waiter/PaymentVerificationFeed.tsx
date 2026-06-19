@@ -7,7 +7,7 @@ import { verifyPayment, verifyPaymentAndCloseTable } from './payment-verificatio
 import { timeAgo, formatCurrency } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
 
-interface PaymentClaim {
+export interface PaymentClaim {
     id: string
     order_id: string | null
     restaurant_id: string

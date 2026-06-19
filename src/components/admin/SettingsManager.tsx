@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import Image from 'next/image'
 import { Save, Store, Mail, Phone, MapPin, Building, Percent, Check, Loader2, QrCode, Shield, ToggleLeft, ToggleRight, Upload, X, Bell, Play } from 'lucide-react'
 import { updateRestaurantSettingsAction } from '@/app/(admin)/admin/settings/actions'
 import { updateFeaturesAction } from '@/lib/features'
@@ -245,7 +246,7 @@ export default function SettingsManager({
                             {/* Current logo preview or placeholder */}
                             <div className="w-20 h-20 rounded-xl border-2 border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
                                 {formData.logo_url
-                                    ? <img src={formData.logo_url} alt="Logo" className="w-full h-full object-contain p-1" />
+                                    ? <Image src={formData.logo_url} alt="Logo" width={80} height={80} className="w-full h-full object-contain p-1" />
                                     : <Store size={28} className="text-gray-300" />
                                 }
                             </div>
@@ -473,7 +474,7 @@ export default function SettingsManager({
 
                             {formData.payment_qr_url && (
                                 <div className="mt-4 flex items-start gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50">
-                                    <img src={formData.payment_qr_url} alt="Payment QR" className="h-24 w-24 object-contain bg-white rounded-lg p-1 border border-gray-200 shrink-0" />
+                                    <Image src={formData.payment_qr_url} alt="Payment QR" width={96} height={96} className="h-24 w-24 object-contain bg-white rounded-lg p-1 border border-gray-200 shrink-0" />
                                     {canEdit && (
                                         <button type="button" onClick={() => setFormData(p => ({ ...p, payment_qr_url: null }))} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 mt-1">
                                             <X size={12} /> Remove QR

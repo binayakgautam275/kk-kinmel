@@ -1,15 +1,16 @@
 import { getCurrentUser } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import TableManager, { type TableWithSession } from '@/components/waiter/TableManager'
-import ServiceRequestFeed from '@/components/waiter/ServiceRequestFeed'
+import ServiceRequestFeed, { type ServiceRequestWithTable } from '@/components/waiter/ServiceRequestFeed'
 import StaffShiftClock from '@/components/shared/StaffShiftClock'
-import PaymentVerificationFeed from '@/components/waiter/PaymentVerificationFeed'
-import WaiterOrderFeed from '@/components/waiter/WaiterOrderFeed'
+import PaymentVerificationFeed, { type PaymentClaim } from '@/components/waiter/PaymentVerificationFeed'
+import WaiterOrderFeed, { type WaiterOrder } from '@/components/waiter/WaiterOrderFeed'
 import WaiterTakeoutFeed from '@/components/waiter/WaiterTakeoutFeed'
 import FloorStats from '@/components/waiter/FloorStats'
-import CashPaymentFeed from '@/components/waiter/CashPaymentFeed'
+import CashPaymentFeed, { type UnpaidOrder } from '@/components/waiter/CashPaymentFeed'
 import ActiveSessionsList from '@/components/waiter/ActiveSessionsList'
 import { getRestaurantFeatures } from '@/lib/features'
+import type { TakeoutOrder } from '@/types/database'
 import { Users, Package, Bell, ChefHat } from 'lucide-react'
 
 export const revalidate = 0
@@ -127,22 +128,18 @@ export default async function WaiterPage() {
     const tablesMap: Record<string, string> = Object.fromEntries(mappedTables.map(t => [t.id, t.label]))
     const activeSessionEntries = mappedTables
         .filter(t => t.activeSession)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .map(t => {
-            const session = t.activeSession as any
+            const session = t.activeSession!
             const sessionOrders = (activeOrders || []).filter(
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (o: any) => o.session_id === session.id && !['delivered', 'cancelled'].includes(o.status)
+                o => o.session_id === session.id && !['delivered', 'cancelled'].includes(o.status)
             )
             return {
                 tableId: t.id,
                 tableLabel: t.label,
-                sessionId: session.id as string,
-                openedAt: (session.opened_at ?? session.created_at ?? now) as string,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                sessionId: session.id,
+                openedAt: session.opened_at ?? now,
                 orderCount: sessionOrders.length,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                totalAmount: sessionOrders.reduce((sum: number, o: any) => sum + (Number(o.total_amount) || 0), 0),
+                totalAmount: sessionOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
             }
         })
         .sort((a, b) => a.tableLabel.localeCompare(b.tableLabel, undefined, { numeric: true }))
@@ -170,8 +167,7 @@ export default async function WaiterPage() {
             {/* 1. Service Requests — most urgent, someone needs help NOW */}
             {features?.serviceRequestsEnabled !== false && (
                 <ServiceRequestFeed
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    initialRequests={(serviceRequests || []) as any[]}
+                    initialRequests={(serviceRequests || []) as unknown as ServiceRequestWithTable[]}
                     restaurantId={restaurantId}
                     userId={userId}
                 />
@@ -179,16 +175,14 @@ export default async function WaiterPage() {
 
             {/* 2. Active Order Feed — ready orders need immediate delivery */}
             <WaiterOrderFeed
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                initialOrders={(activeOrders || []) as any[]}
+                initialOrders={(activeOrders || []) as unknown as WaiterOrder[]}
                 restaurantId={restaurantId}
             />
 
             {/* 3. Cash Payment Quick-Actions — delivered orders awaiting cash collection */}
             {unpaidDelivered && unpaidDelivered.length > 0 && (
                 <CashPaymentFeed
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    initialOrders={unpaidDelivered as any[]}
+                    initialOrders={unpaidDelivered as unknown as UnpaidOrder[]}
                     restaurantId={restaurantId}
                 />
             )}
@@ -196,8 +190,7 @@ export default async function WaiterPage() {
             {/* 4. Nepal Payment Verification */}
             {features?.nepalPayEnabled && (
                 <PaymentVerificationFeed
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    initialClaims={(paymentClaims || []) as any[]}
+                    initialClaims={(paymentClaims || []) as unknown as PaymentClaim[]}
                     restaurantId={restaurantId}
                     userId={userId}
                 />
@@ -206,8 +199,7 @@ export default async function WaiterPage() {
             {/* 5. Takeout Pickup Feed */}
             {features?.takeoutEnabled && (
                 <WaiterTakeoutFeed
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    initialOrders={(readyTakeouts || []) as any[]}
+                    initialOrders={(readyTakeouts || []) as unknown as TakeoutOrder[]}
                     restaurantId={restaurantId}
                 />
             )}

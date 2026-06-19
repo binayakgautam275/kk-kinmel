@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Shield, ChefHat, Users, User, Check, AlertTriangle, Loader2, Pencil, Trash2, Eye, EyeOff } from 'lucide-react'
 import { updateStaffRoleAction, toggleStaffStatusAction, updateStaffNameAction, resetStaffPasswordAction, deleteStaffAction } from '@/app/(admin)/admin/staff/actions'
 import { toast } from 'react-hot-toast'
@@ -285,7 +286,7 @@ export default function StaffManager({
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center">
                                                 {user.avatar_url ? (
-                                                    <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+                                                    <Image src={user.avatar_url} alt={user.full_name} width={40} height={40} className="w-full h-full object-cover" />
                                                 ) : (
                                                     <span className="text-gray-500 font-medium text-sm">
                                                         {user.full_name.charAt(0).toUpperCase()}
@@ -353,7 +354,7 @@ export default function StaffManager({
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-gray-100 overflow-hidden shrink-0 border border-gray-200 flex items-center justify-center">
                                     {user.avatar_url ? (
-                                        <img src={user.avatar_url} alt={user.full_name} className="w-full h-full object-cover" />
+                                        <Image src={user.avatar_url} alt={user.full_name} width={40} height={40} className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="text-gray-500 font-medium text-sm">{user.full_name.charAt(0).toUpperCase()}</span>
                                     )}

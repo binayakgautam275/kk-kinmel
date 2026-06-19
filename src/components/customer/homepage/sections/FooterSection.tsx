@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { HomepageConfig } from '@/types/database'
 import SocialLinks from './SocialLinks'
 
@@ -22,7 +23,7 @@ export default function FooterSection({
         <footer className="bg-gray-900 text-white py-10 px-4">
             <div className="max-w-6xl mx-auto flex flex-col items-center gap-5 text-center">
                 {logoUrl ? (
-                    <img src={logoUrl} alt={restaurantName || 'Logo'} className="h-12 w-auto object-contain" />
+                    <Image src={logoUrl} alt={restaurantName || 'Logo'} width={200} height={48} className="h-12 w-auto object-contain" />
                 ) : (
                     restaurantName && <p className="text-lg font-semibold">{restaurantName}</p>
                 )}

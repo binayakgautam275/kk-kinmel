@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth'
 import { getAllOrdersAcrossRestaurants, getAllRestaurants } from '../actions'
-import OrdersClient from './OrdersClient'
+import OrdersClient, { type Order } from './OrdersClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +20,7 @@ export default async function OrdersPage() {
                 <h1 className="text-2xl font-bold text-gray-900">All Orders</h1>
                 <p className="text-gray-500 mt-1 text-sm">Platform-wide order history across all restaurant tenants.</p>
             </div>
-            <OrdersClient orders={(ordersResult.data || []) as any} restaurants={restaurants} />
+            <OrdersClient orders={(ordersResult.data || []) as unknown as Order[]} restaurants={restaurants} />
         </div>
     )
 }

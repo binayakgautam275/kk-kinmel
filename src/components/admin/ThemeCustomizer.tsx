@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import Image from 'next/image'
 import { Save, Type, Palette, Image as ImageIcon, Upload, X, RefreshCw, ExternalLink, Smartphone } from 'lucide-react'
 import type { Settings } from '@/types/database'
 import { toast } from 'react-hot-toast'
@@ -171,7 +172,7 @@ export default function ThemeCustomizer({
                 <div className="flex items-center gap-5">
                     <div className="w-24 h-24 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden shrink-0">
                         {logoUrl ? (
-                            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-2" />
+                            <Image src={logoUrl} alt="Logo" width={96} height={96} className="w-full h-full object-contain p-2" />
                         ) : (
                             <ImageIcon className="text-gray-300" size={32} />
                         )}

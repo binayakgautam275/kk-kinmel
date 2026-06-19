@@ -46,10 +46,15 @@ export default function MenuItemCard({ item, sessionId, restaurantSlug, restaura
     const [showModifiers, setShowModifiers] = useState(false)
     const [selectedMods, setSelectedMods] = useState<Record<string, string[]>>({})
 
-    const cartItem = items.find((i) => i.menuItemId === item.id)
-    const quantity = cartItem?.quantity || 0
-    const cartKey = cartItem ? getCartItemKey(cartItem) : ''
-    const hasModifiers = item.modifier_groups && item.modifier_groups.length > 0
+    const hasModifiers = (item.modifier_groups?.length ?? 0) > 0
+    // The cart stores a separate line per (menuItemId + modifiers), so there can
+    // be several lines for one menu item. The badge must show the combined count.
+    const matchingItems = items.filter((i) => i.menuItemId === item.id)
+    const quantity = matchingItems.reduce((sum, i) => sum + i.quantity, 0)
+    // Inline +/- can only act on one concrete line, so they're reserved for items
+    // without modifiers (exactly one line). Modifier items always use the sheet.
+    const simpleCartItem = hasModifiers ? undefined : matchingItems[0]
+    const cartKey = simpleCartItem ? getCartItemKey(simpleCartItem) : ''
 
     function initModSelections() {
         const init: Record<string, string[]> = {}
@@ -60,7 +65,9 @@ export default function MenuItemCard({ item, sessionId, restaurantSlug, restaura
     const handleAdd = () => {
         if (!sessionId) return
         setSession(sessionId, restaurantSlug, restaurantId)
-        if (hasModifiers && quantity === 0) { initModSelections(); setShowModifiers(true); return }
+        // Modifier items always go through the sheet so each tap can pick its own
+        // options and create the correct line — never blindly bump one variant.
+        if (hasModifiers) { initModSelections(); setShowModifiers(true); return }
         if (quantity > 0) updateQuantity(cartKey, quantity + 1)
         else addItem({ menuItemId: item.id, name: item.name, price: item.price, imageUrl: item.image_url || undefined })
     }
@@ -90,6 +97,7 @@ export default function MenuItemCard({ item, sessionId, restaurantSlug, restaura
     }
 
     const handleRemove = () => {
+        if (!cartKey) return
         if (quantity > 1) updateQuantity(cartKey, quantity - 1)
         else if (quantity === 1) removeItem(cartKey)
     }
@@ -183,7 +191,7 @@ export default function MenuItemCard({ item, sessionId, restaurantSlug, restaura
                 <div className="mt-auto pt-2">
                     {!sessionId ? (
                         <div className="h-8" />
-                    ) : quantity === 0 ? (
+                    ) : (quantity === 0 || hasModifiers) ? (
                         <button
                             onClick={handleAdd}
                             disabled={!item.is_available}

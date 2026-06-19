@@ -1,9 +1,10 @@
 'use client'
+import Image from 'next/image'
 import { HomepageConfig } from '@/types/database'
 export default function ClassicTemplate({ config, onMenuClick }: { config: HomepageConfig; onMenuClick: () => void }) {
     return <div className="min-h-screen bg-amber-50">
         <div className="relative h-96 md:h-[600px] flex items-center justify-center px-4 overflow-hidden" style={{ backgroundColor: config.theme_primary }}>
-            {config.hero_image_url && <img src={config.hero_image_url} alt="Hero" className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay animate-scale-in" />}
+            {config.hero_image_url && <Image src={config.hero_image_url} alt="Hero" fill className="object-cover opacity-40 mix-blend-overlay animate-scale-in" sizes="100vw" />}
             <div className="relative text-center text-white z-10 animate-fade-up">
                 <h1 className="text-5xl md:text-7xl font-serif mb-6 drop-shadow-lg">{config.hero_title}</h1>
                 <p className="text-xl md:text-2xl mb-10 drop-shadow-md font-light">{config.hero_subtitle}</p>

@@ -11,28 +11,28 @@ export interface JwtClaims {
 }
 
 /**
- * Extracts custom claims (app_role, restaurant_id) from the current user's JWT.
- * This avoids an admin DB roundtrip — the data is already embedded in the access token
- * by the custom_access_token_hook function.
+ * Extracts custom claims (app_role, restaurant_id, session_token) from the current
+ * user's JWT — embedded in the access token by the custom_access_token_hook.
+ *
+ * Uses supabase.auth.getClaims(), which verifies the token signature before
+ * returning its claims. Unlike a raw base64 decode of the cookie, a tampered
+ * token is rejected here instead of being trusted for authorization.
  */
 export async function getJwtClaims(): Promise<JwtClaims | null> {
     const supabase = await createServerClient()
-    const { data: { session } } = await supabase.auth.getSession()
-
-    if (!session?.access_token) return null
 
     try {
-        // Decode the JWT payload (middle segment)
-        const payload = JSON.parse(
-            Buffer.from(session.access_token.split('.')[1], 'base64').toString('utf-8')
-        )
+        const { data } = await supabase.auth.getClaims()
+        const claims = data?.claims as Record<string, unknown> | undefined
+        if (!claims) return null
+
         return {
-            app_role: payload.app_role ?? undefined,
-            restaurant_id: payload.restaurant_id ?? undefined,
-            session_token: payload.session_token ?? undefined,
+            app_role: typeof claims.app_role === 'string' ? claims.app_role : undefined,
+            restaurant_id: typeof claims.restaurant_id === 'string' ? claims.restaurant_id : undefined,
+            session_token: typeof claims.session_token === 'string' ? claims.session_token : undefined,
         }
     } catch (error) {
-        console.error('Failed to decode JWT claims:', error)
+        console.error('Failed to read JWT claims:', error)
         return null
     }
 }

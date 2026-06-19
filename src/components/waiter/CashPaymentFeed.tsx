@@ -7,7 +7,7 @@ import { Banknote, CheckCircle, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { formatCurrency, timeAgo } from '@/lib/utils'
 
-interface UnpaidOrder {
+export interface UnpaidOrder {
     id: string
     total_amount: number
     delivered_at: string | null
@@ -77,7 +77,7 @@ export default function CashPaymentFeed({
             </h2>
 
             {orders.map((order) => {
-                const tableLabel = (order.sessions as unknown as { tables?: { label?: string } })?.tables?.label
+                const tableLabel = order.sessions?.tables?.label
                 const isProcessing = processingId === order.id
                 return (
                     <div key={order.id} className="bg-white rounded-xl border-2 border-amber-300 p-4 flex items-center justify-between gap-3">

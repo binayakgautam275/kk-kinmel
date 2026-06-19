@@ -1,6 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
+import Image from 'next/image'
 import { updateRestaurantSettings } from '../actions'
 
 interface RestaurantData {
@@ -86,8 +87,7 @@ export default function SettingsForm({ restaurant }: { restaurant: RestaurantDat
                                 {/* @ts-ignore */}
                                 {restaurant.physical_menu_urls.map((url: string, idx: number) => (
                                     <div key={idx} className="relative aspect-[3/4] bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={url} alt={`Menu Page ${idx + 1}`} className="w-full h-full object-cover" />
+                                        <Image src={url} alt={`Menu Page ${idx + 1}`} fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover" />
                                     </div>
                                 ))}
                             </div>
@@ -112,10 +112,11 @@ export default function SettingsForm({ restaurant }: { restaurant: RestaurantDat
                     {restaurant.payment_qr_url && (
                         <div>
                             <p className="text-xs font-medium text-gray-500 mb-2">Current QR Image</p>
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <Image
                                 src={restaurant.payment_qr_url}
                                 alt="Payment QR"
+                                width={128}
+                                height={128}
                                 className="w-32 h-32 object-contain border border-gray-200 rounded-lg"
                             />
                             <p className="text-xs text-gray-400 mt-1">To update the QR image, use the Admin Panel → Settings.</p>

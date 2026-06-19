@@ -20,8 +20,9 @@ const SIGNED_URL_EXPIRY = 30 * 60
 
 export async function GET(request: NextRequest) {
     // Only staff roles may view payment proofs
+    let currentUser
     try {
-        await requireRole('super_admin', 'manager', 'waiter')
+        currentUser = await requireRole('super_admin', 'manager', 'waiter')
     } catch {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -41,6 +42,13 @@ export async function GET(request: NextRequest) {
         .single()
 
     if (!claim?.screenshot_url) {
+        return NextResponse.json({ error: 'No screenshot found' }, { status: 404 })
+    }
+
+    // Tenant isolation: createAdminClient() bypasses RLS, so the claim's
+    // restaurant must be verified against the caller's. Return 404 (not 403)
+    // to avoid leaking the existence of other tenants' payment proofs.
+    if (claim.restaurant_id !== currentUser.restaurantId) {
         return NextResponse.json({ error: 'No screenshot found' }, { status: 404 })
     }
 

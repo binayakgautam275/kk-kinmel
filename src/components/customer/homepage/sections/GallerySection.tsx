@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { HomepageConfig } from '@/types/database'
 
 export default function GallerySection({
@@ -34,11 +35,12 @@ export default function GallerySection({
                                         autoPlay muted loop playsInline
                                     />
                                 ) : (
-                                    <img
+                                    <Image
                                         src={item.image_url}
                                         alt={item.caption || `Gallery image ${idx + 1}`}
-                                        loading="lazy"
-                                        className="w-full h-full object-cover transition duration-700 hover:scale-110"
+                                        fill
+                                        sizes="(max-width: 768px) 16rem, 20rem"
+                                        className="object-cover transition duration-700 hover:scale-110"
                                     />
                                 )}
                                 {item.caption && (

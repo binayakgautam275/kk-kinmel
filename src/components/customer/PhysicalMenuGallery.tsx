@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { BookOpen, X, ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function PhysicalMenuGallery({ images, restaurantName }: { images: string[], restaurantName: string }) {
@@ -46,11 +47,12 @@ export default function PhysicalMenuGallery({ images, restaurantName }: { images
 
                     {/* Image Viewer */}
                     <div className="relative w-full h-full flex items-center justify-center p-4">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <Image
                             src={images[currentIndex]}
                             alt={`Menu Page ${currentIndex + 1}`}
-                            className="max-w-full max-h-full object-contain drop-shadow-2xl"
+                            fill
+                            sizes="100vw"
+                            className="object-contain drop-shadow-2xl"
                         />
 
                         {images.length > 1 && (
@@ -85,8 +87,7 @@ export default function PhysicalMenuGallery({ images, restaurantName }: { images
                                         idx === currentIndex ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-50 hover:opacity-100'
                                     }`}
                                 >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={img} alt="" className="w-full h-full object-cover" />
+                                    <Image src={img} alt="" fill sizes="48px" className="object-cover" />
                                 </button>
                             ))}
                         </div>

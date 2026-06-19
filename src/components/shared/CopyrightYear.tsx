@@ -1,16 +1,5 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-
+// Server component — the year is computed at render time on the server, so SSR
+// and client markup agree (no hydration swap) and crawlers/no-JS see the right year.
 export default function CopyrightYear() {
-    const [year, setYear] = useState<number | null>(null)
-
-    useEffect(() => {
-        setYear(new Date().getFullYear())
-    }, [])
-
-    // During hydration, render nothing or a placeholder
-    if (year === null) return <span>2026</span>
-
-    return <span>{year}</span>
+    return <span>{new Date().getFullYear()}</span>
 }

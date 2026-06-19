@@ -1,6 +1,6 @@
 import { requireRole } from '@/lib/auth'
 import { getAllEodReportsAcrossRestaurants, getAllRestaurants } from '../actions'
-import ReportsClient from './ReportsClient'
+import ReportsClient, { type Report } from './ReportsClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +20,7 @@ export default async function ReportsPage() {
                 <h1 className="text-2xl font-bold text-gray-900">EOD Reports</h1>
                 <p className="text-gray-500 mt-1 text-sm">End-of-day reports across all restaurant tenants.</p>
             </div>
-            <ReportsClient reports={(reportsResult.data || []) as any} restaurants={restaurants} />
+            <ReportsClient reports={(reportsResult.data || []) as unknown as Report[]} restaurants={restaurants} />
         </div>
     )
 }

@@ -7,11 +7,17 @@ export function useHomepageConfig(restaurantId: string) {
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
+        if (!restaurantId) return
+
+        const controller = new AbortController()
+
         async function fetchConfig() {
             try {
                 setIsLoading(true)
-                const response = await fetch(`/api/homepage/get?restaurant_id=${restaurantId}`)
-                
+                const response = await fetch(`/api/homepage/get?restaurant_id=${restaurantId}`, {
+                    signal: controller.signal,
+                })
+
                 if (!response.ok) {
                     throw new Error('Failed to fetch homepage config')
                 }
@@ -20,17 +26,19 @@ export function useHomepageConfig(restaurantId: string) {
                 setConfig(data)
                 setError(null)
             } catch (err) {
+                // Aborted requests (restaurantId changed / unmount) are expected — ignore.
+                if (controller.signal.aborted) return
                 const message = err instanceof Error ? err.message : 'Failed to load config'
                 setError(message)
                 console.error('Error fetching homepage config:', err)
             } finally {
-                setIsLoading(false)
+                if (!controller.signal.aborted) setIsLoading(false)
             }
         }
 
-        if (restaurantId) {
-            fetchConfig()
-        }
+        fetchConfig()
+
+        return () => controller.abort()
     }, [restaurantId])
 
     return { config, isLoading, error }

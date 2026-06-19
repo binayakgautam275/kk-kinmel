@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircle, XCircle, Clock, Banknote, ScanLine, Loader2, ExternalLink } from 'lucide-react'
 import { verifyPayment, verifyPaymentAndCloseTable } from '@/components/waiter/payment-verification-actions'
@@ -192,9 +193,12 @@ export default function PaymentVerificationPanel({
                         {/* Screenshot thumbnail — routed through auth-gated proxy */}
                         {claim.screenshot_url && (
                             <div className="flex items-center gap-2">
-                                <img
+                                <Image
                                     src={`/api/payment-proof?claim=${claim.id}`}
                                     alt="Payment proof"
+                                    width={64}
+                                    height={64}
+                                    unoptimized
                                     className="w-16 h-16 rounded-lg object-cover border border-gray-200 cursor-pointer"
                                     onClick={() => window.open(`/api/payment-proof?claim=${claim.id}`, '_blank')}
                                 />

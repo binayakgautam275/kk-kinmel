@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Upload, CheckCircle, Loader2, Banknote, ScanLine, Camera, X } from 'lucide-react'
 import { submitPaymentClaim } from '@/app/(public)/t/[tableSlug]/checkout/nepal-payment-actions'
 import Image from 'next/image'
@@ -41,6 +41,10 @@ export default function NepalPaymentPanel({
     const [phone, setPhone] = useState('')
     const [screenshot, setScreenshot] = useState<File | null>(null)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+    // Revoke any live preview blob URL when the panel unmounts.
+    const previewUrlRef = useRef<string | null>(null)
+    useEffect(() => { previewUrlRef.current = previewUrl }, [previewUrl])
+    useEffect(() => () => { if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current) }, [])
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
 
@@ -198,9 +202,11 @@ export default function NepalPaymentPanel({
                             </label>
                             {previewUrl ? (
                                 <div className="relative inline-block">
-                                    <img
+                                    <Image
                                         src={previewUrl}
                                         alt="Payment screenshot"
+                                        width={150}
+                                        height={112}
                                         className="h-28 w-auto rounded-lg object-cover border border-gray-200"
                                     />
                                     <button
@@ -247,9 +253,11 @@ export default function NepalPaymentPanel({
                         </label>
                         {previewUrl ? (
                             <div className="relative inline-block">
-                                <img
+                                <Image
                                     src={previewUrl}
                                     alt="Receipt"
+                                    width={150}
+                                    height={112}
                                     className="h-28 w-auto rounded-lg object-cover border border-gray-200"
                                 />
                                 <button

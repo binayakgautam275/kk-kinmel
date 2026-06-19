@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { ShoppingBag } from 'lucide-react'
 
-type Order = {
+export type Order = {
     id: string
     restaurant_id: string
     total_amount: number
@@ -31,14 +31,15 @@ export default function OrdersClient({ orders, restaurants }: {
     const [filterRestaurant, setFilterRestaurant] = useState('all')
     const [filterStatus, setFilterStatus] = useState('all')
     const [filterDate, setFilterDate] = useState('all')
+    // Seeded once on mount so the filter memo stays a pure computation.
+    const [now] = useState(() => Date.now())
 
     const filtered = useMemo(() => {
-        const now = Date.now()
         return orders.filter(o => {
             if (filterRestaurant !== 'all' && o.restaurant_id !== filterRestaurant) return false
             if (filterStatus !== 'all' && o.status !== filterStatus) return false
             if (filterDate === 'today') {
-                const today = new Date(); today.setHours(0, 0, 0, 0)
+                const today = new Date(now); today.setHours(0, 0, 0, 0)
                 if (new Date(o.placed_at) < today) return false
             } else if (filterDate === '7d') {
                 if (now - new Date(o.placed_at).getTime() > 7 * 24 * 3600 * 1000) return false
@@ -47,7 +48,7 @@ export default function OrdersClient({ orders, restaurants }: {
             }
             return true
         })
-    }, [orders, filterRestaurant, filterStatus, filterDate])
+    }, [orders, filterRestaurant, filterStatus, filterDate, now])
 
     const totalRevenue = filtered.reduce((s, o) => s + (o.total_amount || 0), 0)
 

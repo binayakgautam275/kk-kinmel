@@ -1,6 +1,6 @@
 import { getCurrentUser } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
-import CashierClient from '@/components/waiter/CashierClient'
+import CashierClient, { type UnpaidOrder, type ActiveOrder } from '@/components/waiter/CashierClient'
 
 export const revalidate = 0
 
@@ -50,10 +50,8 @@ export default async function CashierPage() {
     return (
         <CashierClient
             restaurantId={restaurantId}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            initialUnpaid={(unpaidOrders || []) as any[]}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            initialActive={(activeOrders || []) as any[]}
+            initialUnpaid={(unpaidOrders || []) as unknown as UnpaidOrder[]}
+            initialActive={(activeOrders || []) as unknown as ActiveOrder[]}
             tables={(tables || []).map(t => ({ id: t.id, label: t.label, capacity: t.capacity }))}
         />
     )

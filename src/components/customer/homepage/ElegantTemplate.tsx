@@ -1,11 +1,12 @@
 'use client'
+import Image from 'next/image'
 import { HomepageConfig } from '@/types/database'
 
 export default function ElegantTemplate({ config, onMenuClick }: { config: HomepageConfig; onMenuClick: () => void }) {
     return (
         <div className="min-h-screen bg-white">
             <div className="relative h-96 md:h-128 flex items-center justify-center" style={{ backgroundColor: config.theme_primary }}>
-                {config.hero_image_url && <img src={config.hero_image_url} alt="Hero" className="absolute inset-0 w-full h-full object-cover opacity-20" />}
+                {config.hero_image_url && <Image src={config.hero_image_url} alt="Hero" fill className="object-cover opacity-20" sizes="100vw" />}
                 <div className="relative z-10 text-center text-white">
                     <h1 className="text-5xl md:text-6xl font-serif mb-4">{config.hero_title}</h1>
                     <p className="text-xl md:text-2xl mb-12 opacity-90">{config.hero_subtitle}</p>

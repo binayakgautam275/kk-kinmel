@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { Plus, Edit2, Trash2, GripVertical, Check, X, Tag, Loader2, Image as ImageIcon, Globe, Upload, Link } from 'lucide-react'
 import type { MenuCategory, MenuItem } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
@@ -314,7 +315,7 @@ export default function MenuManager({
                                                 <div key={item.id} className="flex gap-4 p-4 border border-gray-200 rounded-xl bg-white hover:border-gray-300 transition-colors group">
                                                     <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 border border-gray-200">
                                                         {item.image_url ? (
-                                                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover rounded-lg" />
+                                                            <Image src={item.image_url} alt={item.name} width={64} height={64} className="w-full h-full object-cover rounded-lg" />
                                                         ) : (
                                                             <ImageIcon className="text-gray-300" />
                                                         )}
@@ -495,7 +496,7 @@ export default function MenuManager({
                                         />
                                         {itemFormData.image_url ? (
                                             <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50" style={{ height: 140 }}>
-                                                <img src={itemFormData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                                                <Image src={itemFormData.image_url} alt="Preview" fill sizes="400px" className="object-cover" />
                                                 <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                                     <button type="button" onClick={() => imageInputRef.current?.click()} className="bg-white text-gray-900 text-xs font-medium px-3 py-1.5 rounded-lg shadow flex items-center gap-1">
                                                         <Upload size={12} /> Change
@@ -523,8 +524,8 @@ export default function MenuManager({
                                             placeholder="https://example.com/image.jpg"
                                         />
                                         {itemFormData.image_url && (
-                                            <div className="rounded-xl overflow-hidden border border-gray-200 bg-gray-50" style={{ height: 120 }}>
-                                                <img src={itemFormData.image_url} alt="Preview" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
+                                            <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50" style={{ height: 120 }}>
+                                                <Image src={itemFormData.image_url} alt="Preview" fill sizes="400px" unoptimized className="object-cover" onError={e => (e.currentTarget.style.display = 'none')} />
                                             </div>
                                         )}
                                     </div>

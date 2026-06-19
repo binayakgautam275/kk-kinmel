@@ -97,6 +97,9 @@ export default function SignupForm() {
     const [vatNumber, setVatNumber] = useState('')
     const [logoFile, setLogoFile] = useState<File | null>(null)
     const [logoPreview, setLogoPreview] = useState<string | null>(null)
+    // Tracks the live object URL so we can revoke the old one before replacing it
+    // and on unmount — otherwise each logo pick leaks a blob URL.
+    const logoPreviewRef = useRef<string | null>(null)
 
     // Step 3 — owner
     const [ownerName, setOwnerName] = useState('')
@@ -105,6 +108,7 @@ export default function SignupForm() {
     const [confirmPassword, setConfirmPassword] = useState('')
 
     useEffect(() => { setMounted(true) }, [])
+    useEffect(() => () => { if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current) }, [])
 
     const selectedPlan = PLANS.find(p => p.id === plan)!
 
@@ -120,7 +124,10 @@ export default function SignupForm() {
         if (!file) return
         if (file.size > 2 * 1024 * 1024) { setFieldErrors(p => ({ ...p, logo: 'Logo must be under 2 MB' })); return }
         setLogoFile(file)
-        setLogoPreview(URL.createObjectURL(file))
+        if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current)
+        const url = URL.createObjectURL(file)
+        logoPreviewRef.current = url
+        setLogoPreview(url)
         setFieldErrors(p => { const n = { ...p }; delete n.logo; return n })
     }
 
@@ -327,7 +334,7 @@ export default function SignupForm() {
                                             {logoPreview ? 'Change Logo' : 'Upload Logo'}
                                         </button>
                                         {logoPreview && (
-                                            <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null) }}
+                                            <button type="button" onClick={() => { setLogoFile(null); if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current); logoPreviewRef.current = null; setLogoPreview(null) }}
                                                     className="block text-xs text-red-500 hover:underline">Remove</button>
                                         )}
                                         <p className="text-xs text-gray-400">JPG, PNG · Max 2 MB · Can be changed in Settings</p>

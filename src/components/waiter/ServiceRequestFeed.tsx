@@ -37,7 +37,7 @@ const COLOR_MAP: Record<ServiceRequestType, string> = {
     open_session: 'bg-violet-100 text-violet-600',
 }
 
-type ServiceRequestWithTable = ServiceRequest & {
+export type ServiceRequestWithTable = ServiceRequest & {
     sessions?: { tables?: { label?: string } }
     direct_table?: { label?: string }
 }

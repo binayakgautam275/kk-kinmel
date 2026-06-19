@@ -10,7 +10,7 @@ import { timeAgo, formatCurrency } from '@/lib/utils'
 import { Package, ChefHat, Loader2, Banknote, Truck, Clock, CheckCircle } from 'lucide-react'
 import type { Order, OrderItem, MenuItem, Session, Table, OrderStatus } from '@/types/database'
 
-type WaiterOrder = Order & {
+export type WaiterOrder = Order & {
     sessions?: Session & { tables?: Partial<Table> }
     order_items?: (OrderItem & { menu_items?: Partial<MenuItem> })[]
 }
@@ -22,7 +22,7 @@ const ORDER_SELECT = `
 ` as const
 
 function tableLabel(order: WaiterOrder) {
-    return (order.sessions as unknown as { tables?: { label?: string } })?.tables?.label || '?'
+    return order.sessions?.tables?.label || '?'
 }
 
 const STATUS_ORDER: Record<string, number> = { ready: 3, preparing: 2, confirmed: 1, pending: 1 }
@@ -51,10 +51,13 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                     const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
                     if (data) {
                         const order = data as unknown as WaiterOrder
-                        setOrders(prev => [order, ...prev])
+                        // Skip replayed/duplicate INSERTs (reconnect, multiple tabs,
+                        // or a row already present in initialOrders).
+                        if (ordersRef.current.some(o => o.id === order.id)) return
+                        setOrders(prev => prev.some(o => o.id === order.id) ? prev : [order, ...prev])
                         playNewOrder().catch(() => {})
                         navigator.vibrate?.(300)
-                        const tbl = (order.sessions as unknown as { tables?: { label?: string } })?.tables?.label
+                        const tbl = order.sessions?.tables?.label
                         toast.custom((t) => (
                             <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-xl rounded-xl px-4 py-3 flex items-start gap-3 border border-amber-200`}>
                                 <span className="text-xl mt-0.5">🛎️</span>
@@ -68,13 +71,27 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                 }
             )
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
+                async (payload) => {
                     const newStatus = payload.new.status as OrderStatus
+                    const isTerminal = newStatus === 'delivered' || newStatus === 'cancelled'
+
+                    // The UPDATE may be for an order we never received (created before
+                    // mount, or a missed INSERT). If it's still active, fetch + insert
+                    // it so a ready order can't silently bypass the feed.
+                    let fetched: WaiterOrder | null = null
+                    if (!isTerminal && !ordersRef.current.some(o => o.id === payload.new.id)) {
+                        const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
+                        if (data) {
+                            fetched = data as unknown as WaiterOrder
+                            setOrders(prev => prev.some(o => o.id === fetched!.id) ? prev : [fetched!, ...prev])
+                        }
+                    }
+
                     if (newStatus === 'ready') {
                         playOrderReady().catch(() => {})
                         navigator.vibrate?.([200, 100, 200])
-                        const order = ordersRef.current.find(o => o.id === payload.new.id)
-                        const tbl = (order?.sessions as unknown as { tables?: { label?: string } })?.tables?.label
+                        const order = fetched ?? ordersRef.current.find(o => o.id === payload.new.id)
+                        const tbl = order?.sessions?.tables?.label
                         toast.custom((t) => (
                             <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-xl rounded-xl px-4 py-3 flex items-start gap-3 border-2 border-emerald-300`}>
                                 <span className="text-xl mt-0.5">✅</span>

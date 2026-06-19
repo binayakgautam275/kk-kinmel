@@ -77,11 +77,18 @@ function themeToCSS(theme: Record<string, string>): string {
     return radiusMap.lg
   }
 
+  // Theme colors are restaurant-editable and injected raw into a <style> block,
+  // so validate strictly to prevent CSS injection. Allow only hex and the rgb/hsl
+  // functional notations; anything else falls back to the default.
+  const COLOR_RE = /^(#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|(?:rgb|rgba|hsl|hsla)\(\s*[\d.,%\s/]+\))$/i
+  const resolveColor = (val: string | undefined, fallback: string): string =>
+    val && COLOR_RE.test(val.trim()) ? val.trim() : fallback
+
   return `
     :root {
-      --color-primary: ${theme.primaryColor || '#E85D04'};
-      --color-secondary: ${theme.secondaryColor || '#1B263B'};
-      --color-accent: ${theme.accentColor || '#EC4899'};
+      --color-primary: ${resolveColor(theme.primaryColor, '#E85D04')};
+      --color-secondary: ${resolveColor(theme.secondaryColor, '#1B263B')};
+      --color-accent: ${resolveColor(theme.accentColor, '#EC4899')};
       --font-family: ${fontMap[theme.fontFamily] || fontMap.Inter};
       --border-radius: ${resolveRadius(theme.borderRadius)};
     }

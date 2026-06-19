@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Building2, ShoppingBag, Crown, Ban, CheckCircle, Loader2, ChevronDown, Plus, X, Store, UserRound, Mail, KeyRound, Phone, MapPin, Check, CreditCard, AlertTriangle } from 'lucide-react'
 import { createTenantWithOwner, suspendRestaurant, updateSubscriptionTier, sendPasswordResetEmail, updateOwnerContact, recordSubscriptionPayment } from './actions'
@@ -188,7 +188,7 @@ export default function SuperAdminDashboard({
     const handleOwnerAction = async () => {
         if (!manageOwnerModal.restaurant) return
         const restaurant = manageOwnerModal.restaurant
-        const ownerEmail = (restaurant.users as any)?.email || ''
+        const ownerEmail = restaurant.users?.email || ''
 
         setIsUpdatingOwner(true)
 
@@ -247,12 +247,14 @@ export default function SuperAdminDashboard({
         setIsRecordingPayment(false)
     }
 
-    // Restaurants expiring within 7 days
-    const expiringSoon = items.filter(r => {
+    // Restaurants expiring within 7 days. `now` is seeded once on mount so the
+    // filter stays a pure computation across re-renders (React 19 purity).
+    const [now] = useState(() => Date.now())
+    const expiringSoon = useMemo(() => items.filter(r => {
         if (!r.subscription_expires_at) return false
-        const diff = new Date(r.subscription_expires_at).getTime() - Date.now()
+        const diff = new Date(r.subscription_expires_at).getTime() - now
         return diff > 0 && diff < 7 * 24 * 3600 * 1000
-    })
+    }), [items, now])
 
     return (
         <div className="space-y-5 md:space-y-6">
@@ -342,7 +344,7 @@ export default function SuperAdminDashboard({
                                 </div>
                                 <p className="text-sm text-gray-500 mt-1">
                                     {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                    {(restaurant.users as any)?.email || 'No owner'} • 
+                                    {restaurant.users?.email || 'No owner'} •
                                     Staff: {restaurant.max_staff} • 
                                     Items: {restaurant.max_menu_items}
                                 </p>
@@ -365,7 +367,7 @@ export default function SuperAdminDashboard({
                                 {/* Manage Owner Button */}
                                 <button
                                     onClick={() => {
-                                        const ownerEmail = (restaurant.users as any)?.email || ''
+                                        const ownerEmail = restaurant.users?.email || ''
                                         setManageOwnerModal({
                                             isOpen: true,
                                             restaurant,
@@ -473,7 +475,7 @@ export default function SuperAdminDashboard({
                                 <div className="space-y-4">
                                     <div className="rounded-2xl bg-blue-50 border border-blue-200 p-4">
                                         <p className="text-sm text-blue-900">
-                                            A password reset email will be sent to <span className="font-semibold">{(manageOwnerModal.restaurant.users as any)?.email || 'owner'}</span>. They can use this link to set a new password.
+                                            A password reset email will be sent to <span className="font-semibold">{manageOwnerModal.restaurant.users?.email || 'owner'}</span>. They can use this link to set a new password.
                                         </p>
                                     </div>
                                     <button

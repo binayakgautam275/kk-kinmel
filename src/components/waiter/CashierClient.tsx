@@ -10,7 +10,7 @@ import { Banknote, CheckCircle, ChefHat, Clock, Loader2, CreditCard, Receipt } f
 type OrderItem = { quantity: number; menu_items: { name: string } | null }
 type TableRef = { label?: string } | null
 
-type UnpaidOrder = {
+export type UnpaidOrder = {
     id: string
     total_amount: number
     delivered_at: string | null
@@ -21,7 +21,7 @@ type UnpaidOrder = {
     order_items: OrderItem[]
 }
 
-type ActiveOrder = {
+export type ActiveOrder = {
     id: string
     status: string
     total_amount: number

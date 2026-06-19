@@ -43,7 +43,11 @@ export default function CheckoutPage() {
     // Stable idempotency key for this checkout attempt. Sent with the order so a
     // double-tap / retry / second tab can't create a duplicate order in the
     // kitchen — the server returns the already-placed order instead.
-    const idempotencyKey = useHydratedStore(useCartStore, (s) => s.idempotencyKey) || `fallback-cr-${Date.now()}`
+    // The fallback is seeded once on mount (not on every render) so a missing
+    // store key doesn't produce a fresh, useless key on each re-render.
+    const storeIdempotencyKey = useHydratedStore(useCartStore, (s) => s.idempotencyKey)
+    const [fallbackKey] = useState(() => `fallback-cr-${Date.now()}`)
+    const idempotencyKey = storeIdempotencyKey || fallbackKey
 
     if (items.length === 0) {
         return (

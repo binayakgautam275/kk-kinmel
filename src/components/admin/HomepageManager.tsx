@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { HomepageConfig, HomepageTemplate, HOMEPAGE_TEMPLATES } from '@/types/database'
 import { Eye, Loader2, AlertCircle, Upload, X, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
@@ -288,7 +289,7 @@ export default function HomepageManager({ restaurantId }: HomepageManagerProps) 
                         <p className="text-sm text-gray-500 -mt-2">Shown in the homepage navbar, hero and footer. Defaults to your <strong>Brand &amp; Theme</strong> logo until you set one here.</p>
                         {config.logo_url && (
                             <div className="relative inline-block">
-                                <img src={config.logo_url} alt="Logo" className="h-20 object-contain rounded-lg border border-gray-200 bg-gray-50 p-2" />
+                                <Image src={config.logo_url} alt="Logo" width={200} height={80} className="h-20 w-auto object-contain rounded-lg border border-gray-200 bg-gray-50 p-2" />
                                 <button onClick={() => patchAndSave({ logo_url: null })} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full">
                                     <X size={14} />
                                 </button>
@@ -324,8 +325,8 @@ export default function HomepageManager({ restaurantId }: HomepageManagerProps) 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Hero Image</label>
                             {config.hero_image_url && (
-                                <div className="mb-3 relative group">
-                                    <img src={config.hero_image_url} alt="Hero" className="h-32 w-full object-cover rounded-lg" />
+                                <div className="mb-3 relative group h-32 w-full">
+                                    <Image src={config.hero_image_url} alt="Hero" fill sizes="(max-width: 768px) 100vw, 500px" className="object-cover rounded-lg" />
                                     <button onClick={() => patchAndSave({ hero_image_url: null })} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-lg opacity-0 group-hover:opacity-100 transition">
                                         <X size={14} />
                                     </button>
@@ -374,7 +375,7 @@ export default function HomepageManager({ restaurantId }: HomepageManagerProps) 
                             <label className="block text-sm font-medium text-gray-700 mb-2">Image</label>
                             {config.about?.image_url && (
                                 <div className="mb-3 relative group inline-block">
-                                    <img src={config.about.image_url} alt="About" className="h-32 object-cover rounded-lg" />
+                                    <Image src={config.about.image_url} alt="About" width={300} height={128} className="h-32 w-auto object-cover rounded-lg" />
                                     <button onClick={() => patchAndSave({ about: { ...DEFAULT_CONFIG.about!, ...config.about, image_url: '' } })} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-lg">
                                         <X size={14} />
                                     </button>
@@ -429,7 +430,7 @@ export default function HomepageManager({ restaurantId }: HomepageManagerProps) 
                                             {g.media_type === 'video' || g.image_url.match(/\.(mp4|webm|mov)(\?.*)?$/i) ? (
                                                 <video src={g.image_url} className="w-full h-full object-cover" autoPlay muted loop playsInline />
                                             ) : (
-                                                <img src={g.image_url} alt={g.caption || ''} className="w-full h-full object-cover" />
+                                                <Image src={g.image_url} alt={g.caption || ''} fill sizes="200px" className="object-cover" />
                                             )}
                                             <button onClick={() => patchAndSave({ gallery: gallery.filter((_, i) => i !== idx) })} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-lg opacity-0 group-hover:opacity-100 transition">
                                                 <X size={14} />

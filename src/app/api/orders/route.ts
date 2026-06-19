@@ -6,9 +6,15 @@ import { validateInput, OrderQuerySchema } from '@/lib/validation'
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
 
-    // Require API Key in header for external access
+    // Require API Key in header for external access.
+    // Fail closed if the key is unset — otherwise the comparison would match a
+    // literal "Bearer undefined" and silently disable auth.
+    const apiKey = process.env.SRMS_API_KEY
+    if (!apiKey) {
+        return NextResponse.json({ error: 'API not configured' }, { status: 503 })
+    }
     const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.SRMS_API_KEY}`) {
+    if (authHeader !== `Bearer ${apiKey}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
