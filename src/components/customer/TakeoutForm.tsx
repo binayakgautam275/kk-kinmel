@@ -9,6 +9,7 @@ import { formatCurrency } from '@/lib/utils'
 import PromoCodeInput from '@/components/customer/PromoCodeInput'
 import type { PromoCode } from '@/types/database'
 import { ArrowLeft, Clock, Loader2, ShoppingBag } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 
 interface TakeoutFormProps {
     restaurantId: string
@@ -29,7 +30,6 @@ export default function TakeoutForm({ restaurantId, restaurantName, restaurantSl
     const [promo, setPromo] = useState<PromoCode | null>(null)
     const [promoDiscount, setPromoDiscount] = useState(0)
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [error, setError] = useState('')
     const router = useRouter()
 
     // Generate time slots (every 15 min for next 4 hours)
@@ -51,16 +51,15 @@ export default function TakeoutForm({ restaurantId, restaurantName, restaurantSl
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         if (!customerName.trim() || !customerPhone.trim() || !pickupTime) {
-            setError('Please fill in all required fields.')
+            toast.error('Please fill in all required fields.')
             return
         }
         if (!items || items.length === 0) {
-            setError('Your cart is empty.')
+            toast.error('Your cart is empty.')
             return
         }
 
         setIsSubmitting(true)
-        setError('')
 
         const result = await createTakeoutOrder({
             restaurantId,
@@ -74,9 +73,10 @@ export default function TakeoutForm({ restaurantId, restaurantName, restaurantSl
         })
 
         if (result.error) {
-            setError(result.error)
+            toast.error(result.error)
             setIsSubmitting(false)
         } else if (result.order) {
+            toast.success('Takeout order placed successfully!')
             clearCart()
             // Redirect to order tracking page
             router.push(`/takeout/${restaurantSlug}/order/${result.order.id}`)
@@ -108,12 +108,6 @@ export default function TakeoutForm({ restaurantId, restaurantName, restaurantSl
             </header>
 
             <form onSubmit={handleSubmit} className="max-w-xl mx-auto px-4 mt-6 space-y-6">
-                {error && (
-                    <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
-                        {error}
-                    </div>
-                )}
-
                 {/* Order items summary */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                     <h2 className="font-semibold text-gray-700 mb-3">

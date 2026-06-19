@@ -22,6 +22,19 @@ export async function createServiceRequest(
         return { success: false, error: 'You have too many pending requests. Please wait for a response.' }
     }
 
+    if (requestType === 'request_bill') {
+        // Prevent requesting bill if there are pending/preparing/ready orders
+        const { count: activeOrders } = await supabase
+            .from('orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', sessionId)
+            .in('status', ['pending', 'confirmed', 'preparing', 'ready'])
+        
+        if (activeOrders && activeOrders > 0) {
+            return { success: false, error: 'You still have orders being prepared or waiting to be delivered! Please wait before requesting the bill.' }
+        }
+    }
+
     const { error } = await supabase
         .from('service_requests')
         .insert({

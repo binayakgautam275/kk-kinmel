@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Upload, CheckCircle, Loader2, Banknote, ScanLine, Camera, X } from 'lucide-react'
 import { submitPaymentClaim } from '@/app/(public)/t/[tableSlug]/checkout/nepal-payment-actions'
 import Image from 'next/image'
+import { toast } from 'react-hot-toast'
 
 interface NepalPaymentPanelProps {
     restaurantId: string
@@ -42,7 +43,6 @@ export default function NepalPaymentPanel({
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [submitted, setSubmitted] = useState(false)
-    const [error, setError] = useState('')
 
     const providerKey = provider?.toLowerCase() ?? ''
     const providerLabel = PROVIDER_LABELS[providerKey] ?? provider ?? 'QR'
@@ -54,7 +54,6 @@ export default function NepalPaymentPanel({
         if (previewUrl) URL.revokeObjectURL(previewUrl)
         setScreenshot(file)
         setPreviewUrl(URL.createObjectURL(file))
-        setError('')
     }
 
     const removeScreenshot = () => {
@@ -66,17 +65,16 @@ export default function NepalPaymentPanel({
     const handleSubmit = async () => {
         if (mode === 'qr') {
             if (!phone || phone.replace(/\D/g, '').length < 10) {
-                setError('Enter your registered phone number (10 digits)')
+                toast.error('Enter your registered phone number (10 digits)')
                 return
             }
             if (!screenshot) {
-                setError('Please upload your payment screenshot to confirm')
+                toast.error('Please upload your payment screenshot to confirm')
                 return
             }
         }
 
         setIsSubmitting(true)
-        setError('')
 
         const formData = new FormData()
         formData.append('restaurantId', restaurantId)
@@ -89,7 +87,7 @@ export default function NepalPaymentPanel({
         const res = await submitPaymentClaim(formData)
 
         if (res.error) {
-            setError(res.error)
+            toast.error(res.error)
         } else {
             setSubmitted(true)
         }
@@ -119,7 +117,7 @@ export default function NepalPaymentPanel({
             {/* Mode selector */}
             <div className="grid grid-cols-2 gap-2">
                 <button
-                    onClick={() => { setMode('qr'); setError('') }}
+                    onClick={() => { setMode('qr') }}
                     className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-colors ${
                         mode === 'qr'
                             ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)]'
@@ -130,7 +128,7 @@ export default function NepalPaymentPanel({
                     {providerLabel} QR
                 </button>
                 <button
-                    onClick={() => { setMode('cash'); setError('') }}
+                    onClick={() => { setMode('cash') }}
                     className={`flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 text-sm font-medium transition-colors ${
                         mode === 'cash'
                             ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 text-[var(--color-primary)]'
@@ -276,12 +274,6 @@ export default function NepalPaymentPanel({
                         )}
                     </div>
                 </div>
-            )}
-
-            {error && (
-                <p className="text-sm text-red-600 font-medium bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                    {error}
-                </p>
             )}
 
             <button

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { validatePromoCode } from '@/app/api/loyalty/actions'
 import type { PromoCode } from '@/types/database'
+import { toast } from 'react-hot-toast'
 
 interface PromoCodeInputProps {
     restaurantId: string
@@ -21,18 +22,16 @@ export default function PromoCodeInput({
 }: PromoCodeInputProps) {
     const [code, setCode] = useState('')
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
 
     async function handleApply() {
         if (!code.trim()) return
         setLoading(true)
-        setError(null)
 
         const result = await validatePromoCode(code, restaurantId, subtotal)
         setLoading(false)
 
         if (!result.valid || !result.promo) {
-            setError(result.error || 'Invalid code.')
+            toast.error(result.error || 'Invalid code.')
             return
         }
 
@@ -81,7 +80,6 @@ export default function PromoCodeInput({
                     value={code}
                     onChange={(e) => {
                         setCode(e.target.value.toUpperCase())
-                        setError(null)
                     }}
                     placeholder="Enter code"
                     className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -95,7 +93,6 @@ export default function PromoCodeInput({
                     {loading ? '...' : 'Apply'}
                 </button>
             </div>
-            {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
     )
 }

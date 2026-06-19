@@ -121,6 +121,18 @@ export async function placeOrder(
 
     const sessionUuid = sessionData.id
 
+    // 2b. Prevent multiple active orders per session (anti-spam / kitchen overload)
+    const { count: activeUndelivered } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('session_id', sessionUuid)
+        .in('status', ['pending', 'confirmed', 'preparing', 'ready'])
+        .neq('client_request_id', clientRequestId || 'none')
+
+    if (activeUndelivered && activeUndelivered > 0) {
+        return { error: 'You have an active order being prepared. Please wait for it to be delivered before ordering more.' }
+    }
+
     // Call the ACID-safe RPC (returns JSONB with breakdown)
     const { data, error } = await supabase.rpc('place_order', {
         p_session_id: sessionUuid,

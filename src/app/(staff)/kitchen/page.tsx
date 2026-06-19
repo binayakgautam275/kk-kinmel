@@ -86,7 +86,7 @@ export default async function KitchenPage() {
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {/* Kitchen Stats — always-visible at-a-glance bar */}
-            <div className="shrink-0 border-b border-white/10 px-3 md:px-6 py-3 md:py-4 bg-secondary brightness-90">
+            <div className="shrink-0 border-b border-white/10 px-3 md:px-6 py-3 md:py-4 bg-secondary brightness-90 print:hidden">
                 <KitchenStats
                     queuedOrders={queuedOrders}
                     preparingOrders={preparingOrders}
@@ -98,7 +98,7 @@ export default async function KitchenPage() {
 
             {/* Shift clock — only shown when staffShiftsEnabled */}
             {features?.staffShiftsEnabled && (
-                <div className="px-4 pt-4 shrink-0">
+                <div className="px-4 pt-4 shrink-0 print:hidden">
                     <StaffShiftClock
                         userId={userId}
                         restaurantId={restaurantId}
@@ -119,7 +119,7 @@ export default async function KitchenPage() {
                 </div>
 
                 {features?.takeoutEnabled && (
-                    <div className="px-4 pb-4 shrink-0">
+                    <div className="px-4 pb-4 shrink-0 print:hidden">
                         <TakeoutQueue
                             initialOrders={(takeoutOrders || []) as unknown as TakeoutOrder[]}
                             restaurantId={restaurantId}

@@ -39,7 +39,7 @@ export default function KitchenLayoutClient({ children, restaurantName, staffNam
 
     return (
         <div className="min-h-screen flex flex-col" style={{ background: '#0f1117' }}>
-            <header className="shrink-0 border-b border-white/[0.07] px-4 md:px-6 h-13 flex items-center justify-between gap-4"
+            <header className="shrink-0 border-b border-white/[0.07] px-4 md:px-6 h-13 flex items-center justify-between gap-4 print:hidden"
                     style={{ background: 'rgba(255,255,255,0.03)' }}>
                 <div className="flex items-center gap-3 min-w-0">
                     <VideoLogo className="h-7 shrink-0" variant="dark" />

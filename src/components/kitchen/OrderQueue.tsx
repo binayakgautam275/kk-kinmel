@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { playNewOrder } from '@/lib/audio'
 import { toast } from 'react-hot-toast'
 import { formatCurrency, timeAgo } from '@/lib/utils'
-import { Clock, ChefHat, CheckCircle2, CheckSquare } from 'lucide-react'
+import { Clock, ChefHat, CheckCircle2, CheckSquare, ListOrdered, Printer, LayoutPanelLeft } from 'lucide-react'
 import type { OrderStatus, Order, OrderItem, OrderItemModifier, MenuItem, Session, Table } from '@/types/database'
 import { updateOrderStatus } from '@/app/(staff)/kitchen/actions'
 
@@ -91,7 +91,42 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
         }
     }, [orders])
 
-    const [activeTab, setActiveTab] = useState<'new' | 'preparing' | 'pass'>('new')
+    const tocItems = useMemo(() => {
+        const items = [...newOrders, ...preparingOrders].flatMap(o => o.order_items || [])
+        const grouped = new Map<string, {
+            name: string,
+            quantity: number,
+            modifiers: string,
+            special_request: string | null
+        }>()
+
+        for (const item of items) {
+            if (!item.menu_items?.name) continue
+            
+            const mods = (item.order_item_modifiers || [])
+                .map(m => m.modifier_name)
+                .sort()
+                .join(', ')
+            
+            const key = `${item.menu_items.name}|${mods}|${item.special_request || ''}`
+            
+            if (!grouped.has(key)) {
+                grouped.set(key, {
+                    name: item.menu_items.name,
+                    quantity: item.quantity,
+                    modifiers: mods,
+                    special_request: item.special_request
+                })
+            } else {
+                grouped.get(key)!.quantity += item.quantity
+            }
+        }
+
+        return Array.from(grouped.values()).sort((a, b) => b.quantity - a.quantity)
+    }, [newOrders, preparingOrders])
+
+    const [activeTab, setActiveTab] = useState<'new' | 'preparing' | 'pass' | 'toc'>('new')
+    const [showTOCDesktop, setShowTOCDesktop] = useState(false)
 
     const COLS = [
         {
@@ -133,7 +168,7 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
     return (
         <div className="h-full flex flex-col" style={{ background: '#0f1117' }}>
             {/* Mobile tab bar */}
-            <div className="flex md:hidden gap-2 px-3 pt-3 pb-2 shrink-0">
+            <div className="flex md:hidden gap-2 px-3 pt-3 pb-2 shrink-0 print:hidden">
                 {COLS.map(col => {
                     const Icon = col.icon
                     const isActive = activeTab === col.key
@@ -156,10 +191,37 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
                         </button>
                     )
                 })}
+                <button
+                    onClick={() => setActiveTab('toc')}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border"
+                    style={activeTab === 'toc'
+                        ? { background: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.25)', color: '#3b82f6' }
+                        : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.3)' }
+                    }
+                >
+                    <ListOrdered size={13} />
+                    TOC
+                </button>
             </div>
 
-            {/* Columns */}
-            <div className="flex-1 overflow-hidden flex flex-col md:flex-row p-3 md:p-5 gap-3 md:gap-5">
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                {/* Columns Container */}
+                <div className={`flex-1 overflow-hidden flex flex-col md:flex-row p-3 md:p-5 gap-3 md:gap-5 print:hidden ${activeTab === 'toc' ? 'hidden md:flex' : 'flex'}`}>
+                    {/* Desktop TOC Toggle */}
+                    <div className="hidden md:block absolute top-4 right-6 z-10 print:hidden">
+                        <button
+                            onClick={() => setShowTOCDesktop(!showTOCDesktop)}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border transition-colors"
+                            style={{ 
+                                background: showTOCDesktop ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
+                                borderColor: showTOCDesktop ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)',
+                                color: showTOCDesktop ? '#60a5fa' : 'rgba(255,255,255,0.6)'
+                            }}
+                        >
+                            <LayoutPanelLeft size={14} />
+                            {showTOCDesktop ? 'Hide TOC' : 'Show TOC'}
+                        </button>
+                    </div>
                 {COLS.map(col => {
                     const Icon = col.icon
                     const isVisible = activeTab === col.key
@@ -209,6 +271,48 @@ export default function OrderQueue({ initialOrders, restaurantId }: {
                         </div>
                     )
                 })}
+                </div>
+
+                {/* TOC Sidebar / Panel */}
+                <div 
+                    className={`flex flex-col h-full shrink-0 border-white/[0.07] print:w-full print:border-none ${activeTab === 'toc' ? 'block w-full' : (showTOCDesktop ? 'hidden md:flex md:w-[320px] lg:w-[360px] md:border-l' : 'hidden')} print:block`}
+                >
+                    <div className="flex items-center justify-between p-4 border-b border-white/[0.07] shrink-0 print:border-black/10 print:pb-2">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10 print:hidden">
+                                <ListOrdered size={15} className="text-blue-500" />
+                            </div>
+                            <h2 className="font-bold text-white/90 print:text-black print:text-xl">Consolidated (TOC)</h2>
+                        </div>
+                        <button onClick={() => window.print()} className="p-2 hover:bg-white/5 rounded-lg text-white/50 transition print:hidden">
+                            <Printer size={16} />
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 print:space-y-1 print:p-0 print:pt-4" style={{ scrollbarWidth: 'none' }}>
+                        {tocItems.map((item, i) => (
+                            <div key={i} className="flex items-start gap-3 p-3 rounded-xl border border-white/5 bg-white/[0.02] print:border-black/10 print:bg-transparent print:p-2 print:rounded-none">
+                                <span className="font-bold text-lg w-8 shrink-0 tabular-nums mt-0.5 text-blue-400 print:text-black">
+                                    {item.quantity}×
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-white/90 text-[15px] leading-snug print:text-black">{item.name}</p>
+                                    {item.modifiers && (
+                                        <p className="text-xs text-white/35 mt-0.5 print:text-black/60">{item.modifiers}</p>
+                                    )}
+                                    {item.special_request && (
+                                        <p className="text-xs text-yellow-400/80 italic mt-0.5 font-medium print:text-black/80">↳ {item.special_request}</p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        {tocItems.length === 0 && (
+                            <div className="text-center py-12 print:hidden">
+                                <ListOrdered size={28} className="mx-auto mb-2 text-white/10" />
+                                <p className="text-sm font-medium text-white/20">Nothing to prep</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     )

@@ -1,8 +1,9 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useState, useEffect } from 'react'
 import { inviteStaffMember, removeStaffMember } from '../actions'
 import { UserPlus, Copy, Check, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 
 interface StaffMember {
     id: string
@@ -42,10 +43,17 @@ export default function TeamManager({ initialStaff }: { initialStaff: StaffMembe
         setRemovingId(null)
         if (!result.error) {
             setStaff(prev => prev.filter(s => s.id !== userId))
+            toast.success("Staff member deactivated.")
         } else {
-            alert(result.error)
+            toast.error(result.error)
         }
     }
+
+    useEffect(() => {
+        if (inviteState.error) {
+            toast.error(inviteState.error)
+        }
+    }, [inviteState.error])
 
     // After successful invite, collapse form
     const showSuccessBanner = !!inviteState.tempPassword
@@ -88,11 +96,6 @@ export default function TeamManager({ initialStaff }: { initialStaff: StaffMembe
                 {showInvite && (
                     <div className="px-5 py-4 bg-gray-50 border-b border-gray-200">
                         <form action={inviteAction} className="space-y-4">
-                            {inviteState.error && (
-                                <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-700">
-                                    {inviteState.error}
-                                </div>
-                            )}
                             <div className="grid sm:grid-cols-3 gap-3">
                                 <input
                                     type="text"

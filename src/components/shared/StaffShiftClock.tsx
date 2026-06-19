@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { clockIn, clockOut, getActiveShift, getShiftHistory } from '@/app/api/staff/actions'
 import type { StaffShift } from '@/types/database'
 import { Clock, LogIn, LogOut, History } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 
 interface StaffShiftClockProps {
     userId: string
@@ -34,7 +35,6 @@ export default function StaffShiftClock({ userId, restaurantId, initialShift, in
     const [activeShift, setActiveShift] = useState<StaffShift | null>(initialShift)
     const [history, setHistory] = useState<StaffShift[]>(initialHistory)
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
     const [showHistory, setShowHistory] = useState(false)
     const [elapsedTime, setElapsedTime] = useState(
         initialShift ? formatDuration(initialShift.clock_in) : ''
@@ -60,11 +60,11 @@ export default function StaffShiftClock({ userId, restaurantId, initialShift, in
 
     async function handleClockIn() {
         setLoading(true)
-        setError(null)
         const result = await clockIn(userId, restaurantId)
         if (result.error) {
-            setError(result.error)
+            toast.error(result.error)
         } else {
+            toast.success("Clocked in successfully!")
             setActiveShift(result.shift || null)
         }
         setLoading(false)
@@ -72,11 +72,11 @@ export default function StaffShiftClock({ userId, restaurantId, initialShift, in
 
     async function handleClockOut() {
         setLoading(true)
-        setError(null)
         const result = await clockOut(userId)
         if (result.error) {
-            setError(result.error)
+            toast.error(result.error)
         } else {
+            toast.success("Clocked out successfully!")
             setActiveShift(null)
             await refreshData()
         }
@@ -115,10 +115,6 @@ export default function StaffShiftClock({ userId, restaurantId, initialShift, in
                         <p className={`text-3xl font-bold font-mono ${t.elapsed}`}>{elapsedTime}</p>
                         <p className={`text-xs ${t.muted}`}>Since {formatTime(activeShift.clock_in)}</p>
                     </div>
-                )}
-
-                {error && (
-                    <p className="mt-3 text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>
                 )}
 
                 {/* Clock In / Out button */}

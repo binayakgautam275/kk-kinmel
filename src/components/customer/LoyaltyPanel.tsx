@@ -9,6 +9,7 @@ import {
 } from '@/app/api/loyalty/actions'
 import { formatCurrency } from '@/lib/utils'
 import type { LoyaltyMember, LoyaltyConfig } from '@/types/database'
+import { toast } from 'react-hot-toast'
 
 interface LoyaltyPanelProps {
     restaurantId: string
@@ -35,15 +36,12 @@ export default function LoyaltyPanel({
     const [displayName, setDisplayName] = useState('')
     const [email, setEmail] = useState('')
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
     const [config, setConfig] = useState<LoyaltyConfig | null>(null)
     const [signupBonus, setSignupBonus] = useState<number | null>(null)
-    const [redeemMessage, setRedeemMessage] = useState<string | null>(null)
 
     async function handleLookup() {
         if (!phone.trim()) return
         setLoading(true)
-        setError(null)
 
         const result = await lookupLoyaltyMember(restaurantId, phone)
         if (result.member) {
@@ -51,7 +49,7 @@ export default function LoyaltyPanel({
             const cfg = await getLoyaltyConfig(restaurantId)
             setConfig(cfg)
         } else {
-            setError(result.error || 'Not found.')
+            toast.error(result.error || 'Not found.')
         }
         setLoading(false)
     }
@@ -59,7 +57,6 @@ export default function LoyaltyPanel({
     async function handleSignup() {
         if (!phone.trim()) return
         setLoading(true)
-        setError(null)
 
         const result = await signUpLoyalty(restaurantId, phone, displayName, email)
         if (result.member) {
@@ -69,7 +66,7 @@ export default function LoyaltyPanel({
             setConfig(cfg)
             setMode('lookup')
         } else {
-            setError(result.error || 'Signup failed.')
+            toast.error(result.error || 'Signup failed.')
         }
         setLoading(false)
     }
@@ -77,17 +74,16 @@ export default function LoyaltyPanel({
     async function handleRedeem() {
         if (!activeMember) return
         setLoading(true)
-        setRedeemMessage(null)
 
         const result = await redeemLoyaltyPoints(activeMember.id, restaurantId)
         if (result.discount > 0) {
             onRedeemDiscount(result.discount)
-            setRedeemMessage(`${formatCurrency(result.discount)} discount applied!`)
+            toast.success(`${formatCurrency(result.discount)} discount applied!`)
             // Refresh member data
             const updated = await lookupLoyaltyMember(restaurantId, activeMember.phone || '')
             if (updated.member) onMemberSet(updated.member)
         } else {
-            setRedeemMessage(result.error || 'Cannot redeem.')
+            toast.error(result.error || 'Cannot redeem.')
         }
         setLoading(false)
     }
@@ -97,7 +93,6 @@ export default function LoyaltyPanel({
         setPhone('')
         setConfig(null)
         setSignupBonus(null)
-        setRedeemMessage(null)
     }
 
     // If member is already linked
@@ -147,10 +142,6 @@ export default function LoyaltyPanel({
                         </button>
                     )}
                 </div>
-
-                {redeemMessage && (
-                    <p className="text-xs text-green-700">{redeemMessage}</p>
-                )}
             </div>
         )
     }
@@ -163,7 +154,6 @@ export default function LoyaltyPanel({
                 <button
                     onClick={() => {
                         setMode(mode === 'lookup' ? 'signup' : 'lookup')
-                        setError(null)
                     }}
                     className="text-xs text-indigo-600 hover:text-indigo-800"
                 >
@@ -177,7 +167,6 @@ export default function LoyaltyPanel({
                     value={phone}
                     onChange={(e) => {
                         setPhone(e.target.value)
-                        setError(null)
                     }}
                     placeholder="Phone number"
                     className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -219,8 +208,6 @@ export default function LoyaltyPanel({
                     </button>
                 </>
             )}
-
-            {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
     )
 }

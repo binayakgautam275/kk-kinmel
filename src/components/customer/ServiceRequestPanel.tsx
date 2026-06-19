@@ -6,6 +6,7 @@ import { createServiceRequest } from '@/app/api/service-requests/actions'
 import { useCartStore } from '@/lib/stores/cart'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
 import type { ServiceRequestType } from '@/types/database'
+import { toast } from 'react-hot-toast'
 
 type RequestOption = {
     id: string            // unique key (may differ from DB type for presets that use 'other')
@@ -34,7 +35,6 @@ export default function ServiceRequestPanel({
     const [isOpen, setIsOpen] = useState(false)
     const [loading, setLoading] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
-    const [error, setError] = useState('')
     const [customMessage, setCustomMessage] = useState('')
 
     const totalItems = useHydratedStore(useCartStore, (s) => s.totalItems)
@@ -44,7 +44,6 @@ export default function ServiceRequestPanel({
 
     const handlePreset = async (option: RequestOption) => {
         setLoading(option.id)
-        setError('')
 
         const res = await createServiceRequest(
             sessionId,
@@ -56,8 +55,9 @@ export default function ServiceRequestPanel({
         setLoading(null)
 
         if (res.error) {
-            setError(res.error)
+            toast.error(res.error)
         } else {
+            toast.success(`${option.label} requested!`)
             setSuccess(option.id)
             setTimeout(() => setSuccess(null), 3000)
         }
@@ -65,7 +65,6 @@ export default function ServiceRequestPanel({
 
     const handleCustom = async () => {
         setLoading('custom')
-        setError('')
 
         const res = await createServiceRequest(
             sessionId,
@@ -77,8 +76,9 @@ export default function ServiceRequestPanel({
         setLoading(null)
 
         if (res.error) {
-            setError(res.error)
+            toast.error(res.error)
         } else {
+            toast.success("Request sent!")
             setSuccess('custom')
             setCustomMessage('')
             setTimeout(() => setSuccess(null), 3000)
@@ -152,13 +152,6 @@ export default function ServiceRequestPanel({
                     </button>
                 </div>
             </div>
-
-            {/* Error */}
-            {error && (
-                <div className="px-3 pb-3">
-                    <p className="text-xs text-red-500 bg-red-50 p-2 rounded-lg">{error}</p>
-                </div>
-            )}
         </div>
     )
 }

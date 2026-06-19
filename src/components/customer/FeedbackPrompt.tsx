@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Star } from 'lucide-react'
 import { submitFeedback } from '@/app/(public)/t/[tableSlug]/order/actions'
+import { toast } from 'react-hot-toast'
 
 export default function FeedbackPrompt({ orderId }: { orderId: string }) {
     const [rating, setRating] = useState(0)
@@ -10,7 +11,6 @@ export default function FeedbackPrompt({ orderId }: { orderId: string }) {
     const [comment, setComment] = useState('')
     const [submitted, setSubmitted] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
 
     // Persist submitted state across refreshes
     const storageKey = `feedback-submitted-${orderId}`
@@ -28,13 +28,13 @@ export default function FeedbackPrompt({ orderId }: { orderId: string }) {
     }
 
     const handleSubmit = async () => {
-        if (rating === 0) { setError('Please select a star rating.'); return }
+        if (rating === 0) { toast.error('Please select a star rating.'); return }
         setLoading(true)
-        setError(null)
         const result = await submitFeedback(orderId, rating, comment)
         setLoading(false)
-        if (result.error) { setError(result.error); return }
+        if (result.error) { toast.error(result.error); return }
         localStorage.setItem(storageKey, '1')
+        toast.success('Thanks for your feedback!')
         setSubmitted(true)
     }
 
@@ -75,8 +75,6 @@ export default function FeedbackPrompt({ orderId }: { orderId: string }) {
                 className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-orange-300 mb-3"
             />
             <div className="text-right text-xs text-gray-400 -mt-2 mb-3">{comment.length}/500</div>
-
-            {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
 
             <button
                 onClick={handleSubmit}

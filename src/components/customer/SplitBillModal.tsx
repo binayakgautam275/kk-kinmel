@@ -5,6 +5,7 @@ import { Users, Divide, Loader2, Check } from 'lucide-react'
 import { createBillSplit } from '@/app/api/billing/actions'
 import { formatCurrency } from '@/lib/utils'
 import type { SplitType } from '@/types/database'
+import { toast } from 'react-hot-toast'
 
 export default function SplitBillModal({
     sessionId,
@@ -20,18 +21,17 @@ export default function SplitBillModal({
     const [splitCount, setSplitCount] = useState(2)
     const [loading, setLoading] = useState(false)
     const [splits, setSplits] = useState<{ label: string; amount: number; total: number }[]>([])
-    const [error, setError] = useState('')
 
     const handleSplit = async () => {
         setLoading(true)
-        setError('')
 
         const res = await createBillSplit(sessionId, splitType, splitCount)
 
         setLoading(false)
         if (res.error) {
-            setError(res.error)
+            toast.error(res.error)
         } else if (res.splits) {
+            toast.success('Bill split successfully!')
             setSplits(res.splits)
             setStep('result')
         }
@@ -137,10 +137,6 @@ export default function SplitBillModal({
                             </button>
                         </div>
                     )}
-
-                    {error && (
-                        <p className="text-sm text-red-500 bg-red-50 p-3 rounded-lg mt-4">{error}</p>
-                    )}
                 </div>
             </div>
         </div>
@@ -152,9 +148,10 @@ export default function SplitBillModal({
         const res = await createBillSplit(sessionId, 'by_seat', 0)
         setLoading(false)
         if (res.error) {
-            setError(res.error)
+            toast.error(res.error)
             setStep('choose')
         } else if (res.splits) {
+            toast.success('Bill split successfully!')
             setSplits(res.splits)
             setStep('result')
         }

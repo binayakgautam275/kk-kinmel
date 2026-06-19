@@ -12,6 +12,7 @@ import LoyaltyPanel from '@/components/customer/LoyaltyPanel'
 import SplitBillModal from '@/components/customer/SplitBillModal'
 import { useFeatures } from '@/lib/contexts/FeatureContext'
 import { useParams } from 'next/navigation'
+import { toast } from 'react-hot-toast'
 
 export default function CheckoutPage() {
     const params = useParams<{ tableSlug: string }>()
@@ -36,7 +37,6 @@ export default function CheckoutPage() {
     const [note, setNote] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
     const isSubmittingRef = useRef(false)
-    const [errorMsg, setErrorMsg] = useState('')
     const [showSplit, setShowSplit] = useState(false)
     const router = useRouter()
 
@@ -67,16 +67,18 @@ export default function CheckoutPage() {
     const handleCheckout = async () => {
         // Re-entrancy guard: the disabled state only applies on the next render,
         // so a rapid double-tap could otherwise fire two orders before then.
-        if (isSubmittingRef.current) return
+        if (isSubmittingRef.current) {
+            toast.error("Hold tight! We are already sending your order to the kitchen.")
+            return
+        }
 
         if (!sessionId) {
-            setErrorMsg("No active session found. Please scan the QR code again.")
+            toast.error("No active session found. Please scan the QR code again.")
             return
         }
 
         isSubmittingRef.current = true
         setIsSubmitting(true)
-        setErrorMsg('')
 
         const res = await placeOrder(
             sessionId,
@@ -89,10 +91,15 @@ export default function CheckoutPage() {
         )
 
         if (res.error) {
-            setErrorMsg(res.error)
+            if (res.error.includes('OUT_OF_STOCK')) {
+                toast.error("Sorry, an item just went out of stock while you were ordering!", { duration: 5000 })
+            } else {
+                toast.error(res.error)
+            }
             isSubmittingRef.current = false
             setIsSubmitting(false)
         } else if (res.orderId) {
+            toast.success("Order placed successfully!")
             clearCart()
             router.push(`/t/${params.tableSlug}/order/${res.orderId}`)
         }
@@ -109,12 +116,6 @@ export default function CheckoutPage() {
             </header>
 
             <main className="max-w-xl mx-auto px-4 mt-6">
-                {errorMsg && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm font-medium">
-                        {errorMsg}
-                    </div>
-                )}
-
                 <div className="bg-white rounded-[var(--border-radius)] shadow-sm border border-gray-100 overflow-hidden mb-6">
                     <div className="p-4 border-b border-gray-100 bg-gray-50/50">
                         <h2 className="font-semibold text-gray-700">Order Summary ({totalItems()} items)</h2>

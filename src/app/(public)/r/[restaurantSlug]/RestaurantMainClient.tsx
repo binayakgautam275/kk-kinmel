@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { requestSessionOpen } from '@/app/api/service-requests/actions'
 import { UtensilsCrossed, ArrowRight, Loader2, Check } from 'lucide-react'
+import { toast } from 'react-hot-toast'
 
 interface RestaurantMainClientProps {
     restaurant: {
@@ -26,7 +27,6 @@ export default function RestaurantMainClient({ restaurant, tables, restaurantSlu
     const [selectedTableId, setSelectedTableId] = useState('')
     const [loading, setLoading] = useState(false)
     const [success, setSuccess] = useState(false)
-    const [errorMsg, setErrorMsg] = useState('')
     const router = useRouter()
 
     const handleRequestSession = async () => {
@@ -36,7 +36,6 @@ export default function RestaurantMainClient({ restaurant, tables, restaurantSlu
         if (!table) return
 
         setLoading(true)
-        setErrorMsg('')
         
         const res = await requestSessionOpen(selectedTableId, restaurant.id)
         
@@ -45,7 +44,7 @@ export default function RestaurantMainClient({ restaurant, tables, restaurantSlu
             // Redirect to the table page where they will see the "Waiting for session" state
             router.push(`/t/${table.qr_token}`)
         } else {
-            setErrorMsg(res.error || 'Failed to request session. Please try again.')
+            toast.error(res.error || 'Failed to request session. Please try again.')
             setLoading(false)
         }
     }
@@ -88,10 +87,6 @@ export default function RestaurantMainClient({ restaurant, tables, restaurantSlu
                                 ))}
                             </select>
                         </div>
-
-                        {errorMsg && (
-                            <p className="text-sm text-red-600 font-medium">{errorMsg}</p>
-                        )}
 
                         <button
                             onClick={handleRequestSession}
