@@ -89,8 +89,7 @@
     .animate-slide-right { animation: slide-in-right 0.4s var(--ease-smooth) both; }
     .animate-slide-left  { animation: slide-in-left 0.4s var(--ease-smooth) both; }
     .animate-float      { animation: float 3s ease-in-out infinite; }
-    .animate-spin-slow  { animation: spin-slow 8s linear infinite; }
-    .animate-marquee    { animation: marquee 30s linear infinite; }
+    .animate-marquee    { animation: marquee 60s linear infinite; }
 
     /* Staggered delays */
     .delay-50  { animation-delay: 50ms; }

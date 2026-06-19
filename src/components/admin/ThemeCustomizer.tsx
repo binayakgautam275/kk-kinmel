@@ -38,7 +38,6 @@ function themeToCSS(theme: Partial<Settings['theme']> = {}): string {
 
 export default function ThemeCustomizer({
     initialSettings,
-    restaurantName,
     restaurantSlug = null,
     initialLogoUrl = null,
 }: {

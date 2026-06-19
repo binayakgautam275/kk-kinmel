@@ -18,14 +18,14 @@ export default function GallerySection({
                     <h2 className="text-3xl font-bold text-gray-900">Gallery</h2>
                     <div className="w-16 h-1 mx-auto mt-3 rounded-full" style={{ backgroundColor: accent || '#EC4899' }} />
                 </div>
-                <div className="relative overflow-hidden w-full group py-4">
-                    <div className="flex gap-4 md:gap-6 w-max animate-marquee hover:[animation-play-state:paused]">
+                <div className="relative overflow-hidden w-full group py-4 flex flex-col justify-center">
+                    <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
                         {[...items, ...items, ...items, ...items].map((item, idx) => {
                             const isVideo = item.media_type === 'video' || item.image_url.match(/\.(mp4|webm|mov)(\?.*)?$/i)
                             return (
                             <figure
                                 key={idx}
-                                className="relative overflow-hidden rounded-2xl w-64 md:w-80 h-64 md:h-80 shrink-0 bg-gray-100 shadow-md card-hover"
+                                className="relative overflow-hidden rounded-2xl w-64 md:w-80 h-64 md:h-80 shrink-0 bg-gray-100 shadow-md card-hover mr-4 md:mr-6"
                             >
                                 {isVideo ? (
                                     <video
