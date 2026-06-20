@@ -40,7 +40,10 @@ export const getCachedMenuData = unstable_cache(
 
             supabase
                 .from('combo_items')
-                .select('id, combo_id, item_id, quantity')
+                // Scope to this restaurant's combos via the parent combo's restaurant_id
+                // (combo_items has no restaurant_id of its own).
+                .select('id, combo_id, item_id, quantity, combo:menu_items!combo_id!inner(restaurant_id)')
+                .eq('combo.restaurant_id', restaurantId)
         ])
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

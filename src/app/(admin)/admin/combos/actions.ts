@@ -1,97 +1,167 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/server'
+import { requireRole } from '@/lib/auth'
 import { revalidatePath } from 'next/cache'
 
-export async function addComboAction(
+interface ComboData {
+    name: string
+    description: string | null
+    price: number
+    category_id: string | null
+    image_url: string | null
+    is_available: boolean
+}
+
+interface ComboItemInput {
+    item_id: string
+    quantity: number
+}
+
+// Uniform result shape so callers can always read `.error` regardless of branch.
+type ComboActionResult = { error?: string; success?: boolean; data?: unknown }
+
+type AdminClient = Awaited<ReturnType<typeof createAdminClient>>
+
+/**
+ * Validate combo fields and normalize/verify its component items.
+ *
+ * These actions use the RLS-bypassing admin client, so every check here is the
+ * only thing standing between a caller and another tenant's data:
+ *  - quantities are coerced to positive integers and duplicate items merged
+ *    (the DB has a UNIQUE (combo_id, item_id) constraint),
+ *  - every component must be a NON-combo item belonging to `restaurantId`
+ *    (blocks cross-tenant items and nesting a combo inside a combo).
+ */
+async function validateComboInput(
+    supabase: AdminClient,
     restaurantId: string,
-    comboData: {
-        name: string
-        description: string | null
-        price: number
-        category_id: string | null
-        image_url: string | null
-        is_available: boolean
-    },
-    items: { item_id: string; quantity: number }[]
-) {
+    comboData: ComboData,
+    items: ComboItemInput[],
+): Promise<{ error: string } | { items: ComboItemInput[] }> {
+    if (!comboData.name?.trim()) return { error: 'Combo name is required.' }
+    if (!Number.isFinite(comboData.price) || comboData.price < 0) {
+        return { error: 'Price must be a positive number.' }
+    }
+    if (!items.length) return { error: 'A combo must include at least one item.' }
+
+    const merged = new Map<string, number>()
+    for (const it of items) {
+        const qty = Math.floor(Number(it.quantity))
+        if (!it.item_id || !Number.isFinite(qty) || qty < 1) {
+            return { error: 'Each bundle item needs a valid quantity of at least 1.' }
+        }
+        merged.set(it.item_id, (merged.get(it.item_id) ?? 0) + qty)
+    }
+    const cleaned = Array.from(merged, ([item_id, quantity]) => ({ item_id, quantity }))
+
+    const ids = cleaned.map(c => c.item_id)
+    const { data: valid } = await supabase
+        .from('menu_items')
+        .select('id')
+        .eq('restaurant_id', restaurantId)
+        .eq('is_combo', false)
+        .in('id', ids)
+
+    const validIds = new Set((valid ?? []).map(r => r.id))
+    if (validIds.size !== ids.length) {
+        return { error: 'One or more bundle items are invalid or not part of this restaurant.' }
+    }
+
+    return { items: cleaned }
+}
+
+export async function addComboAction(
+    _restaurantId: string,
+    comboData: ComboData,
+    items: ComboItemInput[],
+): Promise<ComboActionResult> {
+    let user
+    try {
+        user = await requireRole('super_admin', 'manager')
+    } catch {
+        return { error: 'You are not authorized to manage combos.' }
+    }
+
     try {
         const supabase = await createAdminClient()
+        // Scope to the authenticated user's restaurant — never trust the client-supplied id.
+        const restaurantId = user.restaurantId
 
-        // 1. Insert into menu_items as a combo
+        const validated = await validateComboInput(supabase, restaurantId, comboData, items)
+        if ('error' in validated) return validated
+
         const { data: menuCombo, error: comboErr } = await supabase
             .from('menu_items')
             .insert({
                 restaurant_id: restaurantId,
-                name: comboData.name,
+                name: comboData.name.trim(),
                 description: comboData.description,
                 price: comboData.price,
                 category_id: comboData.category_id || null,
                 image_url: comboData.image_url || null,
                 is_available: comboData.is_available,
-                is_combo: true, // Mark as combo
+                is_combo: true,
             })
             .select()
             .single()
 
-        if (comboErr) {
-            if (comboErr.message.includes('column "is_combo" does not exist')) {
-                return { error: 'Database column "is_combo" is missing. Please run the SQL migration first!' }
-            }
-            return { error: comboErr.message }
+        if (comboErr || !menuCombo) {
+            return { error: comboErr?.message ?? 'Failed to create combo.' }
         }
 
-        // 2. Insert into combo_items
-        if (items.length > 0) {
-            const comboItemsData = items.map(item => ({
-                combo_id: menuCombo.id,
-                item_id: item.item_id,
-                quantity: item.quantity,
-            }))
+        const { error: itemsErr } = await supabase.from('combo_items').insert(
+            validated.items.map(it => ({ combo_id: menuCombo.id, item_id: it.item_id, quantity: it.quantity })),
+        )
 
-            const { error: itemsErr } = await supabase
-                .from('combo_items')
-                .insert(comboItemsData)
-
-            if (itemsErr) {
-                // If inserting items fails, clean up the created combo
-                await supabase.from('menu_items').delete().eq('id', menuCombo.id)
-                if (itemsErr.message.includes('relation "public.combo_items" does not exist')) {
-                    return { error: 'Database table "combo_items" is missing. Please run the SQL migration first!' }
-                }
-                return { error: itemsErr.message }
-            }
+        if (itemsErr) {
+            // Roll back the orphaned combo so we don't leave an empty bundle.
+            await supabase.from('menu_items').delete().eq('id', menuCombo.id)
+            return { error: itemsErr.message }
         }
 
         revalidatePath('/admin/combos')
         revalidatePath('/admin/menu')
         return { data: menuCombo }
-    } catch (err: any) {
+    } catch (err) {
         console.error('Error in addComboAction:', err)
-        return { error: err.message || 'An unexpected error occurred.' }
+        return { error: err instanceof Error ? err.message : 'An unexpected error occurred.' }
     }
 }
 
 export async function updateComboAction(
     comboId: string,
-    comboData: {
-        name: string
-        description: string | null
-        price: number
-        category_id: string | null
-        image_url: string | null
-        is_available: boolean
-    },
-    items: { item_id: string; quantity: number }[]
-) {
+    comboData: ComboData,
+    items: ComboItemInput[],
+): Promise<ComboActionResult> {
+    let user
+    try {
+        user = await requireRole('super_admin', 'manager')
+    } catch {
+        return { error: 'You are not authorized to manage combos.' }
+    }
+
     try {
         const supabase = await createAdminClient()
+        const restaurantId = user.restaurantId
 
-        // 1. Update menu_items entry
+        // Ownership: the combo must belong to this restaurant (and actually be a combo).
+        const { data: existing } = await supabase
+            .from('menu_items')
+            .select('id')
+            .eq('id', comboId)
+            .eq('restaurant_id', restaurantId)
+            .eq('is_combo', true)
+            .maybeSingle()
+        if (!existing) return { error: 'Combo not found.' }
+
+        const validated = await validateComboInput(supabase, restaurantId, comboData, items)
+        if ('error' in validated) return validated
+
         const { error: comboErr } = await supabase
             .from('menu_items')
             .update({
-                name: comboData.name,
+                name: comboData.name.trim(),
                 description: comboData.description,
                 price: comboData.price,
                 category_id: comboData.category_id || null,
@@ -99,65 +169,54 @@ export async function updateComboAction(
                 is_available: comboData.is_available,
             })
             .eq('id', comboId)
+            .eq('restaurant_id', restaurantId)
 
-        if (comboErr) {
-            return { error: comboErr.message }
-        }
+        if (comboErr) return { error: comboErr.message }
 
-        // 2. Refresh combo_items constituents
-        const { error: deleteErr } = await supabase
-            .from('combo_items')
-            .delete()
-            .eq('combo_id', comboId)
-
-        if (deleteErr) {
-            return { error: deleteErr.message }
-        }
-
-        if (items.length > 0) {
-            const comboItemsData = items.map(item => ({
-                combo_id: comboId,
-                item_id: item.item_id,
-                quantity: item.quantity,
-            }))
-
-            const { error: itemsErr } = await supabase
-                .from('combo_items')
-                .insert(comboItemsData)
-
-            if (itemsErr) {
-                return { error: itemsErr.message }
-            }
-        }
+        // Replace components atomically (delete + insert in one transaction) so the
+        // combo is never momentarily left without items.
+        const { error: rpcErr } = await supabase.rpc('replace_combo_items', {
+            p_combo_id: comboId,
+            p_items: validated.items,
+        })
+        if (rpcErr) return { error: rpcErr.message }
 
         revalidatePath('/admin/combos')
         revalidatePath('/admin/menu')
         return { success: true }
-    } catch (err: any) {
+    } catch (err) {
         console.error('Error in updateComboAction:', err)
-        return { error: err.message || 'An unexpected error occurred.' }
+        return { error: err instanceof Error ? err.message : 'An unexpected error occurred.' }
     }
 }
 
-export async function deleteComboAction(comboId: string) {
+export async function deleteComboAction(comboId: string): Promise<ComboActionResult> {
+    let user
+    try {
+        user = await requireRole('super_admin', 'manager')
+    } catch {
+        return { error: 'You are not authorized to manage combos.' }
+    }
+
     try {
         const supabase = await createAdminClient()
 
-        // Deleting from menu_items will cascade delete from combo_items
-        const { error } = await supabase
+        // Scope the delete to this restaurant's combos; combo_items cascade on FK.
+        const { error, count } = await supabase
             .from('menu_items')
-            .delete()
+            .delete({ count: 'exact' })
             .eq('id', comboId)
+            .eq('restaurant_id', user.restaurantId)
+            .eq('is_combo', true)
 
-        if (error) {
-            return { error: error.message }
-        }
+        if (error) return { error: error.message }
+        if (!count) return { error: 'Combo not found.' }
 
         revalidatePath('/admin/combos')
         revalidatePath('/admin/menu')
         return { success: true }
-    } catch (err: any) {
+    } catch (err) {
         console.error('Error in deleteComboAction:', err)
-        return { error: err.message || 'An unexpected error occurred.' }
+        return { error: err instanceof Error ? err.message : 'An unexpected error occurred.' }
     }
 }

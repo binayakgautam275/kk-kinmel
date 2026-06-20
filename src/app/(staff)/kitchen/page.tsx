@@ -84,7 +84,9 @@ export default async function KitchenPage() {
     try {
         const { data: rawComboItems, error: comboErr } = await adminSupabase
             .from('combo_items')
-            .select('id, combo_id, item_id, quantity, menu_items!item_id(name)')
+            // Scope to this restaurant's combos (combo_items has no restaurant_id).
+            .select('id, combo_id, item_id, quantity, menu_items!item_id(name), combo:menu_items!combo_id!inner(restaurant_id)')
+            .eq('combo.restaurant_id', restaurantId)
         if (comboErr) throw comboErr
         comboItems = rawComboItems || []
     } catch (err) {

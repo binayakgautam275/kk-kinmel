@@ -25,38 +25,31 @@ export default async function AdminCombosPage() {
             .order('name', { ascending: true })
     ])
 
-    // Fetch combo items with error handling in case the tables aren't migrated yet
-    let combos: any[] = []
-    let comboItems: any[] = []
+    // Split the single menu_items fetch into combos vs. standard items — no need for
+    // a second query. Standard items exclude combos so a combo can't nest a combo.
+    const combos = (allItems || []).filter(item => item.is_combo)
+    const standardItems = (allItems || []).filter(item => !item.is_combo)
+
+    // combo_items lives in its own table that may not exist on un-migrated DBs.
+    let comboItems: { id: string; combo_id: string; item_id: string; quantity: number }[] = []
     let isDbReady = true
     let dbError = ''
 
     try {
-        // We select is_combo to see if it exists
-        const { data: combosData, error: combosErr } = await adminSupabase
-            .from('menu_items')
-            .select('*')
-            .eq('restaurant_id', restaurantId)
-            .eq('is_combo', true)
-            .order('name')
-
-        if (combosErr) throw combosErr
-        combos = combosData || []
-
         const { data: comboItemsData, error: itemsErr } = await adminSupabase
             .from('combo_items')
-            .select('id, combo_id, item_id, quantity')
+            // Scope to this restaurant's combos via the parent combo's restaurant_id.
+            .select('id, combo_id, item_id, quantity, combo:menu_items!combo_id!inner(restaurant_id)')
+            .eq('combo.restaurant_id', restaurantId)
 
         if (itemsErr) throw itemsErr
-        comboItems = comboItemsData || []
-    } catch (err: any) {
-        console.warn('Combo Offers database tables or columns do not exist yet:', err.message)
+        comboItems = (comboItemsData || []).map(({ id, combo_id, item_id, quantity }) => ({ id, combo_id, item_id, quantity }))
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        console.warn('Combo Offers database tables or columns do not exist yet:', message)
         isDbReady = false
-        dbError = err.message
+        dbError = message
     }
-
-    // Filter standard items to exclude combos (so they don't list a combo inside a combo)
-    const standardItems = (allItems || []).filter(item => !item.is_combo)
 
     return (
         <div className="space-y-6">
