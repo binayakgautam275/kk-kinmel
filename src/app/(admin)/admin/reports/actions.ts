@@ -99,14 +99,15 @@ export async function runPaymentReconciliation(
     }
 }
 
+import { generateEodReport } from '@/lib/reports'
+
 export async function generateEodReportAction(restaurantId: string, reportDate: string) {
-    const supabase = await createAdminClient()
-    const { data, error } = await supabase.rpc('generate_eod_report', {
-        p_restaurant_id: restaurantId,
-        p_report_date: reportDate,
-    })
-    if (error) return { error: error.message }
-    return { data }
+    try {
+        const data = await generateEodReport(restaurantId, reportDate)
+        return { data }
+    } catch (err: any) {
+        return { error: err.message || 'Failed to generate report' }
+    }
 }
 
 export async function getEodReportsAction(restaurantId: string, limit = 30) {

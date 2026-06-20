@@ -309,13 +309,14 @@ export default function SettingsManager({
                             <label className="block text-sm font-medium text-gray-700 mb-1">Tax Rate (%) *</label>
                             <div className="relative border-gray-300 focus-within:ring-1 focus-within:ring-[var(--color-primary)] focus-within:border-[var(--color-primary)] rounded-lg shadow-sm border bg-white overflow-hidden">
                                 <input
-                                    type="number"
-                                    step="0.01"
+                                    type="text"
+                                    inputMode="decimal"
                                     name="tax_rate"
                                     value={formData.tax_rate}
-                                    onChange={handleChange}
+                                    onChange={e => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) handleChange({ target: { name: 'tax_rate', value: v } } as any) }}
                                     disabled={!canEdit || isSubmitting}
                                     className="w-full py-2.5 pl-3 pr-10 border-0 focus:ring-0 sm:text-sm disabled:bg-gray-50 disabled:text-gray-500"
+                                    placeholder="e.g. 13"
                                     required
                                 />
                                 <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none pr-3">

@@ -14,9 +14,9 @@ export default function IngredientsManager({ initialIngredients, restaurantId }:
     const [showAdd, setShowAdd] = useState(false)
     const [stockModal, setStockModal] = useState<Ingredient | null>(null)
     const [form, setForm] = useState({
-        name: '', unit: 'kg', stock_quantity: 0, reorder_level: 10, cost_per_unit: 0, supplier: '',
+        name: '', unit: 'kg', stock_quantity: '', reorder_level: '10', cost_per_unit: '', supplier: '',
     })
-    const [moveForm, setMoveForm] = useState({ movement_type: 'purchase', quantity: 0, notes: '' })
+    const [moveForm, setMoveForm] = useState({ movement_type: 'purchase', quantity: '', notes: '' })
     const [saving, setSaving] = useState(false)
 
     async function handleCreate() {
@@ -26,9 +26,9 @@ export default function IngredientsManager({ initialIngredients, restaurantId }:
             restaurant_id: restaurantId,
             name: form.name,
             unit: form.unit,
-            stock_quantity: form.stock_quantity,
-            reorder_level: form.reorder_level,
-            cost_per_unit: form.cost_per_unit,
+            stock_quantity: parseFloat(form.stock_quantity) || 0,
+            reorder_level: parseFloat(form.reorder_level) || 0,
+            cost_per_unit: parseFloat(form.cost_per_unit) || 0,
             supplier: form.supplier || null,
         })
         setSaving(false)
@@ -36,28 +36,28 @@ export default function IngredientsManager({ initialIngredients, restaurantId }:
         if (result.data) setIngredients(prev => [...prev, result.data].sort((a, b) => a.name.localeCompare(b.name)))
         toast.success('Ingredient added!')
         setShowAdd(false)
-        setForm({ name: '', unit: 'kg', stock_quantity: 0, reorder_level: 10, cost_per_unit: 0, supplier: '' })
+        setForm({ name: '', unit: 'kg', stock_quantity: '', reorder_level: '10', cost_per_unit: '', supplier: '' })
     }
 
     async function handleStockMove() {
-        if (!stockModal || moveForm.quantity <= 0) { toast.error('Enter a valid quantity'); return }
+        if (!stockModal || !parseFloat(moveForm.quantity)) { toast.error('Enter a valid quantity'); return }
         setSaving(true)
         const result = await addStockMovementAction({
             ingredient_id: stockModal.id,
             movement_type: moveForm.movement_type,
-            quantity: moveForm.quantity,
+            quantity: parseFloat(moveForm.quantity) || 0,
             notes: moveForm.notes || undefined,
         })
         setSaving(false)
         if (result.error) { toast.error(result.error); return }
         // Update local state
-        const delta = moveForm.movement_type === 'purchase' ? moveForm.quantity : -moveForm.quantity
+        const delta = moveForm.movement_type === 'purchase' ? (parseFloat(moveForm.quantity) || 0) : -(parseFloat(moveForm.quantity) || 0)
         setIngredients(prev => prev.map(i =>
             i.id === stockModal.id ? { ...i, stock_quantity: Math.max(0, i.stock_quantity + delta) } : i
         ))
         toast.success('Stock updated!')
         setStockModal(null)
-        setMoveForm({ movement_type: 'purchase', quantity: 0, notes: '' })
+        setMoveForm({ movement_type: 'purchase', quantity: '', notes: '' })
     }
 
     async function handleDelete(id: string) {
@@ -104,17 +104,23 @@ export default function IngredientsManager({ initialIngredients, restaurantId }:
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-600 mb-1">Initial Stock</label>
-                            <input type="number" step="0.01" value={form.stock_quantity} onChange={e => setForm({ ...form, stock_quantity: +e.target.value })}
+                            <input type="text" inputMode="decimal" value={form.stock_quantity}
+                                onChange={e => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setForm({ ...form, stock_quantity: v }) }}
+                                placeholder="e.g. 50"
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-600 mb-1">Reorder Level</label>
-                            <input type="number" step="0.01" value={form.reorder_level} onChange={e => setForm({ ...form, reorder_level: +e.target.value })}
+                            <input type="text" inputMode="decimal" value={form.reorder_level}
+                                onChange={e => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setForm({ ...form, reorder_level: v }) }}
+                                placeholder="e.g. 10"
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-600 mb-1">Cost per Unit ($)</label>
-                            <input type="number" step="0.01" value={form.cost_per_unit} onChange={e => setForm({ ...form, cost_per_unit: +e.target.value })}
+                            <input type="text" inputMode="decimal" value={form.cost_per_unit}
+                                onChange={e => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setForm({ ...form, cost_per_unit: v }) }}
+                                placeholder="e.g. 2.50"
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                         </div>
                         <div>
@@ -157,7 +163,9 @@ export default function IngredientsManager({ initialIngredients, restaurantId }:
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-600 mb-1">Quantity ({stockModal.unit})</label>
-                                <input type="number" step="0.01" value={moveForm.quantity} onChange={e => setMoveForm({ ...moveForm, quantity: +e.target.value })}
+                                <input type="text" inputMode="decimal" value={moveForm.quantity}
+                                    onChange={e => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setMoveForm({ ...moveForm, quantity: v }) }}
+                                    placeholder="e.g. 5"
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                             </div>
                             <div>
@@ -206,7 +214,7 @@ export default function IngredientsManager({ initialIngredients, restaurantId }:
                                     <td className="px-4 py-3 text-right text-gray-500 hidden md:table-cell">${ing.cost_per_unit.toFixed(2)}</td>
                                     <td className="px-4 py-3 text-gray-500 hidden lg:table-cell">{ing.supplier || '—'}</td>
                                     <td className="px-4 py-3 text-right flex items-center gap-2 justify-end">
-                                        <button onClick={() => { setStockModal(ing); setMoveForm({ movement_type: 'purchase', quantity: 0, notes: '' }) }}
+                                        <button onClick={() => { setStockModal(ing); setMoveForm({ movement_type: 'purchase', quantity: '', notes: '' }) }}
                                             className="text-gray-600 hover:text-gray-900" title="Stock Movement">
                                             <Package size={16} />
                                         </button>

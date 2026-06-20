@@ -8,12 +8,19 @@ export default async function TablesManagementPage() {
     const { restaurantId } = await getCurrentUser()
     const adminSupabase = await createAdminClient()
 
-    const { data: tables } = await adminSupabase
-        .from('tables')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .eq('is_active', true)
-        .order('label', { ascending: true })
+    const [{ data: tables }, { data: restaurant }] = await Promise.all([
+        adminSupabase
+            .from('tables')
+            .select('*')
+            .eq('restaurant_id', restaurantId)
+            .eq('is_active', true)
+            .order('label', { ascending: true }),
+        adminSupabase
+            .from('restaurants')
+            .select('name')
+            .eq('id', restaurantId)
+            .single()
+    ])
 
     // Also get the base URL for generating the full QR link
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
@@ -32,6 +39,7 @@ export default async function TablesManagementPage() {
             <TableManager
                 initialTables={tables || []}
                 restaurantId={restaurantId}
+                restaurantName={restaurant?.name || 'Restaurant'}
                 appUrl={appUrl}
             />
         </div>
