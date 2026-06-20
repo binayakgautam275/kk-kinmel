@@ -36,6 +36,7 @@ export default function SettingsManager({
     canEdit: boolean
 }) {
     const [formData, setFormData] = useState<RestaurantSettings>(initialRestaurant)
+    const [taxRateStr, setTaxRateStr] = useState(initialRestaurant.tax_rate.toString())
     const [uploadingField, setUploadingField] = useState<'logo_url' | 'payment_qr_url' | 'notification_sound' | null>(null)
     const logoInputRef = useRef<HTMLInputElement>(null)
     const qrInputRef = useRef<HTMLInputElement>(null)
@@ -133,7 +134,9 @@ export default function SettingsManager({
         setIsSubmitting(true)
         setIsSuccess(false)
 
-        const res = await updateRestaurantSettingsAction(formData.id, formData)
+        const finalTaxRate = taxRateStr === '' ? 0 : Number.parseFloat(taxRateStr)
+        const submissionData = { ...formData, tax_rate: finalTaxRate }
+        const res = await updateRestaurantSettingsAction(formData.id, submissionData)
 
         if (res.success) {
             setIsSuccess(true)
@@ -312,8 +315,17 @@ export default function SettingsManager({
                                     type="text"
                                     inputMode="decimal"
                                     name="tax_rate"
-                                    value={formData.tax_rate}
-                                    onChange={e => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) handleChange({ target: { name: 'tax_rate', value: v } } as any) }}
+                                    value={taxRateStr}
+                                    onChange={e => {
+                                        const value = e.target.value
+                                        if (/^(\d+(\.\d*)?)?$/.test(value)) {
+                                            setTaxRateStr(value)
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                tax_rate: value === '' ? prev.tax_rate : Number.parseFloat(value)
+                                            }))
+                                        }
+                                    }}
                                     disabled={!canEdit || isSubmitting}
                                     className="w-full py-2.5 pl-3 pr-10 border-0 focus:ring-0 sm:text-sm disabled:bg-gray-50 disabled:text-gray-500"
                                     placeholder="e.g. 13"

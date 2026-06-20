@@ -54,45 +54,54 @@ export async function generateEodReport(restaurantId: string, reportDate: string
     const uniqueCustomers = uniqueSessions.size + ordersWithoutSession
 
     // 5. Fetch payment verifications for this period to breakdown payment methods
-    const { data: verifications, error: verError } = await supabase
-        .from('payment_verifications')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .eq('staff_verified', true)
-        .gte('created_at', start)
-        .lte('created_at', end)
-
-    if (verError) throw new Error(`Failed to fetch payment verifications: ${verError.message}`)
-
     let cashTotal = 0
     let cardTotal = 0
     const digitalBreakdown: Record<string, number> = {}
+    let unverifiedOrdersCount = 0
+    const paidOrderIds = paidOrders.map(o => o.id)
 
-    for (const v of verifications || []) {
-        const amt = v.amount || 0
-        const method = v.payment_method || 'unknown'
-        if (method === 'cash') {
-            cashTotal += amt
-        } else if (method === 'card') {
-            cardTotal += amt
-        } else {
-            digitalBreakdown[method] = (digitalBreakdown[method] || 0) + amt
+    if (paidOrderIds.length > 0) {
+        const { data: verifications, error: verError } = await supabase
+            .from('payment_verifications')
+            .select('order_id, payment_method, amount')
+            .in('order_id', paidOrderIds)
+            .eq('staff_verified', true)
+
+        if (verError) throw new Error(`Failed to fetch payment verifications: ${verError.message}`)
+
+        const orderVerMap = new Map<string, typeof verifications[number]>()
+        for (const v of verifications || []) {
+            if (v.order_id) {
+                orderVerMap.set(v.order_id, v)
+            }
         }
+
+        for (const o of paidOrders) {
+            const v = orderVerMap.get(o.id)
+            if (v) {
+                const method = v.payment_method || 'unknown'
+                const orderAmt = o.total_amount || 0
+                if (method === 'cash') {
+                    cashTotal += orderAmt
+                } else if (method === 'card') {
+                    cardTotal += orderAmt
+                } else {
+                    digitalBreakdown[method] = (digitalBreakdown[method] || 0) + orderAmt
+                }
+            }
+        }
+
+        unverifiedOrdersCount = paidOrders.filter(o => !orderVerMap.has(o.id)).length
     }
 
     // Set other digital payment totals
     const paymentBreakdown: Record<string, number> = {
         cash: cashTotal,
-        card: cardTotal,
+        card: totalRevenue - cashTotal,
         ...digitalBreakdown
     }
 
-    // Reconciliation: paid orders with no verified payment_verification
-    const verifiedOrderIds = new Set(verifications?.map(v => v.order_id).filter(Boolean) || [])
-    const unverifiedOrdersCount = paidOrders.filter(o => !verifiedOrderIds.has(o.id)).length
-
     // 6. Top 5 Best Sellers
-    const paidOrderIds = paidOrders.map(o => o.id)
     let topSellers: Array<{ name: string; quantity: number; revenue: number }> = []
 
     if (paidOrderIds.length > 0) {
@@ -161,32 +170,46 @@ export async function generateEodReport(restaurantId: string, reportDate: string
     // 8. COGS and Gross Profit calculation
     let totalCogs = 0
     if (paidOrderIds.length > 0) {
-        const { data: recipes } = await supabase
-            .from('recipes')
-            .select('menu_item_id, ingredient_id, quantity_needed')
-
-        const { data: ingredients } = await supabase
-            .from('ingredients')
-            .select('id, cost_per_unit')
-            .eq('restaurant_id', restaurantId)
-
-        const costMap = new Map(ingredients?.map(i => [i.id, i.cost_per_unit || 0]))
-        const menuItemCostMap = new Map<string, number>()
-
-        for (const r of recipes || []) {
-            const itemCost = (r.quantity_needed || 0) * (costMap.get(r.ingredient_id) || 0)
-            menuItemCostMap.set(r.menu_item_id, (menuItemCostMap.get(r.menu_item_id) || 0) + itemCost)
-        }
-
-        // We need order items quantities to sum total cost
-        const { data: items } = await supabase
+        // Fetch order items for the report day
+        const { data: items, error: orderItemsError } = await supabase
             .from('order_items')
             .select('menu_item_id, quantity')
             .in('order_id', paidOrderIds)
 
-        for (const item of items || []) {
-            const cost = menuItemCostMap.get(item.menu_item_id) || 0
-            totalCogs += cost * (item.quantity || 0)
+        if (orderItemsError) throw orderItemsError
+
+        // Collect menu item IDs from the paid order items for the report day
+        const soldItems = items || []
+        const menuItemIds = Array.from(new Set(soldItems.map(item => item.menu_item_id).filter(Boolean)))
+
+        if (menuItemIds.length > 0) {
+            // Query only recipes for menu items actually sold that day
+            const { data: recipes, error: recipesError } = await supabase
+                .from('recipes')
+                .select('menu_item_id, ingredient_id, quantity_needed')
+                .in('menu_item_id', menuItemIds)
+
+            if (recipesError) throw recipesError
+
+            const { data: ingredients, error: ingredientsError } = await supabase
+                .from('ingredients')
+                .select('id, cost_per_unit')
+                .eq('restaurant_id', restaurantId)
+
+            if (ingredientsError) throw ingredientsError
+
+            const costMap = new Map(ingredients?.map(i => [i.id, i.cost_per_unit || 0]))
+            const menuItemCostMap = new Map<string, number>()
+
+            for (const r of recipes || []) {
+                const itemCost = (r.quantity_needed || 0) * (costMap.get(r.ingredient_id) || 0)
+                menuItemCostMap.set(r.menu_item_id, (menuItemCostMap.get(r.menu_item_id) || 0) + itemCost)
+            }
+
+            for (const item of soldItems) {
+                const cost = menuItemCostMap.get(item.menu_item_id) || 0
+                totalCogs += cost * (item.quantity || 0)
+            }
         }
     }
 

@@ -65,8 +65,8 @@ export default function ReportsViewer({ initialReports, restaurantId }: {
                                 notesText = parsed.notesText || ''
                                 uniqueCustomers = typeof parsed.uniqueCustomers === 'number' ? parsed.uniqueCustomers : r.total_orders
                                 rushHour = parsed.rushHour || 'N/A'
-                                topSellers = parsed.topSellers || []
-                                paymentBreakdown = parsed.paymentBreakdown || {}
+                                topSellers = Array.isArray(parsed.topSellers) ? parsed.topSellers : []
+                                paymentBreakdown = parsed.paymentBreakdown && typeof parsed.paymentBreakdown === 'object' && !Array.isArray(parsed.paymentBreakdown) ? parsed.paymentBreakdown : {}
                             }
                         } catch (e) {
                             // Keep default plain text notesText
@@ -132,12 +132,15 @@ export default function ReportsViewer({ initialReports, restaurantId }: {
                                         <div className="bg-white p-5 rounded-xl border border-gray-200/80 shadow-xs">
                                             <h4 className="font-bold text-gray-800 text-xs uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Payment breakdown</h4>
                                             <div className="space-y-3">
-                                                {Object.entries(paymentBreakdown).map(([method, amount]) => (
-                                                    <div key={method} className="flex justify-between text-sm items-center">
-                                                        <span className="capitalize text-gray-600 font-semibold">{method.replace('_', ' ')}</span>
-                                                        <span className="font-bold text-gray-950 font-mono">{fmt(amount)}</span>
-                                                    </div>
-                                                ))}
+                                                {Object.entries(paymentBreakdown).map(([method, amount]) => {
+                                                    const n = typeof amount === 'number' ? amount : Number(amount) || 0
+                                                    return (
+                                                        <div key={method} className="flex justify-between text-sm items-center">
+                                                            <span className="capitalize text-gray-600 font-semibold">{method.replace('_', ' ')}</span>
+                                                            <span className="font-bold text-gray-950 font-mono">{fmt(n)}</span>
+                                                        </div>
+                                                    )
+                                                })}
                                                 {Object.keys(paymentBreakdown).length === 0 && (
                                                     <>
                                                         <div className="flex justify-between text-sm items-center">
@@ -157,18 +160,23 @@ export default function ReportsViewer({ initialReports, restaurantId }: {
                                         <div className="bg-white p-5 rounded-xl border border-gray-200/80 shadow-xs">
                                             <h4 className="font-bold text-gray-800 text-xs uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Top 5 Best Selling Items</h4>
                                             <div className="space-y-3">
-                                                {topSellers.map((item, idx) => (
-                                                    <div key={idx} className="flex justify-between text-sm items-center">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="bg-gray-100 text-gray-800 w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold">{idx + 1}</span>
-                                                            <span className="text-gray-700 font-semibold">{item.name}</span>
+                                                {topSellers.map((item, idx) => {
+                                                    const name = item && typeof item === 'object' ? (item.name || 'Unknown Item') : 'Unknown Item'
+                                                    const quantity = item && typeof item === 'object' ? (typeof item.quantity === 'number' ? item.quantity : Number(item.quantity) || 0) : 0
+                                                    const revenue = item && typeof item === 'object' ? (typeof item.revenue === 'number' ? item.revenue : Number(item.revenue) || 0) : 0
+                                                    return (
+                                                        <div key={idx} className="flex justify-between text-sm items-center">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="bg-gray-100 text-gray-800 w-5 h-5 rounded-full flex items-center justify-center text-xs font-extrabold">{idx + 1}</span>
+                                                                <span className="text-gray-700 font-semibold">{name}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-gray-900">{quantity} sold</span>
+                                                                <span className="text-xs text-gray-400 font-semibold">({fmt(revenue)})</span>
+                                                            </div>
                                                         </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-gray-900">{item.quantity} sold</span>
-                                                            <span className="text-xs text-gray-400 font-semibold">({fmt(item.revenue)})</span>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    )
+                                                })}
                                                 {topSellers.length === 0 && (
                                                     <p className="text-sm text-gray-400 italic text-center py-4">No item sales recorded for this date.</p>
                                                 )}
