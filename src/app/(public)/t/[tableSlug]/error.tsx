@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect } from 'react'
+import * as Sentry from '@sentry/nextjs'
 import { AlertCircle, RefreshCcw } from 'lucide-react'
 
 export default function CustomerError({
@@ -9,8 +11,7 @@ export default function CustomerError({
     error: Error & { digest?: string }
     reset: () => void
 }) {
-    // error prop required by Next.js error boundary contract
-    void error
+    useEffect(() => { Sentry.captureException(error) }, [error])
     return (
         <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center px-6 text-center">
             <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">

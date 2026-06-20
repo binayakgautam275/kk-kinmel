@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { playNewOrder } from '@/lib/audio'
 import { toast } from 'react-hot-toast'
 import { formatCurrency, timeAgo } from '@/lib/utils'
@@ -36,53 +37,44 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
     const [orders, setOrders] = useState<KitchenOrder[]>(initialOrders)
     const supabaseRef = useRef(createClient())
 
-    useEffect(() => {
-        const supabase = supabaseRef.current
-        const channel = supabase
-            .channel(`kitchen-queue-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                async (payload) => {
-                    const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
-                    if (data) {
-                        const order = data as unknown as KitchenOrder
-                        // Realtime can replay an INSERT (reconnect, multiple tabs) or
-                        // deliver one already present in initialOrders — guard against
-                        // duplicate rows and duplicate React keys.
-                        let isNew = false
-                        setOrders(prev => {
-                            if (prev.some(o => o.id === order.id)) return prev
-                            isNew = true
-                            return [...prev, order]
-                        })
-                        if (!isNew) return
-                        playNewOrder().catch(() => {})
-                        const tbl = order.sessions?.tables?.label
-                        toast.custom((t) => (
-                            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 border border-yellow-500/30`}
-                                 style={{ background: '#1a1d27' }}>
-                                <span className="text-xl mt-0.5">🔔</span>
-                                <div>
-                                    <p className="font-bold text-sm text-yellow-400">New Order!</p>
-                                    <p className="text-xs text-white/40 mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
-                                </div>
-                            </div>
-                        ), { duration: 6000, position: 'top-right' })
-                    }
-                }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const newStatus = payload.new.status as string
-                    if (newStatus === 'delivered' || newStatus === 'cancelled') {
-                        setOrders(prev => prev.filter(o => o.id !== payload.new.id))
-                    } else {
-                        setOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, status: payload.new.status } : o))
-                    }
-                }
-            )
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+    // Live order changes via the shared per-restaurant channel.
+    useRestaurantTable(restaurantId, 'orders', async (payload) => {
+        if (payload.eventType === 'INSERT') {
+            const supabase = supabaseRef.current
+            const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
+            if (!data) return
+            const order = data as unknown as KitchenOrder
+            // Realtime can replay an INSERT (reconnect, multiple tabs) or
+            // deliver one already present in initialOrders — guard against
+            // duplicate rows and duplicate React keys.
+            let isNew = false
+            setOrders(prev => {
+                if (prev.some(o => o.id === order.id)) return prev
+                isNew = true
+                return [...prev, order]
+            })
+            if (!isNew) return
+            playNewOrder().catch(() => {})
+            const tbl = order.sessions?.tables?.label
+            toast.custom((t) => (
+                <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 border border-yellow-500/30`}
+                     style={{ background: '#1a1d27' }}>
+                    <span className="text-xl mt-0.5">🔔</span>
+                    <div>
+                        <p className="font-bold text-sm text-yellow-400">New Order!</p>
+                        <p className="text-xs text-white/40 mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
+                    </div>
+                </div>
+            ), { duration: 6000, position: 'top-right' })
+        } else if (payload.eventType === 'UPDATE') {
+            const newStatus = payload.new.status as string
+            if (newStatus === 'delivered' || newStatus === 'cancelled') {
+                setOrders(prev => prev.filter(o => o.id !== payload.new.id))
+            } else {
+                setOrders(prev => prev.map(o => o.id === payload.new.id ? { ...o, status: payload.new.status } : o))
+            }
+        }
+    })
 
     const updateStatus = async (orderId: string, currentStatus: string) => {
         let nextStatus: OrderStatus = 'preparing'

@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { markDeliveredAndCashPaid } from '@/app/(staff)/waiter/order-actions'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
@@ -47,45 +48,36 @@ export default function CashierClient({ restaurantId, initialUnpaid, initialActi
     const [processingId, setProcessingId] = useState<string | null>(null)
     const supabaseRef = useRef(createClient())
 
-    useEffect(() => {
+    useRestaurantTable(restaurantId, 'orders', async (payload) => {
         const supabase = supabaseRef.current
-        const channel = supabase
-            .channel(`cashier-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                async (payload) => {
-                    const { data } = await supabase
-                        .from('orders')
-                        .select(`id, status, total_amount, placed_at, session_id, sessions ( id, tables ( label ) )`)
-                        .eq('id', payload.new.id)
-                        .single()
-                    if (data) setActive(prev => [...prev, data as unknown as ActiveOrder])
+        if (payload.eventType === 'INSERT') {
+            const { data } = await supabase
+                .from('orders')
+                .select(`id, status, total_amount, placed_at, session_id, sessions ( id, tables ( label ) )`)
+                .eq('id', payload.new.id)
+                .single()
+            if (data) setActive(prev => [...prev, data as unknown as ActiveOrder])
+        } else if (payload.eventType === 'UPDATE') {
+            const { id, status, payment_status } = payload.new
+            if (status === 'delivered' && payment_status === 'unpaid') {
+                // Fetch full record to show in unpaid list
+                const { data } = await supabase
+                    .from('orders')
+                    .select(`id, total_amount, delivered_at, payment_status, payment_method, session_id, sessions ( id, tables ( label ) ), order_items ( quantity, menu_items ( name ) )`)
+                    .eq('id', id)
+                    .single()
+                if (data) {
+                    setUnpaid(prev => [...prev, data as unknown as UnpaidOrder])
                 }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                async (payload) => {
-                    const { id, status, payment_status } = payload.new
-                    if (status === 'delivered' && payment_status === 'unpaid') {
-                        // Fetch full record to show in unpaid list
-                        const { data } = await supabase
-                            .from('orders')
-                            .select(`id, total_amount, delivered_at, payment_status, payment_method, session_id, sessions ( id, tables ( label ) ), order_items ( quantity, menu_items ( name ) )`)
-                            .eq('id', id)
-                            .single()
-                        if (data) {
-                            setUnpaid(prev => [...prev, data as unknown as UnpaidOrder])
-                        }
-                        setActive(prev => prev.filter(o => o.id !== id))
-                    } else if (payment_status === 'paid' || status === 'cancelled') {
-                        setUnpaid(prev => prev.filter(o => o.id !== id))
-                        setActive(prev => prev.filter(o => o.id !== id))
-                    } else {
-                        setActive(prev => prev.map(o => o.id === id ? { ...o, status, total_amount: payload.new.total_amount } : o))
-                    }
-                }
-            )
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+                setActive(prev => prev.filter(o => o.id !== id))
+            } else if (payment_status === 'paid' || status === 'cancelled') {
+                setUnpaid(prev => prev.filter(o => o.id !== id))
+                setActive(prev => prev.filter(o => o.id !== id))
+            } else {
+                setActive(prev => prev.map(o => o.id === id ? { ...o, status, total_amount: payload.new.total_amount } : o))
+            }
+        }
+    })
 
     const handleCashPay = async (orderId: string) => {
         setProcessingId(orderId)

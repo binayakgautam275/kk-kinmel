@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCartStore, getCartItemKey } from '@/lib/stores/cart'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
 import { formatCurrency } from '@/lib/utils'
@@ -47,6 +47,14 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
 
     const [showModifiers, setShowModifiers] = useState(false)
     const [selectedMods, setSelectedMods] = useState<Record<string, string[]>>({})
+
+    // Close the modifier sheet on Escape for keyboard/accessibility users.
+    useEffect(() => {
+        if (!showModifiers) return
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowModifiers(false) }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [showModifiers])
 
     const hasModifiers = (item.modifier_groups?.length ?? 0) > 0
     // The cart stores a separate line per (menuItemId + modifiers), so there can
@@ -232,13 +240,15 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
                     ) : (
                         <div className="flex items-center justify-between bg-gray-50 rounded-lg p-0.5 border border-gray-100">
                             <button onClick={handleRemove}
-                                    className="w-8 h-8 flex items-center justify-center rounded-md bg-white shadow-sm text-gray-600 active:scale-95 transition-all hover:bg-gray-50">
-                                <Minus size={13} />
+                                    aria-label={`Remove one ${displayName}`}
+                                    className="w-11 h-11 flex items-center justify-center rounded-md bg-white shadow-sm text-gray-600 active:scale-95 transition-all hover:bg-gray-50">
+                                <Minus size={15} />
                             </button>
                             <span className="font-bold text-sm text-gray-900 w-6 text-center tabular-nums">{quantity}</span>
                             <button onClick={handleAdd}
-                                    className="w-8 h-8 flex items-center justify-center rounded-md bg-[var(--color-primary)] text-white active:scale-95 transition-all hover:opacity-90">
-                                <Plus size={13} />
+                                    aria-label={`Add one ${displayName}`}
+                                    className="w-11 h-11 flex items-center justify-center rounded-md bg-[var(--color-primary)] text-white active:scale-95 transition-all hover:opacity-90">
+                                <Plus size={15} />
                             </button>
                         </div>
                     )}
@@ -250,7 +260,8 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
         {showModifiers && item.modifier_groups && (
             <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
                  onClick={(e) => { if (e.target === e.currentTarget) setShowModifiers(false) }}>
-                <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-up sm:animate-scale-in">
+                <div role="dialog" aria-modal="true" aria-label={`Customise ${displayName}`}
+                     className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl max-h-[90vh] flex flex-col shadow-2xl animate-fade-up sm:animate-scale-in">
                     <div className="flex justify-center pt-3 pb-1 sm:hidden">
                         <div className="w-10 h-1 bg-gray-200 rounded-full" />
                     </div>
@@ -261,8 +272,9 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
                             <p className="text-xs text-gray-400 mt-0.5">Customise your order</p>
                         </div>
                         <button onClick={() => setShowModifiers(false)}
-                                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition shrink-0">
-                            <X size={15} />
+                                aria-label="Close"
+                                className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition shrink-0">
+                            <X size={17} />
                         </button>
                     </div>
 

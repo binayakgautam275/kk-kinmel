@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { markCashPaid } from '@/app/(staff)/waiter/order-actions'
 import { Banknote, CheckCircle, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
@@ -24,33 +24,21 @@ export default function CashPaymentFeed({
 }) {
     const [orders, setOrders] = useState<UnpaidOrder[]>(initialOrders)
     const [processingId, setProcessingId] = useState<string | null>(null)
-    const supabaseRef = useRef(createClient())
 
     // Remove from local list when an order gets paid via any path (realtime)
-    useEffect(() => {
-        const supabase = supabaseRef.current
-        const channel = supabase
-            .channel(`cash-payment-feed-${restaurantId}`)
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'orders',
-                filter: `restaurant_id=eq.${restaurantId}`,
-            }, (payload) => {
-                if (payload.new.payment_status === 'paid') {
-                    setOrders((prev) => prev.filter((o) => o.id !== payload.new.id))
-                }
-                // Also pick up newly delivered+unpaid orders
-                if (payload.new.status === 'delivered' && payload.new.payment_status === 'unpaid') {
-                    setOrders((prev) => {
-                        if (prev.some(o => o.id === payload.new.id)) return prev
-                        return [...prev, payload.new as unknown as UnpaidOrder]
-                    })
-                }
+    useRestaurantTable(restaurantId, 'orders', (payload) => {
+        if (payload.eventType !== 'UPDATE') return
+        if (payload.new.payment_status === 'paid') {
+            setOrders((prev) => prev.filter((o) => o.id !== payload.new.id))
+        }
+        // Also pick up newly delivered+unpaid orders
+        if (payload.new.status === 'delivered' && payload.new.payment_status === 'unpaid') {
+            setOrders((prev) => {
+                if (prev.some(o => o.id === payload.new.id)) return prev
+                return [...prev, payload.new as unknown as UnpaidOrder]
             })
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+        }
+    })
 
     const handleCashPaid = async (orderId: string) => {
         setProcessingId(orderId)

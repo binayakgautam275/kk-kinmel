@@ -14,6 +14,11 @@ export async function createBillSplit(
     splitType: SplitType,
     splitCount: number
 ): Promise<SplitBillResult> {
+    // Bound splitCount to prevent abuse (e.g. inserting a huge number of rows).
+    if (splitType === 'even' && (!Number.isInteger(splitCount) || splitCount < 1 || splitCount > 50)) {
+        return { error: 'Invalid split count.' }
+    }
+
     const supabase = await createAdminClient()
 
     // Resolve session_token → session UUID (also accepts UUID directly)
@@ -137,9 +142,48 @@ export async function createBillSplit(
 }
 
 export async function payBillSplitItem(
-    splitItemId: string
+    splitItemId: string,
+    sessionToken: string
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createAdminClient()
+
+    // Authorization: this server action runs with the RLS-bypassing admin client and
+    // marks a bill as paid. The caller must prove they hold the active session_token
+    // for the session that owns this split item — otherwise anyone could mark any
+    // bill item paid (payment fraud). Walk bill_split_item → bill_split → session
+    // and require the session_token to match an active session.
+    if (!sessionToken) {
+        return { success: false, error: 'Not authorized for this bill.' }
+    }
+
+    const { data: item } = await supabase
+        .from('bill_split_items')
+        .select('id, bill_split_id')
+        .eq('id', splitItemId)
+        .maybeSingle()
+    if (!item) {
+        return { success: false, error: 'Not authorized for this bill.' }
+    }
+
+    const { data: split } = await supabase
+        .from('bill_splits')
+        .select('session_id')
+        .eq('id', item.bill_split_id)
+        .maybeSingle()
+    if (!split) {
+        return { success: false, error: 'Not authorized for this bill.' }
+    }
+
+    const { data: session } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('id', split.session_id)
+        .eq('session_token', sessionToken)
+        .eq('status', 'active')
+        .maybeSingle()
+    if (!session) {
+        return { success: false, error: 'Not authorized for this bill.' }
+    }
 
     const { error } = await supabase
         .from('bill_split_items')

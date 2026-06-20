@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { createClient } from '@/lib/supabase/client'
 import { acknowledgeServiceRequest, completeServiceRequest } from '@/app/api/service-requests/actions'
 import { Bell, Droplets, Receipt, Sparkles, MessageCircle, LogIn } from 'lucide-react'
@@ -59,57 +60,46 @@ export default function ServiceRequestFeed({
     const [openingSession, setOpeningSession] = useState<string | null>(null)
     const supabaseRef = useRef(createClient())
 
-    useEffect(() => {
+    useRestaurantTable(restaurantId, 'service_requests', async (payload) => {
         const supabase = supabaseRef.current
-        const channel = supabase
-            .channel(`service-requests-${restaurantId}`)
-            .on('postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'service_requests', filter: `restaurant_id=eq.${restaurantId}` },
-                async (payload) => {
-                    const { data } = await supabase
-                        .from('service_requests')
-                        .select('*, sessions ( tables ( label ) ), direct_table:tables ( label )')
-                        .eq('id', payload.new.id)
-                        .single()
-                    if (data) {
-                        const req = data as unknown as ServiceRequestWithTable
-                        setRequests((prev) => [req, ...prev])
-                        playServiceRequest().catch(() => {})
-                        
-                        if (req.request_type === 'request_bill') {
-                            playVoice('waiter_bill_request')
-                        } else {
-                            playVoice('waiter_service_ring')
-                        }
-                        
-                        const tableLabel = getTableLabel(req)
-                        const label = LABEL_MAP[req.request_type as ServiceRequestType] || 'Service Request'
-                        const isOpenSession = req.request_type === 'open_session'
-                        toast.custom((t) => (
-                            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-gray-900 text-white shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 ${isOpenSession ? 'border border-violet-500/40' : 'border border-amber-500/30'}`}>
-                                <span className="text-xl mt-0.5">{isOpenSession ? '🪑' : '🔔'}</span>
-                                <div>
-                                    <p className={`font-bold text-sm ${isOpenSession ? 'text-violet-400' : 'text-amber-400'}`}>{label}</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">Table {tableLabel}{req.message ? ` — ${req.message}` : ''}</p>
-                                </div>
-                            </div>
-                        ), { duration: 7000, position: 'top-right' })
-                    }
+        if (payload.eventType === 'INSERT') {
+            const { data } = await supabase
+                .from('service_requests')
+                .select('*, sessions ( tables ( label ) ), direct_table:tables ( label )')
+                .eq('id', payload.new.id)
+                .single()
+            if (data) {
+                const req = data as unknown as ServiceRequestWithTable
+                setRequests((prev) => [req, ...prev])
+                playServiceRequest().catch(() => {})
+
+                if (req.request_type === 'request_bill') {
+                    playVoice('waiter_bill_request')
+                } else {
+                    playVoice('waiter_service_ring')
                 }
+
+                const tableLabel = getTableLabel(req)
+                const label = LABEL_MAP[req.request_type as ServiceRequestType] || 'Service Request'
+                const isOpenSession = req.request_type === 'open_session'
+                toast.custom((t) => (
+                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-gray-900 text-white shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 ${isOpenSession ? 'border border-violet-500/40' : 'border border-amber-500/30'}`}>
+                        <span className="text-xl mt-0.5">{isOpenSession ? '🪑' : '🔔'}</span>
+                        <div>
+                            <p className={`font-bold text-sm ${isOpenSession ? 'text-violet-400' : 'text-amber-400'}`}>{label}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">Table {tableLabel}{req.message ? ` — ${req.message}` : ''}</p>
+                        </div>
+                    </div>
+                ), { duration: 7000, position: 'top-right' })
+            }
+        } else if (payload.eventType === 'UPDATE') {
+            setRequests((prev) =>
+                prev
+                    .map((r) => (r.id === payload.new.id ? { ...r, ...payload.new } : r))
+                    .filter((r) => r.status !== 'completed' && r.status !== 'cancelled')
             )
-            .on('postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'service_requests', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    setRequests((prev) =>
-                        prev
-                            .map((r) => (r.id === payload.new.id ? { ...r, ...payload.new } : r))
-                            .filter((r) => r.status !== 'completed' && r.status !== 'cancelled')
-                    )
-                }
-            )
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+        }
+    })
 
     const handleAcknowledge = async (id: string) => {
         setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'acknowledged' as const } : r)))

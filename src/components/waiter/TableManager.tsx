@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState, useEffect } from 'react'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { openSession, closeSession, setTableStatus } from '@/app/(staff)/waiter/actions'
 import { Users, QrCode, PowerOff, Power, Sparkles, CalendarClock, UtensilsCrossed } from 'lucide-react'
 import type { Table, Session } from '@/types/database'
@@ -32,7 +32,6 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
     const [tables, setTables] = useState<TableWithSession[]>(initialTables)
     const [selectedTable, setSelectedTable] = useState<TableWithSession | null>(null)
     const [isProcessing, setIsProcessing] = useState(false)
-    const supabaseRef = useRef(createClient())
     const { confirm } = useConfirmStore()
 
     // Track order statuses per order ID → { session_id, status }
@@ -46,51 +45,39 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
     const [baseUrl, setBaseUrl] = useState(appUrl)
     useEffect(() => { setBaseUrl(window.location.origin) }, [])
 
-    useEffect(() => {
-        const supabase = supabaseRef.current
-        const channel = supabase
-            .channel(`waiter-sessions-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const { id, session_id, status } = payload.new
-                    setOrderStatuses(prev => ({ ...prev, [id]: { session_id, status } }))
-                }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const { id, session_id, status } = payload.new
-                    if (status === 'delivered' || status === 'cancelled') {
-                        setOrderStatuses(prev => { const n = { ...prev }; delete n[id]; return n })
-                    } else {
-                        setOrderStatuses(prev => ({ ...prev, [id]: { session_id, status } }))
-                    }
-                }
-            )
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sessions', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const s = payload.new as Session
-                    setTables(prev => prev.map(t => t.id === s.table_id ? { ...t, activeSession: s } : t))
-                    setSelectedTable(prev => prev?.id === s.table_id ? { ...prev, activeSession: s } : prev)
-                }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const s = payload.new as Session
-                    const isClosed = s.status === 'closed' || s.status === 'expired'
-                    setTables(prev => prev.map(t => t.activeSession?.id === s.id ? { ...t, activeSession: isClosed ? null : s } : t))
-                    setSelectedTable(prev => prev?.activeSession?.id === s.id ? { ...prev, activeSession: isClosed ? null : s } : prev)
-                }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tables', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const u = payload.new as TableWithSession
-                    setTables(prev => prev.map(t => t.id === u.id ? { ...t, table_status: u.table_status } : t))
-                    setSelectedTable(prev => prev?.id === u.id ? { ...prev, table_status: u.table_status } : prev)
-                }
-            )
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+    useRestaurantTable(restaurantId, 'orders', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            const { id, session_id, status } = payload.new
+            setOrderStatuses(prev => ({ ...prev, [id]: { session_id, status } }))
+        } else if (payload.eventType === 'UPDATE') {
+            const { id, session_id, status } = payload.new
+            if (status === 'delivered' || status === 'cancelled') {
+                setOrderStatuses(prev => { const n = { ...prev }; delete n[id]; return n })
+            } else {
+                setOrderStatuses(prev => ({ ...prev, [id]: { session_id, status } }))
+            }
+        }
+    })
+
+    useRestaurantTable(restaurantId, 'sessions', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            const s = payload.new as Session
+            setTables(prev => prev.map(t => t.id === s.table_id ? { ...t, activeSession: s } : t))
+            setSelectedTable(prev => prev?.id === s.table_id ? { ...prev, activeSession: s } : prev)
+        } else if (payload.eventType === 'UPDATE') {
+            const s = payload.new as Session
+            const isClosed = s.status === 'closed' || s.status === 'expired'
+            setTables(prev => prev.map(t => t.activeSession?.id === s.id ? { ...t, activeSession: isClosed ? null : s } : t))
+            setSelectedTable(prev => prev?.activeSession?.id === s.id ? { ...prev, activeSession: isClosed ? null : s } : prev)
+        }
+    })
+
+    useRestaurantTable(restaurantId, 'tables', (payload) => {
+        if (payload.eventType !== 'UPDATE') return
+        const u = payload.new as TableWithSession
+        setTables(prev => prev.map(t => t.id === u.id ? { ...t, table_status: u.table_status } : t))
+        setSelectedTable(prev => prev?.id === u.id ? { ...prev, table_status: u.table_status } : prev)
+    })
 
     const handleOpenSession = async (tableId: string) => {
         setIsProcessing(true)

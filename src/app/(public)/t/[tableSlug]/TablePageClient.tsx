@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import HomepageGate from '@/components/customer/HomepageGate'
 import type { MenuItem, MenuCategory } from '@/types/database'
@@ -12,7 +12,6 @@ import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
 import { UtensilsCrossed, RefreshCw, Bell, Check, Loader2, Home } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { useCartStore } from '@/lib/stores/cart'
 import { requestSessionOpen } from '@/app/api/service-requests/actions'
 
@@ -59,7 +58,6 @@ export default function TablePageClient({
     const [showMenu, setShowMenu] = useState(true)
     const [requestSent, setRequestSent] = useState(false)
     const [requestLoading, setRequestLoading] = useState(false)
-    const supabaseRef = useRef(createClient())
 
     // Keep the Zustand cart store in sync with the live session so checkout
     // always sees a non-null sessionId regardless of how the session arrived
@@ -80,70 +78,38 @@ export default function TablePageClient({
         setLiveSessionUUID(uuid)
     }
 
-    // Direct DB fetch for the active session on this table (used by both the
-    // one-shot Realtime race-guard and the 3-second polling fallback).
+    // Fetch the active session for this table via a qr_token-gated server endpoint.
+    // Customers can no longer read `sessions` directly (that policy exposed every
+    // session_token globally) — the endpoint only returns this table's session and
+    // requires the table's qr_token as proof of access.
     const fetchActiveSession = async () => {
-        const { data } = await supabaseRef.current
-            .from('sessions')
-            .select('id, session_token')
-            .eq('table_id', tableData.id)
-            .eq('status', 'active')
-            .gt('expires_at', new Date().toISOString())
-            .order('opened_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-        if (data?.session_token) {
-            applySession(data.session_token, data.id)
-            return true
+        try {
+            const res = await fetch(
+                `/api/session/active?table_id=${encodeURIComponent(tableData.id)}&qr_token=${encodeURIComponent(tableData.qr_token)}`,
+                { cache: 'no-store' },
+            )
+            if (!res.ok) return false
+            const { session } = await res.json()
+            if (session?.session_token) {
+                applySession(session.session_token, session.id)
+                return true
+            }
+        } catch {
+            // Transient network error — the polling interval will retry.
         }
         return false
     }
 
-    // Polling fallback — runs every 3 s when no session is detected.
-    // This catches the case where Supabase Realtime fails to deliver the INSERT
-    // event (WebSocket not yet established, publication lag, etc.).
+    // Polling — runs every 3 s while no session is detected, so the page enables
+    // ordering within ~3 s of a waiter opening a session (no refresh needed). This
+    // replaces the former anon Realtime subscription on `sessions`, which required
+    // the global read policy we removed for security.
     useEffect(() => {
         if (hasSession) return
         // Immediate check first, then poll
         fetchActiveSession()
         const timer = setInterval(fetchActiveSession, 3000)
         return () => clearInterval(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tableData.id, hasSession])
-
-    // Subscribe to session INSERT events for this table so the customer page
-    // enables ordering the moment a waiter opens a session — no refresh needed.
-    //
-    // Race guard: subscribe() callback fires once the WebSocket handshake
-    // completes. At that point we do a one-shot DB fetch to catch any session
-    // opened in the gap between SSR render and WebSocket ready.
-    useEffect(() => {
-        if (hasSession) return
-        const supabase = supabaseRef.current
-
-        const channel = supabase
-            .channel(`table-session-watch-${tableData.id}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'sessions',
-                    filter: `table_id=eq.${tableData.id}`,
-                },
-                (payload) => {
-                    const s = payload.new as { status: string; session_token: string; id: string; expires_at: string }
-                    if (s.status === 'active' && s.session_token && new Date(s.expires_at) > new Date()) {
-                        applySession(s.session_token, s.id)
-                    }
-                }
-            )
-            .subscribe(async (status) => {
-                if (status !== 'SUBSCRIBED') return
-                // Catch sessions opened between SSR and WebSocket ready
-                await fetchActiveSession()
-            })
-        return () => { supabase.removeChannel(channel) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [tableData.id, hasSession])
 

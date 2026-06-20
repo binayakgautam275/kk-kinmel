@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { Clock, ShoppingBag, UtensilsCrossed } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
 
@@ -22,67 +22,45 @@ interface Props {
 
 export default function ActiveSessionsList({ initialEntries, tablesMap, restaurantId }: Props) {
     const [entries, setEntries] = useState<ActiveTableEntry[]>(initialEntries)
-    const supabaseRef = useRef(createClient())
 
-    useEffect(() => {
-        const supabase = supabaseRef.current
-
-        const sessionChannel = supabase
-            .channel(`active-sessions-list-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sessions', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const s = payload.new as { id: string; table_id: string; opened_at: string; status: string }
-                    if (s.status !== 'active') return
-                    const tableLabel = tablesMap[s.table_id] ?? '?'
-                    setEntries(prev => [
-                        { tableId: s.table_id, tableLabel, sessionId: s.id, openedAt: s.opened_at, orderCount: 0, totalAmount: 0 },
-                        ...prev,
-                    ])
-                }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const s = payload.new as { id: string; status: string }
-                    if (s.status === 'closed' || s.status === 'expired') {
-                        setEntries(prev => prev.filter(e => e.sessionId !== s.id))
-                    }
-                }
-            )
-            .subscribe()
-
-        const orderChannel = supabase
-            .channel(`active-sessions-orders-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const o = payload.new as { session_id: string; total_amount: number; status: string }
-                    if (!['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)) return
-                    setEntries(prev => prev.map(e =>
-                        e.sessionId === o.session_id
-                            ? { ...e, orderCount: e.orderCount + 1, totalAmount: e.totalAmount + Number(o.total_amount) }
-                            : e
-                    ))
-                }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const next = payload.new as { session_id: string; total_amount: number; status: string }
-                    const prev = payload.old as { status: string; total_amount: number }
-                    if (['delivered', 'cancelled'].includes(next.status) && !['delivered', 'cancelled'].includes(prev.status)) {
-                        setEntries(es => es.map(e =>
-                            e.sessionId === next.session_id
-                                ? { ...e, orderCount: Math.max(0, e.orderCount - 1), totalAmount: Math.max(0, e.totalAmount - Number(prev.total_amount)) }
-                                : e
-                        ))
-                    }
-                }
-            )
-            .subscribe()
-
-        return () => {
-            supabase.removeChannel(sessionChannel)
-            supabase.removeChannel(orderChannel)
+    useRestaurantTable(restaurantId, 'sessions', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            const s = payload.new as { id: string; table_id: string; opened_at: string; status: string }
+            if (s.status !== 'active') return
+            const tableLabel = tablesMap[s.table_id] ?? '?'
+            setEntries(prev => [
+                { tableId: s.table_id, tableLabel, sessionId: s.id, openedAt: s.opened_at, orderCount: 0, totalAmount: 0 },
+                ...prev,
+            ])
+        } else if (payload.eventType === 'UPDATE') {
+            const s = payload.new as { id: string; status: string }
+            if (s.status === 'closed' || s.status === 'expired') {
+                setEntries(prev => prev.filter(e => e.sessionId !== s.id))
+            }
         }
-    }, [restaurantId, tablesMap])
+    })
+
+    useRestaurantTable(restaurantId, 'orders', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            const o = payload.new as { session_id: string; total_amount: number; status: string }
+            if (!['pending', 'confirmed', 'preparing', 'ready'].includes(o.status)) return
+            setEntries(prev => prev.map(e =>
+                e.sessionId === o.session_id
+                    ? { ...e, orderCount: e.orderCount + 1, totalAmount: e.totalAmount + Number(o.total_amount) }
+                    : e
+            ))
+        } else if (payload.eventType === 'UPDATE') {
+            const next = payload.new as { session_id: string; total_amount: number; status: string }
+            const prev = payload.old as { status: string; total_amount: number }
+            if (['delivered', 'cancelled'].includes(next.status) && !['delivered', 'cancelled'].includes(prev.status)) {
+                setEntries(es => es.map(e =>
+                    e.sessionId === next.session_id
+                        ? { ...e, orderCount: Math.max(0, e.orderCount - 1), totalAmount: Math.max(0, e.totalAmount - Number(prev.total_amount)) }
+                        : e
+                ))
+            }
+        }
+    })
 
     if (entries.length === 0) return null
 

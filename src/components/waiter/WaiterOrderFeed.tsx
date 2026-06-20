@@ -3,6 +3,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { markOrderDelivered, markDeliveredAndCashPaid } from '@/app/(staff)/waiter/order-actions'
 import { playOrderReady, playNewOrder } from '@/lib/audio'
 import { playVoice } from '@/lib/voice'
@@ -43,78 +44,69 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
     useEffect(() => { const i = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(i) }, [])
     useEffect(() => { ordersRef.current = orders }, [orders])
 
-    useEffect(() => {
+    useRestaurantTable(restaurantId, 'orders', async (payload) => {
         const supabase = supabaseRef.current
-        const channel = supabase
-            .channel(`waiter-orders-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                async (payload) => {
-                    const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
-                    if (data) {
-                        const order = data as unknown as WaiterOrder
-                        // Skip replayed/duplicate INSERTs (reconnect, multiple tabs,
-                        // or a row already present in initialOrders).
-                        if (ordersRef.current.some(o => o.id === order.id)) return
-                        setOrders(prev => prev.some(o => o.id === order.id) ? prev : [order, ...prev])
-                        playNewOrder().catch(() => {})
-                        playVoice('waiter_new_order')
-                        navigator.vibrate?.(300)
-                        const tbl = order.sessions?.tables?.label
-                        toast.custom((t) => (
-                            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-xl rounded-xl px-4 py-3 flex items-start gap-3 border border-amber-200`}>
-                                <span className="text-xl mt-0.5">🛎️</span>
-                                <div>
-                                    <p className="font-bold text-sm text-amber-700">New Order</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
-                                </div>
-                            </div>
-                        ), { duration: 5000, position: 'top-right' })
-                    }
-                }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                async (payload) => {
-                    const newStatus = payload.new.status as OrderStatus
-                    const isTerminal = newStatus === 'delivered' || newStatus === 'cancelled'
+        if (payload.eventType === 'INSERT') {
+            const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
+            if (data) {
+                const order = data as unknown as WaiterOrder
+                // Skip replayed/duplicate INSERTs (reconnect, multiple tabs,
+                // or a row already present in initialOrders).
+                if (ordersRef.current.some(o => o.id === order.id)) return
+                setOrders(prev => prev.some(o => o.id === order.id) ? prev : [order, ...prev])
+                playNewOrder().catch(() => {})
+                playVoice('waiter_new_order')
+                navigator.vibrate?.(300)
+                const tbl = order.sessions?.tables?.label
+                toast.custom((t) => (
+                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-xl rounded-xl px-4 py-3 flex items-start gap-3 border border-amber-200`}>
+                        <span className="text-xl mt-0.5">🛎️</span>
+                        <div>
+                            <p className="font-bold text-sm text-amber-700">New Order</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
+                        </div>
+                    </div>
+                ), { duration: 5000, position: 'top-right' })
+            }
+        } else if (payload.eventType === 'UPDATE') {
+            const newStatus = payload.new.status as OrderStatus
+            const isTerminal = newStatus === 'delivered' || newStatus === 'cancelled'
 
-                    // The UPDATE may be for an order we never received (created before
-                    // mount, or a missed INSERT). If it's still active, fetch + insert
-                    // it so a ready order can't silently bypass the feed.
-                    let fetched: WaiterOrder | null = null
-                    if (!isTerminal && !ordersRef.current.some(o => o.id === payload.new.id)) {
-                        const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
-                        if (data) {
-                            fetched = data as unknown as WaiterOrder
-                            setOrders(prev => prev.some(o => o.id === fetched!.id) ? prev : [fetched!, ...prev])
-                        }
-                    }
-
-                    if (newStatus === 'ready') {
-                        playOrderReady().catch(() => {})
-                        playVoice('waiter_order_ready')
-                        navigator.vibrate?.([200, 100, 200])
-                        const order = fetched ?? ordersRef.current.find(o => o.id === payload.new.id)
-                        const tbl = order?.sessions?.tables?.label
-                        toast.custom((t) => (
-                            <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-xl rounded-xl px-4 py-3 flex items-start gap-3 border-2 border-emerald-300`}>
-                                <span className="text-xl mt-0.5">✅</span>
-                                <div>
-                                    <p className="font-bold text-sm text-emerald-700">Ready for Pickup!</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(payload.new.total_amount)}</p>
-                                </div>
-                            </div>
-                        ), { duration: 8000, position: 'top-right' })
-                    }
-                    setOrders(prev =>
-                        prev
-                            .map(o => o.id === payload.new.id ? { ...o, status: newStatus, payment_status: payload.new.payment_status } : o)
-                            .filter(o => !['delivered', 'cancelled'].includes(o.status))
-                    )
+            // The UPDATE may be for an order we never received (created before
+            // mount, or a missed INSERT). If it's still active, fetch + insert
+            // it so a ready order can't silently bypass the feed.
+            let fetched: WaiterOrder | null = null
+            if (!isTerminal && !ordersRef.current.some(o => o.id === payload.new.id)) {
+                const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()
+                if (data) {
+                    fetched = data as unknown as WaiterOrder
+                    setOrders(prev => prev.some(o => o.id === fetched!.id) ? prev : [fetched!, ...prev])
                 }
+            }
+
+            if (newStatus === 'ready') {
+                playOrderReady().catch(() => {})
+                playVoice('waiter_order_ready')
+                navigator.vibrate?.([200, 100, 200])
+                const order = fetched ?? ordersRef.current.find(o => o.id === payload.new.id)
+                const tbl = order?.sessions?.tables?.label
+                toast.custom((t) => (
+                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full bg-white shadow-xl rounded-xl px-4 py-3 flex items-start gap-3 border-2 border-emerald-300`}>
+                        <span className="text-xl mt-0.5">✅</span>
+                        <div>
+                            <p className="font-bold text-sm text-emerald-700">Ready for Pickup!</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(payload.new.total_amount)}</p>
+                        </div>
+                    </div>
+                ), { duration: 8000, position: 'top-right' })
+            }
+            setOrders(prev =>
+                prev
+                    .map(o => o.id === payload.new.id ? { ...o, status: newStatus, payment_status: payload.new.payment_status } : o)
+                    .filter(o => !['delivered', 'cancelled'].includes(o.status))
             )
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+        }
+    })
 
     const handleMarkDelivered = async (orderId: string) => {
         setProcessingId(orderId)

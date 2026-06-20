@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { completeTakeoutOrder } from '@/app/api/takeout/actions'
 import { formatCurrency } from '@/lib/utils'
 import type { TakeoutOrder } from '@/types/database'
@@ -18,48 +18,30 @@ export default function WaiterTakeoutFeed({ initialOrders, restaurantId }: Props
     const [loading, setLoading] = useState<string | null>(null)
 
     // Real-time subscription for takeout orders that are ready for pickup
-    useEffect(() => {
-        const supabase = createClient()
-
-        const channel = supabase
-            .channel(`waiter-takeout-feed-${restaurantId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'takeout_orders',
-                    filter: `restaurant_id=eq.${restaurantId}`,
-                },
-                (payload) => {
-                    if (payload.eventType === 'INSERT') {
-                        const newOrder = payload.new as TakeoutOrder
-                        if (newOrder.status === 'ready_for_pickup') {
-                            setOrders((prev) => [newOrder, ...prev])
-                            playOrderReady().catch(() => {})
-                        }
-                    } else if (payload.eventType === 'UPDATE') {
-                        const updated = payload.new as TakeoutOrder
-                        if (updated.status === 'ready_for_pickup') {
-                            setOrders((prev) => {
-                                const exists = prev.find((o) => o.id === updated.id)
-                                if (exists) {
-                                    return prev.map((o) => (o.id === updated.id ? updated : o))
-                                }
-                                playOrderReady().catch(() => {})
-                                return [updated, ...prev]
-                            })
-                        } else {
-                            // Order moved past ready — remove from feed
-                            setOrders((prev) => prev.filter((o) => o.id !== updated.id))
-                        }
+    useRestaurantTable(restaurantId, 'takeout_orders', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            const newOrder = payload.new as TakeoutOrder
+            if (newOrder.status === 'ready_for_pickup') {
+                setOrders((prev) => [newOrder, ...prev])
+                playOrderReady().catch(() => {})
+            }
+        } else if (payload.eventType === 'UPDATE') {
+            const updated = payload.new as TakeoutOrder
+            if (updated.status === 'ready_for_pickup') {
+                setOrders((prev) => {
+                    const exists = prev.find((o) => o.id === updated.id)
+                    if (exists) {
+                        return prev.map((o) => (o.id === updated.id ? updated : o))
                     }
-                }
-            )
-            .subscribe()
-
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+                    playOrderReady().catch(() => {})
+                    return [updated, ...prev]
+                })
+            } else {
+                // Order moved past ready — remove from feed
+                setOrders((prev) => prev.filter((o) => o.id !== updated.id))
+            }
+        }
+    })
 
     async function handleComplete(orderId: string) {
         setLoading(orderId)

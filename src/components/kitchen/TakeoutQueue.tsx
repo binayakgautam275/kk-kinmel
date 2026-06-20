@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { updateTakeoutStatus } from '@/app/api/takeout/actions'
 import { formatCurrency } from '@/lib/utils'
 import type { TakeoutOrder } from '@/types/database'
@@ -65,35 +65,17 @@ export default function TakeoutQueue({ restaurantId, initialOrders }: TakeoutQue
     const [orders, setOrders] = useState<TakeoutOrder[]>(initialOrders)
     const [loading, setLoading] = useState<string | null>(null)
 
-    // Real-time subscription
-    useEffect(() => {
-        const supabase = createClient()
-
-        const channel = supabase
-            .channel(`takeout-queue-${restaurantId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'takeout_orders',
-                    filter: `restaurant_id=eq.${restaurantId}`,
-                },
-                (payload) => {
-                    if (payload.eventType === 'INSERT') {
-                        setOrders((prev) => [payload.new as TakeoutOrder, ...prev])
-                        playKitchenPing() // Audio alert for new takeout order
-                    } else if (payload.eventType === 'UPDATE') {
-                        setOrders((prev) =>
-                            prev.map((o) => (o.id === payload.new.id ? (payload.new as TakeoutOrder) : o))
-                        )
-                    }
-                }
+    // Real-time subscription via the shared per-restaurant channel.
+    useRestaurantTable(restaurantId, 'takeout_orders', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            setOrders((prev) => [payload.new as TakeoutOrder, ...prev])
+            playKitchenPing() // Audio alert for new takeout order
+        } else if (payload.eventType === 'UPDATE') {
+            setOrders((prev) =>
+                prev.map((o) => (o.id === payload.new.id ? (payload.new as TakeoutOrder) : o))
             )
-            .subscribe()
-
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+        }
+    })
 
     async function handleStatusChange(orderId: string, newStatus: string) {
         setLoading(orderId)

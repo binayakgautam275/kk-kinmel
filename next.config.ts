@@ -57,6 +57,11 @@ const withPWA = withPWAInit({
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   images: {
+    // Negotiate modern formats — AVIF/WebP are typically 30-50% smaller than the
+    // original JPEG/PNG. next/image already serves these responsively per `sizes`.
+    formats: ['image/avif', 'image/webp'],
+    // Optimized images are immutable per source URL; cache them at the edge for a day.
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: 'https',

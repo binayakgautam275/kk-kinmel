@@ -43,6 +43,8 @@ export async function addTableAction(restaurantId: string, label: string, capaci
     if (error) return { error: error.message }
 
     revalidatePath('/admin/tables')
+    // Keep the public ISR landing page (/r/[slug]) in sync after a table change.
+    revalidatePath('/r/[restaurantSlug]', 'page')
     return { data }
 }
 
@@ -56,6 +58,7 @@ export async function updateTableAction(id: string, updates: Record<string, unkn
     if (error) return { error: error.message }
 
     revalidatePath('/admin/tables')
+    revalidatePath('/r/[restaurantSlug]', 'page')
     return { success: true }
 }
 
@@ -70,5 +73,6 @@ export async function deleteTableAction(id: string) {
     if (error) return { error: error.message }
 
     revalidatePath('/admin/tables')
+    revalidatePath('/r/[restaurantSlug]', 'page')
     return { success: true }
 }

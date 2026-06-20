@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { CheckCircle, XCircle, Clock, Smartphone, Loader2, DoorClosed } from 'lucide-react'
 import { verifyPayment, verifyPaymentAndCloseTable } from './payment-verification-actions'
 import { timeAgo, formatCurrency } from '@/lib/utils'
@@ -39,25 +39,14 @@ export default function PaymentVerificationFeed({
 }) {
     const [claims, setClaims] = useState<PaymentClaim[]>(initialClaims)
     const [loading, setLoading] = useState<string | null>(null)
-    const supabaseRef = useRef(createClient())
 
-    useEffect(() => {
-        const supabase = supabaseRef.current
-        const channel = supabase
-            .channel(`payment-verifications-${restaurantId}`)
-            .on('postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'payment_verifications', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => { setClaims((prev) => [payload.new as PaymentClaim, ...prev]) }
-            )
-            .on('postgres_changes',
-                { event: 'UPDATE', schema: 'public', table: 'payment_verifications', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    setClaims((prev) => prev.map((c) => (c.id === (payload.new as PaymentClaim).id ? (payload.new as PaymentClaim) : c)))
-                }
-            )
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+    useRestaurantTable(restaurantId, 'payment_verifications', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            setClaims((prev) => [payload.new as PaymentClaim, ...prev])
+        } else if (payload.eventType === 'UPDATE') {
+            setClaims((prev) => prev.map((c) => (c.id === (payload.new as PaymentClaim).id ? (payload.new as PaymentClaim) : c)))
+        }
+    })
 
     const handleVerify = async (claimId: string, action: 'verified' | 'rejected') => {
         setLoading(claimId)

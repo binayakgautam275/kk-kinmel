@@ -72,11 +72,15 @@ export async function submitPaymentClaim(formData: FormData): Promise<{ error?: 
 
     if (validScreenshot && validScreenshot.size > 0) {
         const ext = validScreenshot.name.split('.').pop()
-        const fileName = `payment-proofs/${validRestaurantId}/${Date.now()}.${ext}`
+        // Payment proofs go to a PRIVATE bucket. We store the storage path (not a
+        // public URL) in screenshot_url; /api/payment-proof signs a short-lived URL
+        // on demand after auth + tenant checks. This keeps proofs unreachable via a
+        // raw public URL even if the path leaks.
+        const filePath = `${validRestaurantId}/${Date.now()}.${ext}`
 
         const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('uploads')
-            .upload(fileName, validScreenshot, {
+            .from('payment-proofs')
+            .upload(filePath, validScreenshot, {
                 contentType: validScreenshot.type,
                 upsert: false,
             })
@@ -85,8 +89,7 @@ export async function submitPaymentClaim(formData: FormData): Promise<{ error?: 
             console.error('Screenshot upload failed:', uploadError)
             // Continue without screenshot — it's optional
         } else if (uploadData) {
-            const { data: { publicUrl } } = supabase.storage.from('uploads').getPublicUrl(fileName)
-            screenshotUrl = publicUrl
+            screenshotUrl = filePath
         }
     }
 

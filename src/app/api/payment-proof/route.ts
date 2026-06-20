@@ -5,10 +5,9 @@
  * Returns a short-lived signed URL so the underlying storage path is never
  * exposed directly to the browser.
  *
- * ⚠️  IMPORTANT — infrastructure step required for full security:
- *     Move the 'payment-proofs/' prefix to a PRIVATE Supabase storage bucket.
- *     Until then, the public URL still exists; this proxy adds an auth gate
- *     in front of it and is upgrade-ready when the bucket is made private.
+ * New uploads land in the PRIVATE `payment-proofs` bucket, so a raw public URL
+ * no longer exists — access requires passing the auth + tenant checks below.
+ * Legacy records (full public `uploads` URLs) remain supported for back-compat.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -52,25 +51,32 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'No screenshot found' }, { status: 404 })
     }
 
-    // Extract the storage path from the public URL
-    // Public URL format: https://<project>.supabase.co/storage/v1/object/public/uploads/<path>
-    const url = new URL(claim.screenshot_url)
-    const pathMatch = url.pathname.match(/\/object\/public\/uploads\/(.+)$/)
-    if (!pathMatch) {
-        // Fallback: redirect to the original URL if we can't parse the path
-        return NextResponse.redirect(claim.screenshot_url)
-    }
+    // New uploads store a bare storage path in the PRIVATE `payment-proofs` bucket.
+    // Legacy records store a full public URL in the `uploads` bucket — handle both.
+    let bucket: string
+    let storagePath: string
 
-    const storagePath = decodeURIComponent(pathMatch[1])
+    if (/^https?:\/\//i.test(claim.screenshot_url)) {
+        // Legacy: https://<project>.supabase.co/storage/v1/object/public/uploads/<path>
+        const url = new URL(claim.screenshot_url)
+        const pathMatch = url.pathname.match(/\/object\/public\/uploads\/(.+)$/)
+        if (!pathMatch) {
+            return NextResponse.redirect(claim.screenshot_url)
+        }
+        bucket = 'uploads'
+        storagePath = decodeURIComponent(pathMatch[1])
+    } else {
+        bucket = 'payment-proofs'
+        storagePath = claim.screenshot_url
+    }
 
     // Generate a short-lived signed URL
     const { data: signed, error } = await supabase.storage
-        .from('uploads')
+        .from(bucket)
         .createSignedUrl(storagePath, SIGNED_URL_EXPIRY)
 
     if (error || !signed?.signedUrl) {
-        // If signed URL fails (e.g. public bucket), fall back to original
-        return NextResponse.redirect(claim.screenshot_url)
+        return NextResponse.json({ error: 'No screenshot found' }, { status: 404 })
     }
 
     return NextResponse.redirect(signed.signedUrl)

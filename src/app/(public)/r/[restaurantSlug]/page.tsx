@@ -4,7 +4,17 @@ import RestaurantMainClient from './RestaurantMainClient'
 
 import type { Metadata } from 'next'
 
-export const dynamic = 'force-dynamic'
+// ISR: this public landing page (restaurant info + table/QR list) changes rarely.
+// Serve cached HTML and revalidate every 10 min as a safety net; table edits trigger
+// immediate on-demand revalidation from admin/tables/actions.ts.
+export const revalidate = 600
+
+// Slugs are tenant-defined and unbounded, so we prerender none at build time and let
+// each slug be generated + cached on first request (on-demand ISR). Without this,
+// the dynamic segment renders per-request and `revalidate` above has no effect.
+export function generateStaticParams() {
+    return []
+}
 
 export async function generateMetadata(props: {
     params: Promise<{ restaurantSlug: string }>

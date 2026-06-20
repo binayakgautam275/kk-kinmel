@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { Zap, Clock, CheckCircle2, Package } from 'lucide-react'
 
 interface Props {
@@ -23,44 +23,34 @@ export default function KitchenStats({
     const [preparing, setPreparing] = useState(initPreparing)
     const [ready, setReady] = useState(initReady)
     const [completed, setCompleted] = useState(initCompleted)
-    const supabaseRef = useRef(createClient())
 
-    useEffect(() => {
-        const supabase = supabaseRef.current
-        const channel = supabase
-            .channel(`kitchen-stats-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const s = payload.new.status as string
-                    if (s === 'pending' || s === 'confirmed') setQueued(n => n + 1)
-                    else if (s === 'preparing') setPreparing(n => n + 1)
-                    else if (s === 'ready') setReady(n => n + 1)
-                }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const prev = payload.old.status as string
-                    const next = payload.new.status as string
-                    if ((prev === 'pending' || prev === 'confirmed') && next === 'preparing') {
-                        setQueued(n => Math.max(0, n - 1)); setPreparing(n => n + 1)
-                    } else if (prev === 'preparing' && next === 'ready') {
-                        setPreparing(n => Math.max(0, n - 1)); setReady(n => n + 1)
-                    } else if ((prev === 'pending' || prev === 'confirmed') && next === 'ready') {
-                        setQueued(n => Math.max(0, n - 1)); setReady(n => n + 1)
-                    } else if (next === 'delivered') {
-                        setCompleted(n => n + 1)
-                        if (prev === 'preparing') setPreparing(n => Math.max(0, n - 1))
-                        else if (prev === 'ready') setReady(n => Math.max(0, n - 1))
-                    } else if (next === 'cancelled') {
-                        if (prev === 'pending' || prev === 'confirmed') setQueued(n => Math.max(0, n - 1))
-                        else if (prev === 'preparing') setPreparing(n => Math.max(0, n - 1))
-                        else if (prev === 'ready') setReady(n => Math.max(0, n - 1))
-                    }
-                }
-            )
-            .subscribe()
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+    // Live counters via the shared per-restaurant channel.
+    useRestaurantTable(restaurantId, 'orders', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            const s = payload.new.status as string
+            if (s === 'pending' || s === 'confirmed') setQueued(n => n + 1)
+            else if (s === 'preparing') setPreparing(n => n + 1)
+            else if (s === 'ready') setReady(n => n + 1)
+        } else if (payload.eventType === 'UPDATE') {
+            const prev = payload.old.status as string
+            const next = payload.new.status as string
+            if ((prev === 'pending' || prev === 'confirmed') && next === 'preparing') {
+                setQueued(n => Math.max(0, n - 1)); setPreparing(n => n + 1)
+            } else if (prev === 'preparing' && next === 'ready') {
+                setPreparing(n => Math.max(0, n - 1)); setReady(n => n + 1)
+            } else if ((prev === 'pending' || prev === 'confirmed') && next === 'ready') {
+                setQueued(n => Math.max(0, n - 1)); setReady(n => n + 1)
+            } else if (next === 'delivered') {
+                setCompleted(n => n + 1)
+                if (prev === 'preparing') setPreparing(n => Math.max(0, n - 1))
+                else if (prev === 'ready') setReady(n => Math.max(0, n - 1))
+            } else if (next === 'cancelled') {
+                if (prev === 'pending' || prev === 'confirmed') setQueued(n => Math.max(0, n - 1))
+                else if (prev === 'preparing') setPreparing(n => Math.max(0, n - 1))
+                else if (prev === 'ready') setReady(n => Math.max(0, n - 1))
+            }
+        }
+    })
 
     const stats = [
         { icon: Zap,         label: 'In Queue',   value: queued,    color: '#f59e0b', active: queued > 0 },

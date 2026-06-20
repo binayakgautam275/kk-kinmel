@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from 'react'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { Users, Package, Bell, ChefHat } from 'lucide-react'
 
 interface Props {
@@ -25,68 +25,44 @@ export default function FloorStats({
     const [ready, setReady] = useState(initReady)
     const [kitchen, setKitchen] = useState(initKitchen)
     const [pending, setPending] = useState(initPending)
-    const supabaseRef = useRef(createClient())
 
-    useEffect(() => {
-        const supabase = supabaseRef.current
-        const sessionChannel = supabase
-            .channel(`floor-stats-sessions-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sessions', filter: `restaurant_id=eq.${restaurantId}` },
-                () => setOccupied(n => n + 1)
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    if (payload.new.status === 'closed' || payload.new.status === 'expired') {
-                        setOccupied(n => Math.max(0, n - 1))
-                    }
-                }
-            )
-            .subscribe()
-
-        const orderChannel = supabase
-            .channel(`floor-stats-orders-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const s = payload.new.status as string
-                    if (s === 'ready') setReady(n => n + 1)
-                    else if (['pending', 'confirmed', 'preparing'].includes(s)) setKitchen(n => n + 1)
-                }
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    const prev = payload.old.status as string
-                    const next = payload.new.status as string
-                    if (prev !== 'ready' && next === 'ready') {
-                        setReady(n => n + 1)
-                        setKitchen(n => Math.max(0, n - 1))
-                    } else if (prev === 'ready' && next !== 'ready') {
-                        setReady(n => Math.max(0, n - 1))
-                    }
-                    if (['delivered', 'cancelled'].includes(next) && ['pending', 'confirmed', 'preparing'].includes(prev)) {
-                        setKitchen(n => Math.max(0, n - 1))
-                    }
-                }
-            )
-            .subscribe()
-
-        const srChannel = supabase
-            .channel(`floor-stats-sr-${restaurantId}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'service_requests', filter: `restaurant_id=eq.${restaurantId}` },
-                () => setPending(n => n + 1)
-            )
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'service_requests', filter: `restaurant_id=eq.${restaurantId}` },
-                (payload) => {
-                    if (payload.old.status === 'pending' && payload.new.status !== 'pending') setPending(n => Math.max(0, n - 1))
-                }
-            )
-            .subscribe()
-
-        return () => {
-            supabase.removeChannel(sessionChannel)
-            supabase.removeChannel(orderChannel)
-            supabase.removeChannel(srChannel)
+    useRestaurantTable(restaurantId, 'sessions', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            setOccupied(n => n + 1)
+        } else if (payload.eventType === 'UPDATE') {
+            if (payload.new.status === 'closed' || payload.new.status === 'expired') {
+                setOccupied(n => Math.max(0, n - 1))
+            }
         }
-    }, [restaurantId])
+    })
+
+    useRestaurantTable(restaurantId, 'orders', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            const s = payload.new.status as string
+            if (s === 'ready') setReady(n => n + 1)
+            else if (['pending', 'confirmed', 'preparing'].includes(s)) setKitchen(n => n + 1)
+        } else if (payload.eventType === 'UPDATE') {
+            const prev = payload.old.status as string
+            const next = payload.new.status as string
+            if (prev !== 'ready' && next === 'ready') {
+                setReady(n => n + 1)
+                setKitchen(n => Math.max(0, n - 1))
+            } else if (prev === 'ready' && next !== 'ready') {
+                setReady(n => Math.max(0, n - 1))
+            }
+            if (['delivered', 'cancelled'].includes(next) && ['pending', 'confirmed', 'preparing'].includes(prev)) {
+                setKitchen(n => Math.max(0, n - 1))
+            }
+        }
+    })
+
+    useRestaurantTable(restaurantId, 'service_requests', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            setPending(n => n + 1)
+        } else if (payload.eventType === 'UPDATE') {
+            if (payload.old.status === 'pending' && payload.new.status !== 'pending') setPending(n => Math.max(0, n - 1))
+        }
+    })
 
     const stats = [
         {

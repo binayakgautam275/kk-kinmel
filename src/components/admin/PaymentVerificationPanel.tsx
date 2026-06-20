@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/client'
+import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { CheckCircle, XCircle, Clock, Banknote, ScanLine, Loader2, ExternalLink } from 'lucide-react'
 import { verifyPayment, verifyPaymentAndCloseTable } from '@/components/waiter/payment-verification-actions'
 import { toast } from 'react-hot-toast'
@@ -51,39 +51,17 @@ export default function PaymentVerificationPanel({
     const [claims, setClaims] = useState<PaymentClaim[]>(initialClaims)
     const [loading, setLoading] = useState<string | null>(null)
     const [filter, setFilter] = useState<'pending' | 'verified' | 'rejected' | 'all'>('pending')
-    const supabaseRef = useRef(createClient())
 
-    useEffect(() => {
-        const supabase = supabaseRef.current
-        const channel = supabase
-            .channel(`admin-payment-verifications-${restaurantId}`)
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'payment_verifications',
-                filter: `restaurant_id=eq.${restaurantId}`,
-            }, (payload) => {
-                setClaims((prev) => [payload.new as PaymentClaim, ...prev])
-                toast('New payment claim received', { icon: '💳' })
-            })
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'payment_verifications',
-                filter: `restaurant_id=eq.${restaurantId}`,
-            }, (payload) => {
-                setClaims((prev) =>
-                    prev.map((c) => (c.id === (payload.new as PaymentClaim).id ? (payload.new as PaymentClaim) : c))
-                )
-            })
-            .subscribe((status) => {
-                if (status === 'CHANNEL_ERROR') {
-                    console.error('Payment verification subscription failed')
-                }
-            })
-
-        return () => { supabase.removeChannel(channel) }
-    }, [restaurantId])
+    useRestaurantTable(restaurantId, 'payment_verifications', (payload) => {
+        if (payload.eventType === 'INSERT') {
+            setClaims((prev) => [payload.new as PaymentClaim, ...prev])
+            toast('New payment claim received', { icon: '💳' })
+        } else if (payload.eventType === 'UPDATE') {
+            setClaims((prev) =>
+                prev.map((c) => (c.id === (payload.new as PaymentClaim).id ? (payload.new as PaymentClaim) : c))
+            )
+        }
+    })
 
     const handleVerify = async (claimId: string, action: 'verified' | 'rejected') => {
         setLoading(claimId)
