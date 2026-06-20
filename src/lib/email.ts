@@ -5,7 +5,7 @@
 
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY || '')
+let resendInstance: Resend | null = null
 
 export interface EmailOptions {
   to: string
@@ -25,8 +25,12 @@ export async function sendEmail(options: EmailOptions) {
     return { success: false, error: 'Email service not configured' }
   }
 
+  if (!resendInstance) {
+    resendInstance = new Resend(process.env.RESEND_API_KEY)
+  }
+
   try {
-    const response = await resend.emails.send({
+    const response = await resendInstance.emails.send({
       from: options.from || process.env.RESEND_FROM_EMAIL || 'noreply@khane.com',
       to: options.to,
       subject: options.subject,

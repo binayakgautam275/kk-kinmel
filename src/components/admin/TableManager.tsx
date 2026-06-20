@@ -216,7 +216,7 @@ export default function TableManager({
             ctx.fillText(
                 restaurantName,
                 exportCanvas.width / 2,
-                495 * scale
+                525 * scale
             )
 
             // 5. Draw Restaurant Terminal ID
@@ -225,7 +225,7 @@ export default function TableManager({
             ctx.fillText(
                 '2222222222222', // terminal ID
                 exportCanvas.width / 2,
-                520 * scale
+                550 * scale
             )
 
             // 6. Draw Bottom Banner
@@ -385,7 +385,7 @@ export default function TableManager({
                                         </div>
 
                                         {/* Hotel Name / Terminal ID */}
-                                        <div className="text-center flex-1 flex flex-col justify-end pb-3 min-h-[40px] px-1 overflow-hidden shrink-0 mt-0.5">
+                                        <div className="text-center flex-1 flex flex-col justify-end pb-1 min-h-[40px] px-1 overflow-hidden shrink-0 mt-0.5">
                                             <p className="font-extrabold text-[12px] text-gray-950 truncate max-w-[190px] leading-tight mb-0.5" title={restaurantName}>
                                                 {restaurantName}
                                             </p>
