@@ -53,29 +53,33 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
             {/* Nav */}
             <nav className="flex-1 overflow-y-auto py-3 px-2.5 scrollbar-thin space-y-0.5">
                 <NavItem href="/admin/dashboard"  icon={BarChart3}       label="Overview"        path={pathname} />
+                
+                <SectionLabel>Menu</SectionLabel>
                 <NavItem href="/admin/menu"        icon={UtensilsCrossed} label="Menu"            path={pathname} />
                 <NavItem href="/admin/combos"      icon={Sparkles}        label="Combo Offers"    path={pathname} />
+                <NavItem href="/admin/pricing"     icon={DollarSign}      label="Dynamic Pricing" path={pathname} />
+                <NavItem href="/admin/promos"      icon={Tag}             label="Promo Codes"     path={pathname} />
+
+                <SectionLabel>Sales & Service</SectionLabel>
                 <NavItem href="/admin/orders"      icon={ShoppingBag}     label="Orders"         path={pathname} />
                 <NavItem href="/admin/payments"    icon={CreditCard}      label="Payments"       path={pathname} />
                 <NavItem href="/admin/takeout"     icon={Truck}           label="Takeout"        path={pathname} />
-                <NavItem href="/admin/staff"       icon={Users}           label="Staff"          path={pathname} />
                 <NavItem href="/admin/tables"      icon={Grid3X3}         label="Tables & QR"    path={pathname} />
+                
+                <SectionLabel>Revenue & Growth</SectionLabel>
+                <NavItem href="/admin/loyalty"     icon={Heart}           label="Loyalty"         path={pathname} />
+                <NavItem href="/admin/reports"     icon={FileText}        label="EOD Reports"     path={pathname} />
                 <NavItem href="/admin/analytics"   icon={TrendingUp}      label="Analytics"      path={pathname} />
 
-                <SectionLabel>Revenue</SectionLabel>
-                <NavItem href="/admin/pricing"    icon={DollarSign} label="Dynamic Pricing" path={pathname} />
-                <NavItem href="/admin/promos"     icon={Tag}        label="Promo Codes"     path={pathname} />
-                <NavItem href="/admin/loyalty"    icon={Heart}      label="Loyalty"         path={pathname} />
-                <NavItem href="/admin/reports"    icon={FileText}   label="EOD Reports"     path={pathname} />
-
                 <SectionLabel>Operations</SectionLabel>
-                <NavItem href="/admin/ingredients" icon={Package} label="Ingredients"  path={pathname} />
-                <NavItem href="/admin/shifts"      icon={Clock}   label="Staff Shifts" path={pathname} />
+                <NavItem href="/admin/ingredients" icon={Package}         label="Ingredients"  path={pathname} />
+                <NavItem href="/admin/staff"       icon={Users}           label="Staff"          path={pathname} />
+                <NavItem href="/admin/shifts"      icon={Clock}           label="Staff Shifts" path={pathname} />
 
                 <SectionLabel>Config</SectionLabel>
-                <NavItem href="/admin/homepage" icon={Palette}   label="Homepage"      path={pathname} />
-                <NavItem href="/admin/theme"    icon={Palette}   label="Brand & Theme" path={pathname} />
-                <NavItem href="/admin/settings" icon={Settings}  label="Settings"      path={pathname} />
+                <NavItem href="/admin/homepage"    icon={Palette}         label="Homepage"      path={pathname} />
+                <NavItem href="/admin/theme"       icon={Palette}         label="Brand & Theme" path={pathname} />
+                <NavItem href="/admin/settings"    icon={Settings}        label="Settings"      path={pathname} />
             </nav>
 
             {/* Footer */}

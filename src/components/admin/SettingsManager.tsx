@@ -36,6 +36,7 @@ export default function SettingsManager({
     canEdit: boolean
 }) {
     const [formData, setFormData] = useState<RestaurantSettings>(initialRestaurant)
+    const [taxRateStr, setTaxRateStr] = useState(initialRestaurant.tax_rate.toString())
     const [uploadingField, setUploadingField] = useState<'logo_url' | 'payment_qr_url' | 'notification_sound' | null>(null)
     const logoInputRef = useRef<HTMLInputElement>(null)
     const qrInputRef = useRef<HTMLInputElement>(null)
@@ -133,7 +134,9 @@ export default function SettingsManager({
         setIsSubmitting(true)
         setIsSuccess(false)
 
-        const res = await updateRestaurantSettingsAction(formData.id, formData)
+        const finalTaxRate = taxRateStr === '' ? 0 : Number.parseFloat(taxRateStr)
+        const submissionData = { ...formData, tax_rate: finalTaxRate }
+        const res = await updateRestaurantSettingsAction(formData.id, submissionData)
 
         if (res.success) {
             setIsSuccess(true)
@@ -309,13 +312,23 @@ export default function SettingsManager({
                             <label className="block text-sm font-medium text-gray-700 mb-1">Tax Rate (%) *</label>
                             <div className="relative border-gray-300 focus-within:ring-1 focus-within:ring-[var(--color-primary)] focus-within:border-[var(--color-primary)] rounded-lg shadow-sm border bg-white overflow-hidden">
                                 <input
-                                    type="number"
-                                    step="0.01"
+                                    type="text"
+                                    inputMode="decimal"
                                     name="tax_rate"
-                                    value={formData.tax_rate}
-                                    onChange={handleChange}
+                                    value={taxRateStr}
+                                    onChange={e => {
+                                        const value = e.target.value
+                                        if (/^(\d+(\.\d*)?)?$/.test(value)) {
+                                            setTaxRateStr(value)
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                tax_rate: value === '' ? prev.tax_rate : Number.parseFloat(value)
+                                            }))
+                                        }
+                                    }}
                                     disabled={!canEdit || isSubmitting}
                                     className="w-full py-2.5 pl-3 pr-10 border-0 focus:ring-0 sm:text-sm disabled:bg-gray-50 disabled:text-gray-500"
+                                    placeholder="e.g. 13"
                                     required
                                 />
                                 <div className="absolute inset-y-0 right-0 flex items-center pointer-events-none pr-3">

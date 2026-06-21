@@ -99,33 +99,55 @@ export async function runPaymentReconciliation(
     }
 }
 
+import { generateEodReport } from '@/lib/reports'
+
 export async function generateEodReportAction(restaurantId: string, reportDate: string) {
-    const supabase = await createAdminClient()
-    const { data, error } = await supabase.rpc('generate_eod_report', {
-        p_restaurant_id: restaurantId,
-        p_report_date: reportDate,
-    })
-    if (error) return { error: error.message }
-    return { data }
+    try {
+        const currentUser = await requireRole('manager', 'super_admin')
+        if (restaurantId !== currentUser.restaurantId) {
+            return { error: 'Unauthorized' }
+        }
+        const data = await generateEodReport(restaurantId, reportDate)
+        return { data }
+    } catch (err: any) {
+        return { error: err.message || 'Failed to generate report' }
+    }
 }
 
 export async function getEodReportsAction(restaurantId: string, limit = 30) {
-    const supabase = await createAdminClient()
-    const { data } = await supabase
-        .from('eod_reports')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .order('report_date', { ascending: false })
-        .limit(limit)
-    return { data: data || [] }
+    try {
+        const currentUser = await requireRole('manager', 'super_admin')
+        if (restaurantId !== currentUser.restaurantId) {
+            return { error: 'Unauthorized', data: [] }
+        }
+        const supabase = await createAdminClient()
+        const { data } = await supabase
+            .from('eod_reports')
+            .select('*')
+            .eq('restaurant_id', restaurantId)
+            .order('report_date', { ascending: false })
+            .limit(limit)
+        return { data: data || [] }
+    } catch (err: any) {
+        return { error: err.message || 'Failed to get reports', data: [] }
+    }
 }
 
 export async function getEodReportAction(reportId: string) {
-    const supabase = await createAdminClient()
-    const { data } = await supabase
-        .from('eod_reports')
-        .select('*')
-        .eq('id', reportId)
-        .single()
-    return { data }
+    try {
+        const currentUser = await requireRole('manager', 'super_admin')
+        const supabase = await createAdminClient()
+        const { data } = await supabase
+            .from('eod_reports')
+            .select('*')
+            .eq('id', reportId)
+            .single()
+
+        if (data && data.restaurant_id !== currentUser.restaurantId) {
+            return { error: 'Unauthorized' }
+        }
+        return { data }
+    } catch (err: any) {
+        return { error: err.message || 'Failed to get report' }
+    }
 }

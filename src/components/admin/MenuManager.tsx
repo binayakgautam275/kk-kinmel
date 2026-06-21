@@ -381,9 +381,11 @@ export default function MenuManager({
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Sort Order</label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={categorySort}
-                                        onChange={e => setCategorySort(Number(e.target.value))}
+                                        onChange={e => { const v = e.target.value; if (/^\d*$/.test(v)) setCategorySort(Number(v)) }}
+                                        placeholder="e.g. 1"
                                         className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border"
                                     />
                                 </div>
@@ -441,10 +443,11 @@ export default function MenuManager({
                                             <span className="text-gray-500 sm:text-sm">$</span>
                                         </div>
                                         <input
-                                            type="number"
-                                            step="0.01"
+                                            type="text"
+                                            inputMode="decimal"
                                             value={itemFormData.price ?? ''}
-                                            onChange={e => setItemFormData({ ...itemFormData, price: e.target.value === '' ? undefined : Number(e.target.value) })}
+                                            onChange={e => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setItemFormData({ ...itemFormData, price: v === '' ? undefined : Number(v) }) }}
+                                            placeholder="e.g. 12.99"
                                             className="w-full pl-7 border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border"
                                         />
                                     </div>

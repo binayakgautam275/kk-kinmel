@@ -9,18 +9,20 @@ import { toast } from 'react-hot-toast'
 import { useConfirmStore } from '@/lib/stores/confirm'
 
 // Brand colors for QR code customization
-const QR_FG_COLOR = '#1a1a2e'   // dark navy (matches --color-secondary)
+const QR_FG_COLOR = '#000000'   // black for QR code body to maximize scan readability
 const QR_BG_COLOR = '#ffffff'
-const QR_LOGO_SRC = '/icons/kkkhane.png'
+const QR_LOGO_SRC = '/icons/kkkhane.png?v=2'
 const QR_LOGO_SIZE = 28  // px — centered inside the QR
 
 export default function TableManager({
     initialTables,
     restaurantId,
+    restaurantName,
     appUrl
 }: {
     initialTables: Table[]
     restaurantId: string
+    restaurantName: string
     appUrl: string
 }) {
     const [tables, setTables] = useState<Table[]>(initialTables)
@@ -111,47 +113,209 @@ export default function TableManager({
     }
 
     const qrCanvasRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+    const [qrToDownload, setQrToDownload] = useState<{ url: string; label: string } | null>(null)
 
     const downloadQR = (table: Table) => {
-        const wrapperDiv = qrCanvasRefs.current.get(table.id)
-        const canvas = wrapperDiv?.querySelector('canvas') as HTMLCanvasElement | null
-        if (!canvas) return
-
-        // Create a larger canvas with label text below
-        const exportCanvas = document.createElement('canvas')
-        const scale = 3  // 3x for high-res print
-        const padding = 30 * scale
-        const labelHeight = 40 * scale
-        exportCanvas.width = canvas.width * scale + padding * 2
-        exportCanvas.height = canvas.height * scale + padding * 2 + labelHeight
-
-        const ctx = exportCanvas.getContext('2d')
-        if (!ctx) return
-
-        // White background
-        ctx.fillStyle = '#ffffff'
-        ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height)
-
-        // Draw QR (scaled up)
-        ctx.drawImage(canvas, padding, padding, canvas.width * scale, canvas.height * scale)
-
-        // Draw table label
-        ctx.font = `bold ${20 * scale}px system-ui, -apple-system, sans-serif`
-        ctx.fillStyle = QR_FG_COLOR
-        ctx.textAlign = 'center'
-        ctx.fillText(table.label, exportCanvas.width / 2, exportCanvas.height - padding / 2)
-
-        // Subtitle: "Scan to order"
-        ctx.font = `${12 * scale}px system-ui, -apple-system, sans-serif`
-        ctx.fillStyle = '#6b7280'
-        ctx.fillText('Scan to order', exportCanvas.width / 2, exportCanvas.height - padding / 2 + 24 * scale)
-
-        const pngFile = exportCanvas.toDataURL('image/png')
-        const downloadLink = document.createElement('a')
-        downloadLink.download = `${table.label.replace(/\s+/g, '_')}_QR.png`
-        downloadLink.href = pngFile
-        downloadLink.click()
+        const menuUrl = `${baseUrl}/t/${table.qr_token}`
+        setQrToDownload({ url: menuUrl, label: table.label })
     }
+
+    useEffect(() => {
+        if (!qrToDownload) return
+
+        let active = true
+
+        const runDownload = async () => {
+            // Wait for canvas to mount and render
+            await new Promise(resolve => setTimeout(resolve, 150))
+            if (!active) return
+
+            const container = document.getElementById('shared-high-res-qr-container')
+            const canvas = container?.querySelector('canvas') as HTMLCanvasElement | null
+            if (!canvas) {
+                setQrToDownload(null)
+                return
+            }
+
+            // Preload logo image
+            const logoImg = new Image()
+            logoImg.src = QR_LOGO_SRC
+            await new Promise<void>((resolve) => {
+                logoImg.onload = () => resolve()
+                logoImg.onerror = () => resolve()
+            })
+
+            if (!active) return
+
+            const baseWidth = 600
+            const baseHeight = 650
+            const scale = 3
+            
+            const exportCanvas = document.createElement('canvas')
+            exportCanvas.width = baseWidth * scale
+            exportCanvas.height = baseHeight * scale
+            
+            const ctx = exportCanvas.getContext('2d')
+            if (!ctx) {
+                setQrToDownload(null)
+                return
+            }
+
+            // 1. Draw white background
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height)
+
+            // 2. Draw Top Banner
+            const orangeColor = '#ff7a00'
+            
+            // Thin horizontal line across the banner area (y = 55px)
+            ctx.strokeStyle = orangeColor
+            ctx.lineWidth = 4 * scale
+            ctx.beginPath()
+            ctx.moveTo(0, 55 * scale)
+            ctx.lineTo(exportCanvas.width, 55 * scale)
+            ctx.stroke()
+            
+            // Solid orange box in the center
+            const boxWidth = 320
+            const boxHeight = 50
+            const boxX = (baseWidth - boxWidth) / 2
+            const boxY = 30
+            
+            ctx.fillStyle = orangeColor
+            ctx.fillRect(boxX * scale, boxY * scale, boxWidth * scale, boxHeight * scale)
+            
+            // Table Label inside the orange box
+            ctx.fillStyle = '#ffffff'
+            ctx.font = `bold ${22 * scale}px "Outfit", "Inter", system-ui, -apple-system, sans-serif`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            ctx.fillText(
+                qrToDownload.label.toUpperCase(),
+                exportCanvas.width / 2,
+                (boxY + boxHeight / 2) * scale
+            )
+
+            // 3. Draw QR Code in the middle
+            const qrSize = 340
+            const qrX = (baseWidth - qrSize) / 2
+            const qrY = 120
+            ctx.drawImage(
+                canvas,
+                qrX * scale,
+                qrY * scale,
+                qrSize * scale,
+                qrSize * scale
+            )
+
+            // 4. Draw Hotel/Restaurant Name
+            ctx.fillStyle = '#000000'
+            ctx.font = `bold ${26 * scale}px "Outfit", "Inter", system-ui, -apple-system, sans-serif`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'alphabetic'
+            ctx.fillText(
+                restaurantName,
+                exportCanvas.width / 2,
+                525 * scale
+            )
+
+            // 5. Draw Restaurant Terminal ID
+            ctx.fillStyle = '#4b5563' // gray-600
+            ctx.font = `600 ${16 * scale}px "Outfit", "Inter", system-ui, -apple-system, sans-serif`
+            ctx.fillText(
+                '2222222222222', // terminal ID
+                exportCanvas.width / 2,
+                550 * scale
+            )
+
+            // 6. Draw Bottom Banner
+            const footerHeight = 55
+            const footerY = baseHeight - footerHeight
+            
+            ctx.fillStyle = orangeColor
+            ctx.fillRect(0, footerY * scale, exportCanvas.width, footerHeight * scale)
+
+            // Draw Footer Text "Powered by KKKHANEY"
+            ctx.fillStyle = '#ffffff'
+            ctx.font = `bold ${16 * scale}px "Outfit", "Inter", system-ui, -apple-system, sans-serif`
+            ctx.textAlign = 'center'
+            ctx.textBaseline = 'middle'
+            
+            const footerText = 'Powered by KKKHANEY'
+            const textCenterY = (footerY + footerHeight / 2) * scale
+            
+            const textWidth = ctx.measureText(footerText).width
+            const logoSpacing = 10 * scale
+            const logoRadius = 11 * scale
+            const totalWidth = textWidth + logoSpacing + (logoRadius * 2)
+            
+            const textStartX = (exportCanvas.width - totalWidth) / 2 + textWidth / 2
+            ctx.fillText(footerText, textStartX, textCenterY)
+
+            // Draw Logo Icon next to text
+            const logoCenterX = textStartX + textWidth / 2 + logoSpacing + logoRadius
+            const logoCenterY = textCenterY
+            
+            // Draw circular logo image if preloaded successfully, fallback to styled white 'K' circle
+            if (logoImg.complete && logoImg.naturalWidth > 0) {
+                // Draw solid white background circle
+                ctx.fillStyle = '#ffffff'
+                ctx.beginPath()
+                ctx.arc(logoCenterX, logoCenterY, logoRadius, 0, 2 * Math.PI)
+                ctx.fill()
+
+                ctx.save()
+                ctx.beginPath()
+                ctx.arc(logoCenterX, logoCenterY, logoRadius - (1.5 * scale), 0, 2 * Math.PI)
+                ctx.closePath()
+                ctx.clip()
+                ctx.drawImage(
+                    logoImg,
+                    logoCenterX - logoRadius,
+                    logoCenterY - logoRadius,
+                    logoRadius * 2,
+                    logoRadius * 2
+                )
+                ctx.restore()
+                
+                // Draw white circle outline on top
+                ctx.strokeStyle = '#ffffff'
+                ctx.lineWidth = 1.5 * scale
+                ctx.beginPath()
+                ctx.arc(logoCenterX, logoCenterY, logoRadius, 0, 2 * Math.PI)
+                ctx.stroke()
+            } else {
+                // Draw white circle outline fallback
+                ctx.strokeStyle = '#ffffff'
+                ctx.lineWidth = 2 * scale
+                ctx.beginPath()
+                ctx.arc(logoCenterX, logoCenterY, logoRadius, 0, 2 * Math.PI)
+                ctx.stroke()
+                
+                // Draw white K letter inside the circle fallback
+                ctx.fillStyle = '#ffffff'
+                ctx.font = `bold ${12 * scale}px "Outfit", "Inter", system-ui, sans-serif`
+                ctx.textAlign = 'center'
+                ctx.textBaseline = 'middle'
+                ctx.fillText('K', logoCenterX, logoCenterY + 0.5 * scale)
+            }
+
+            const pngFile = exportCanvas.toDataURL('image/png')
+            const downloadLink = document.createElement('a')
+            downloadLink.download = `${qrToDownload.label.replace(/\s+/g, '_')}_QR.png`
+            downloadLink.href = pngFile
+            downloadLink.click()
+
+            // Reset state
+            setQrToDownload(null)
+        }
+
+        runDownload()
+
+        return () => {
+            active = false
+        }
+    }, [qrToDownload, baseUrl, restaurantName])
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
@@ -187,36 +351,76 @@ export default function TableManager({
                                     </div>
                                 </div>
 
-                                <div className="p-6 flex flex-col items-center justify-center flex-1">
-                                    <div
-                                        ref={el => { if (el) qrCanvasRefs.current.set(table.id, el) }}
-                                        className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm mb-4"
-                                    >
-                                        <QRCodeCanvas
-                                            value={menuUrl}
-                                            size={120}
-                                            level="H"
-                                            includeMargin={true}
-                                            fgColor={QR_FG_COLOR}
-                                            bgColor={QR_BG_COLOR}
-                                            imageSettings={{
-                                                src: QR_LOGO_SRC,
-                                                height: QR_LOGO_SIZE,
-                                                width: QR_LOGO_SIZE,
-                                                excavate: true,
-                                            }}
-                                        />
+                                <div className="p-6 flex flex-col items-center justify-center flex-1 bg-gray-50/30">
+                                    {/* The Card Preview Container */}
+                                    <div className="w-[220px] h-[260px] bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col items-center p-3 pb-9 relative overflow-hidden mb-4 select-none">
+                                        
+                                        {/* Top Banner */}
+                                        <div className="w-full flex items-center justify-center relative my-1.5 shrink-0">
+                                            <div className="absolute left-0 right-0 h-[2px] bg-[#ff7a00]" />
+                                            <div className="bg-[#ff7a00] text-white text-[10px] font-black px-4 py-1.5 rounded-sm uppercase tracking-wider relative z-10 min-w-[100px] text-center">
+                                                {table.label}
+                                            </div>
+                                        </div>
+
+                                        {/* QR Code */}
+                                        <div
+                                            ref={el => { if (el) qrCanvasRefs.current.set(table.id, el) }}
+                                            className="my-1 shrink-0"
+                                        >
+                                            <QRCodeCanvas
+                                                value={menuUrl}
+                                                size={105}
+                                                level="H"
+                                                includeMargin={false}
+                                                fgColor="#000000"
+                                                bgColor="#ffffff"
+                                                imageSettings={{
+                                                    src: QR_LOGO_SRC,
+                                                    height: 28,
+                                                    width: 28,
+                                                    excavate: true,
+                                                }}
+                                            />
+                                        </div>
+
+                                        {/* Hotel Name / Terminal ID */}
+                                        <div className="text-center flex-1 flex flex-col justify-end pb-1 min-h-[40px] px-1 overflow-hidden shrink-0 mt-0.5">
+                                            <p className="font-extrabold text-[12px] text-gray-950 truncate max-w-[190px] leading-tight mb-0.5" title={restaurantName}>
+                                                {restaurantName}
+                                            </p>
+                                            <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-wider leading-none">
+                                                2222222222222
+                                            </p>
+                                        </div>
+
+                                        {/* Bottom Banner */}
+                                        <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#ff7a00] flex items-center justify-center gap-1.5 shrink-0">
+                                            <span 
+                                                className="text-white text-[9px] font-extrabold tracking-wider uppercase" 
+                                                style={{ fontFamily: '"Outfit", "Inter", system-ui, sans-serif' }}
+                                            >
+                                                Powered by KKKHANEY
+                                            </span>
+                                            <img
+                                                src={QR_LOGO_SRC}
+                                                alt="Logo"
+                                                className="w-4 h-4 rounded-full bg-white object-cover border border-white shrink-0"
+                                            />
+                                        </div>
+
                                     </div>
+
                                     <div className="flex gap-2 w-full">
                                         <button
                                             onClick={() => openPreview(table)}
-                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-gray-600 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition"
                                         >
                                             <Smartphone size={14} /> Preview
                                         </button>
                                         <button
                                             onClick={() => downloadQR(table)}
-                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-[var(--color-primary)] bg-[var(--color-primary)]/10 rounded-lg hover:bg-[var(--color-primary)]/20 transition-colors"
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-[var(--color-primary)] rounded-lg hover:opacity-90 active:scale-95 transition"
                                         >
                                             <Download size={14} /> Download
                                         </button>
@@ -269,11 +473,12 @@ export default function TableManager({
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Seat Capacity (Optional)</label>
                                 <input
-                                    type="number"
+                                    type="text"
+                                    inputMode="numeric"
                                     value={formData.capacity}
-                                    onChange={e => setFormData({ ...formData, capacity: e.target.value })}
+                                    onChange={e => { const v = e.target.value; if (/^\d*$/.test(v)) setFormData({ ...formData, capacity: v }) }}
                                     className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border"
-                                    placeholder="4"
+                                    placeholder="e.g. 4"
                                 />
                             </div>
                         </div>
@@ -347,6 +552,26 @@ export default function TableManager({
                         {/* Home indicator bar */}
                         <div className="absolute bottom-1.5 sm:bottom-2 left-1/2 -translate-x-1/2 w-24 sm:w-28 h-1 bg-gray-600 rounded-full" />
                     </div>
+                </div>
+            )}
+
+            {/* Shared dynamic high-resolution QR canvas for crisp on-demand downloads */}
+            {qrToDownload && (
+                <div id="shared-high-res-qr-container" className="hidden" style={{ display: 'none' }}>
+                    <QRCodeCanvas
+                        value={qrToDownload.url}
+                        size={1020}
+                        level="H"
+                        includeMargin={false}
+                        fgColor="#000000"
+                        bgColor="#ffffff"
+                        imageSettings={{
+                            src: QR_LOGO_SRC,
+                            height: 272,
+                            width: 272,
+                            excavate: true,
+                        }}
+                    />
                 </div>
             )}
         </div>

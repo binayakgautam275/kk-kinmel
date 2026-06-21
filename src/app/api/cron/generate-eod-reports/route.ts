@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { NextRequest } from 'next/server'
+import { generateEodReport } from '@/lib/reports'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -34,15 +35,14 @@ export async function POST(request: NextRequest) {
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
     const reportDate = yesterday.toISOString().slice(0, 10) // YYYY-MM-DD
-
     const results = await Promise.allSettled(
         restaurants.map(async (restaurant) => {
-            const { error } = await supabase.rpc('generate_eod_report', {
-                p_restaurant_id: restaurant.id,
-                p_report_date: reportDate,
-            })
-            if (error) throw new Error(`${restaurant.name}: ${error.message}`)
-            return restaurant.name
+            try {
+                await generateEodReport(restaurant.id, reportDate)
+                return restaurant.name
+            } catch (err: any) {
+                throw new Error(`${restaurant.name}: ${err.message || 'unknown error'}`)
+            }
         })
     )
 

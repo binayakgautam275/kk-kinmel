@@ -37,13 +37,13 @@ export default function PricingRulesManager({ initialRules, menuItems, restauran
     const [form, setForm] = useState({
         name: '',
         rule_type: 'percentage_off',
-        value: 10,
+        value: '10',
         applies_to_item_id: '' as string | null,
         applies_to_all: false,
         days_of_week: [] as number[],
         start_time: '11:00',
         end_time: '14:00',
-        priority: 0,
+        priority: '0',
     })
     const [saving, setSaving] = useState(false)
 
@@ -63,13 +63,13 @@ export default function PricingRulesManager({ initialRules, menuItems, restauran
             restaurant_id: restaurantId,
             name: form.name,
             rule_type: form.rule_type,
-            value: form.value,
+            value: parseFloat(form.value) || 0,
             applies_to_item_id: form.applies_to_item_id || null,
             applies_to_all: form.applies_to_all,
             days_of_week: form.days_of_week,
             start_time: form.start_time,
             end_time: form.end_time,
-            priority: form.priority,
+            priority: parseInt(form.priority) || 0,
         })
         setSaving(false)
         if (result.error) { toast.error(result.error); return }
@@ -78,7 +78,7 @@ export default function PricingRulesManager({ initialRules, menuItems, restauran
         }
         toast.success('Rule created!')
         setShowForm(false)
-        setForm({ name: '', rule_type: 'percentage_off', value: 10, applies_to_item_id: '', applies_to_all: false, days_of_week: [], start_time: '11:00', end_time: '14:00', priority: 0 })
+        setForm({ name: '', rule_type: 'percentage_off', value: '10', applies_to_item_id: '', applies_to_all: false, days_of_week: [], start_time: '11:00', end_time: '14:00', priority: '0' })
     }
 
     async function toggleActive(rule: Rule) {
@@ -117,7 +117,9 @@ export default function PricingRulesManager({ initialRules, menuItems, restauran
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-600 mb-1">Value</label>
-                            <input type="number" step="0.01" value={form.value} onChange={e => setForm({ ...form, value: +e.target.value })}
+                            <input type="text" inputMode="decimal" value={form.value}
+                                onChange={e => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setForm({ ...form, value: v }) }}
+                                placeholder="e.g. 10"
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
                         </div>
                         <div>
