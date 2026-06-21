@@ -1,31 +1,37 @@
 'use client'
 import Image from 'next/image'
 import { HomepageConfig } from '@/types/database'
+import Button from '@/components/ui/Button'
+import Card from '@/components/ui/Card'
 
 export default function ModernTemplate({ config, onMenuClick }: { config: HomepageConfig; onMenuClick: () => void }) {
     return (
-        <div className="min-h-screen bg-white">
-            <div className="relative h-96 md:h-[32rem] overflow-hidden" style={{ backgroundColor: config.theme_primary }}>
+        <div className="min-h-screen bg-canvas">
+            <div className="relative h-[480px] md:h-[600px] overflow-hidden" style={{ backgroundColor: config.theme_primary }}>
                 {config.hero_video_url && <video src={config.hero_video_url} autoPlay muted loop className="absolute inset-0 w-full h-full object-cover opacity-30" />}
                 {config.hero_image_url && !config.hero_video_url && <Image src={config.hero_image_url} alt="Hero" fill className="object-cover opacity-30" sizes="100vw" />}
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+                <div className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]" />
                 <div className="relative h-full flex flex-col items-center justify-center text-center px-4 z-10 animate-fade-up">
-                    <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 drop-shadow-xl tracking-tight">{config.hero_title}</h1>
-                    <p className="text-xl md:text-2xl text-gray-100 mb-10 max-w-2xl font-light">{config.hero_subtitle}</p>
-                    <button onClick={onMenuClick} className="inline-flex items-center gap-3 px-10 py-4 bg-white/10 backdrop-blur-md border border-white/30 text-white rounded-full text-lg font-semibold hover:bg-white hover:text-black hover:scale-105 transition-all duration-300 shadow-2xl">
-                        {config.hero_cta_text} <span className="text-xl">→</span>
+                    <h1 className="text-display text-white mb-6 drop-shadow-lg">{config.hero_title}</h1>
+                    <p className="text-h2 text-white/90 mb-10 max-w-2xl font-normal">{config.hero_subtitle}</p>
+                    <button onClick={onMenuClick} className="inline-flex items-center gap-3 px-8 h-12 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-pill text-sm font-semibold hover:bg-white hover:text-ink transition-[background-color,color,transform] duration-300 hover:-translate-y-0.5 focus-ring shadow-lg">
+                        {config.hero_cta_text} <span className="text-lg leading-none">→</span>
                     </button>
                 </div>
             </div>
 
             {config.about?.enabled && (
-                <div className="py-16 md:py-24 px-4 bg-gray-50">
-                    <div className="max-w-6xl mx-auto">
-                        <div className="grid md:grid-cols-2 gap-12 items-center">
-                            {config.about.image_url && <div className="animate-fade-up relative h-96 w-full rounded-2xl overflow-hidden shadow-2xl card-hover"><Image src={config.about.image_url} alt={config.about.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" /></div>}
-                            <div className="animate-fade-up delay-100">
-                                <h2 className="text-4xl md:text-5xl font-bold mb-6 text-gray-900 tracking-tight">{config.about.title}</h2>
-                                <p className="text-gray-600 text-lg md:text-xl leading-relaxed font-light">{config.about.description}</p>
+                <div className="section-pad bg-surface">
+                    <div className="container-pad">
+                        <div className="grid md:grid-cols-2 gap-12 lg:gap-16 items-center">
+                            {config.about.image_url && (
+                                <div className="animate-fade-up relative h-80 md:h-[480px] w-full rounded-card overflow-hidden shadow-sm card-hover border border-hairline">
+                                    <Image src={config.about.image_url} alt={config.about.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+                                </div>
+                            )}
+                            <div className="animate-fade-up delay-100 flex flex-col gap-6">
+                                <h2 className="text-display text-ink">{config.about.title}</h2>
+                                <p className="text-body text-ink-muted">{config.about.description}</p>
                             </div>
                         </div>
                     </div>
@@ -33,18 +39,18 @@ export default function ModernTemplate({ config, onMenuClick }: { config: Homepa
             )}
 
             {config.features && config.features.length > 0 && (
-                <div className="py-16 md:py-24 px-4 bg-white">
-                    <div className="max-w-6xl mx-auto">
-                        <h2 className="text-4xl md:text-5xl font-bold text-center mb-16 text-gray-900 tracking-tight animate-fade-up">Why Choose Us</h2>
-                        <div className="grid md:grid-cols-3 gap-8">
+                <div className="section-pad bg-canvas">
+                    <div className="container-pad">
+                        <h2 className="text-display text-center mb-16 text-ink animate-fade-up">Why Choose Us</h2>
+                        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
                             {config.features.map((feature, idx) => (
-                                <div key={idx} className="text-center bg-gray-50 p-8 rounded-3xl card-hover animate-fade-up" style={{ animationDelay: `${(idx+1)*100}ms`}}>
-                                    <div className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg rotate-3 hover:rotate-0 transition-transform" style={{ backgroundColor: config.theme_primary }}>
-                                        <span className="text-white text-3xl">✓</span>
+                                <Card key={idx} className="text-center card-hover animate-fade-up flex flex-col items-center pt-10 pb-8 px-6" style={{ animationDelay: `${(idx+1)*100}ms` }}>
+                                    <div className="size-16 rounded-[var(--r-md)] flex items-center justify-center mb-6 shadow-sm rotate-3 hover:rotate-0 transition-transform duration-300" style={{ backgroundColor: config.theme_primary }}>
+                                        <span className="text-white text-2xl font-bold">✓</span>
                                     </div>
-                                    <h3 className="text-2xl font-bold mb-3 text-gray-900">{feature.title}</h3>
-                                    <p className="text-gray-600 leading-relaxed font-light">{feature.description}</p>
-                                </div>
+                                    <h3 className="text-h2 text-ink mb-3">{feature.title}</h3>
+                                    <p className="text-body text-ink-subtle">{feature.description}</p>
+                                </Card>
                             ))}
                         </div>
                     </div>
@@ -52,11 +58,13 @@ export default function ModernTemplate({ config, onMenuClick }: { config: Homepa
             )}
 
             {config.cta?.enabled && (
-                <div className="py-16 md:py-24 px-4" style={{ backgroundColor: config.theme_primary }}>
-                    <div className="max-w-4xl mx-auto text-center text-white">
-                        <h2 className="text-3xl md:text-4xl font-bold mb-6">{config.cta.headline}</h2>
-                        <p className="text-lg mb-8 opacity-90">{config.cta.description}</p>
-                        <button onClick={onMenuClick} className="px-8 py-3 bg-white rounded-lg font-semibold hover:scale-105 transition" style={{ color: config.theme_primary }}>
+                <div className="section-pad" style={{ backgroundColor: config.theme_primary }}>
+                    <div className="max-w-3xl mx-auto text-center text-white flex flex-col items-center gap-8 px-4">
+                        <div className="flex flex-col gap-4">
+                            <h2 className="text-display">{config.cta.headline}</h2>
+                            <p className="text-h3 font-normal opacity-90">{config.cta.description}</p>
+                        </div>
+                        <button onClick={onMenuClick} className="inline-flex items-center justify-center h-12 px-8 bg-white text-ink rounded-card font-semibold transition-transform duration-150 hover:-translate-y-0.5 focus-ring shadow-sm" style={{ color: config.theme_primary }}>
                             {config.cta.button_text}
                         </button>
                     </div>

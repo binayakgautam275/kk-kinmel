@@ -65,8 +65,8 @@ export default function KitchenStats({
                 const Icon = s.icon
                 return (
                     <div key={s.label}
-                         className="rounded-xl border border-white/[0.08] p-3 md:p-4 flex items-center gap-3"
-                         style={{ background: s.active && s.color ? `${s.color}14` : 'rgba(255,255,255,0.03)' }}>
+                         className={`rounded-card border border-dark-border p-3 md:p-4 flex items-center gap-3 ${!s.active && 'bg-dark-surface'}`}
+                         style={s.active && s.color ? { background: `${s.color}14` } : undefined}>
                         <div className={`shrink-0 ${s.pulse ? 'animate-pulse' : ''}`}>
                             <Icon size={20} style={{ color: s.active ? s.color : '#4b5563' }} />
                         </div>
@@ -74,7 +74,7 @@ export default function KitchenStats({
                             <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: s.active ? s.color : '#6b7280' }}>
                                 {s.value}
                             </p>
-                            <p className="text-[10px] md:text-xs text-white/30 font-medium mt-0.5">{s.label}</p>
+                            <p className="text-[10px] md:text-xs text-dark-muted font-medium mt-0.5">{s.label}</p>
                         </div>
                     </div>
                 )

@@ -2,13 +2,15 @@
 // Shared utility functions
 
 import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
 /**
- * Merge class names with Tailwind-aware deduplication
- * Uses clsx for conditional class joining
+ * Merge class names with Tailwind-aware deduplication.
+ * clsx joins conditionals; twMerge resolves conflicting utilities so a
+ * caller-supplied className always wins over a primitive's defaults.
  */
 export function cn(...inputs: ClassValue[]) {
-    return clsx(inputs)
+    return twMerge(clsx(inputs))
 }
 
 /**

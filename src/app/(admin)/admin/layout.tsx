@@ -32,7 +32,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     }
 
     return (
-        <div className="min-h-screen bg-[#F7F6F3] flex">
+        <div className="min-h-screen bg-canvas flex">
             {isSuperAdmin ? <SuperAdminSidebar /> : <AdminSidebar userRole={roleNameRaw} restaurantName={restaurantName} />}
             {!isSuperAdmin && currentUser.restaurantId && (
                 <AdminOrderNotifier restaurantId={currentUser.restaurantId} />
@@ -40,22 +40,22 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col overflow-hidden min-w-0">
-                <header className="bg-white border-b border-gray-100 px-5 md:px-8 h-14 flex items-center justify-between shrink-0 shadow-sm z-10">
-                    <h2 className="text-sm font-semibold text-gray-800 pl-10 md:pl-0">
+                <header className="bg-surface border-b border-hairline px-5 md:px-8 h-16 flex items-center justify-between shrink-0 z-10">
+                    <h2 className="text-h3 text-ink pl-10 md:pl-0 truncate">
                         {isSuperAdmin ? 'SaaS Control Panel' : (restaurantName || 'Management Console')}
                     </h2>
                     <div className="flex items-center gap-3">
                         {!isSuperAdmin && <SoundEnableButton variant="light" />}
-                        <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+                        <span className={`text-caption font-semibold px-2.5 py-1 rounded-full ${
                             isSuperAdmin
-                                ? 'bg-[var(--color-primary)]/8 text-[var(--color-primary)] border border-[var(--color-primary)]/20'
-                                : 'bg-gray-100 text-gray-500'
+                                ? 'bg-brand-50 text-brand-700'
+                                : 'bg-[var(--neutral-badge-bg)] text-[var(--neutral-badge-fg)]'
                         }`}>
                             {roleDisplay}
                         </span>
                     </div>
                 </header>
-                <div className="flex-1 overflow-auto p-4 md:p-8">
+                <div className="flex-1 overflow-auto p-5 md:p-8">
                     <div className="max-w-6xl mx-auto">
                         {children}
                     </div>

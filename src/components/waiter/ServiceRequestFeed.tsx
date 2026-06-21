@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { createClient } from '@/lib/supabase/client'
+import { OrderCard, FeedSection, Button } from '@/components/ui'
 import { acknowledgeServiceRequest, completeServiceRequest } from '@/app/api/service-requests/actions'
 import { Bell, Droplets, Receipt, Sparkles, MessageCircle, LogIn } from 'lucide-react'
 import { timeAgo } from '@/lib/utils'
@@ -28,15 +29,6 @@ const LABEL_MAP: Record<ServiceRequestType, string> = {
     clean_table: 'Clean Table',
     other: 'Other',
     open_session: 'Ready to Order',
-}
-
-const COLOR_MAP: Record<ServiceRequestType, string> = {
-    call_waiter: 'bg-blue-100 text-blue-600',
-    request_bill: 'bg-emerald-100 text-emerald-600',
-    need_water: 'bg-cyan-100 text-cyan-600',
-    clean_table: 'bg-amber-100 text-amber-600',
-    other: 'bg-gray-100 text-gray-600',
-    open_session: 'bg-violet-100 text-violet-600',
 }
 
 export type ServiceRequestWithTable = ServiceRequest & {
@@ -129,95 +121,78 @@ export default function ServiceRequestFeed({
 
     if (pending.length === 0 && acknowledged.length === 0) return null
 
+    const titleFor = (req: ServiceRequestWithTable) => {
+        const Icon = ICON_MAP[req.request_type as ServiceRequestType]
+        return (
+            <span className="flex items-center gap-1.5">
+                <Icon size={15} className="text-ink-subtle shrink-0" />
+                {LABEL_MAP[req.request_type as ServiceRequestType]}
+            </span>
+        )
+    }
+
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
-                <Bell size={15} className="text-amber-500" />
-                <h2 className="font-semibold text-gray-900 text-sm">Service Requests</h2>
-                {pending.length > 0 && (
-                    <span className="ml-auto text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full animate-pulse">
-                        {pending.length} urgent
-                    </span>
-                )}
-            </div>
-
-            <div className="divide-y divide-gray-50">
-                {/* Pending — urgent */}
-                {pending.map((req) => {
-                    const Icon = ICON_MAP[req.request_type as ServiceRequestType]
-                    const isOpenSession = req.request_type === 'open_session'
-                    return (
-                        <div key={req.id} className={`px-4 py-3 flex items-center gap-3 ${isOpenSession ? 'bg-violet-50/60' : 'bg-amber-50/50'}`}>
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${COLOR_MAP[req.request_type as ServiceRequestType]}`}>
-                                <Icon size={16} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-sm text-gray-900">
-                                        Table {getTableLabel(req)}
-                                    </span>
-                                    <span className="text-[10px] text-gray-400">{timeAgo(req.created_at)}</span>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                    {LABEL_MAP[req.request_type as ServiceRequestType]}
-                                    {req.message && <span className="text-gray-400"> — {req.message}</span>}
-                                </p>
-                            </div>
-                            {isOpenSession ? (
-                                <button
-                                    onClick={() => handleOpenSession(req)}
-                                    disabled={openingSession === req.id}
-                                    className="bg-violet-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition disabled:opacity-60"
-                                >
-                                    {openingSession === req.id ? '…' : 'Open'}
-                                </button>
+        <FeedSection
+            icon={Bell}
+            title="Service Requests"
+            count={pending.length || undefined}
+            tone="danger"
+        >
+            {/* Pending — urgent (left danger bar) */}
+            {pending.map((req) => {
+                const isOpenSession = req.request_type === 'open_session'
+                return (
+                    <OrderCard
+                        key={req.id}
+                        urgent
+                        tableLabel={getTableLabel(req)}
+                        title={titleFor(req)}
+                        meta={
+                            <>
+                                <span>{timeAgo(req.created_at)}</span>
+                                {req.message && <span className="text-ink-muted truncate">— {req.message}</span>}
+                            </>
+                        }
+                        trailing={
+                            isOpenSession ? (
+                                <Button size="sm" icon={LogIn} loading={openingSession === req.id} onClick={() => handleOpenSession(req)}>
+                                    Open
+                                </Button>
                             ) : (
-                                <button
-                                    onClick={() => handleAcknowledge(req.id)}
-                                    className="bg-[var(--color-primary)] text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition"
-                                >
-                                    On it
-                                </button>
-                            )}
-                        </div>
-                    )
-                })}
+                                <Button size="sm" onClick={() => handleAcknowledge(req.id)}>On it</Button>
+                            )
+                        }
+                    />
+                )
+            })}
 
-                {/* Acknowledged — in progress */}
-                {acknowledged.map((req) => {
-                    const Icon = ICON_MAP[req.request_type as ServiceRequestType]
-                    const isOpenSession = req.request_type === 'open_session'
-                    return (
-                        <div key={req.id} className="px-4 py-3 flex items-center gap-3 opacity-60">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${COLOR_MAP[req.request_type as ServiceRequestType]}`}>
-                                <Icon size={16} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <span className="font-medium text-sm text-gray-700">
-                                    Table {getTableLabel(req)}
-                                </span>
-                                <p className="text-xs text-gray-400">{LABEL_MAP[req.request_type as ServiceRequestType]}</p>
-                            </div>
-                            {isOpenSession ? (
-                                <button
-                                    onClick={() => handleOpenSession(req)}
-                                    disabled={openingSession === req.id}
-                                    className="bg-violet-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition disabled:opacity-60"
-                                >
-                                    {openingSession === req.id ? '…' : 'Open'}
-                                </button>
+            {/* Acknowledged — in progress */}
+            {acknowledged.map((req) => {
+                const isOpenSession = req.request_type === 'open_session'
+                return (
+                    <OrderCard
+                        key={req.id}
+                        className="opacity-70"
+                        tableLabel={getTableLabel(req)}
+                        title={titleFor(req)}
+                        meta={
+                            <>
+                                <span>{timeAgo(req.created_at)}</span>
+                                {req.message && <span className="text-ink-muted truncate">— {req.message}</span>}
+                            </>
+                        }
+                        trailing={
+                            isOpenSession ? (
+                                <Button variant="secondary" size="sm" loading={openingSession === req.id} onClick={() => handleOpenSession(req)}>
+                                    Open
+                                </Button>
                             ) : (
-                                <button
-                                    onClick={() => handleComplete(req.id)}
-                                    className="bg-emerald-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg shrink-0 active:scale-95 transition"
-                                >
-                                    Done
-                                </button>
-                            )}
-                        </div>
-                    )
-                })}
-            </div>
-        </div>
+                                <Button variant="secondary" size="sm" onClick={() => handleComplete(req.id)}>Done</Button>
+                            )
+                        }
+                    />
+                )
+            })}
+        </FeedSection>
     )
 }

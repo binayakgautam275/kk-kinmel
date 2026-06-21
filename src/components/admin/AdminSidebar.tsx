@@ -31,21 +31,23 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
         router.refresh()
     }
 
+    const roleLabel = (userRole || 'admin').replace(/_/g, ' ')
+
     const content = (
         <div className="flex flex-col h-full">
             {/* Header */}
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+            <div className="px-4 py-4 border-b border-hairline flex items-center justify-between gap-2 shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
-                    <Logo className="h-7 shrink-0" />
-                    {restaurantName && (
-                        <div className="min-w-0">
-                            <p className="text-xs font-bold text-gray-800 truncate leading-none">{restaurantName}</p>
-                            <p className="text-[9px] font-semibold text-gray-400 tracking-widest uppercase mt-0.5">Admin</p>
-                        </div>
-                    )}
+                    <Logo variant="dark" className="h-7 shrink-0" />
+                    <div className="min-w-0">
+                        <p className="text-small font-bold text-ink truncate leading-tight">{restaurantName || 'kkkhane'}</p>
+                        <span className="inline-block mt-1 rounded-full bg-[var(--neutral-badge-bg)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--neutral-badge-fg)]">
+                            {roleLabel}
+                        </span>
+                    </div>
                 </div>
                 <button onClick={() => setIsOpen(false)}
-                        className="md:hidden p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
+                        className="md:hidden p-1.5 text-ink-subtle hover:text-ink rounded-[var(--r-md)] hover:bg-surface-muted">
                     <X size={18} />
                 </button>
             </div>
@@ -83,12 +85,12 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
             </nav>
 
             {/* Footer */}
-            <div className="px-2.5 py-3 border-t border-gray-100 shrink-0">
+            <div className="px-2.5 py-3 border-t border-hairline shrink-0">
                 <button
                     onClick={handleSignOut}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition active:scale-95"
+                    className="w-full flex items-center gap-3 px-3 h-9 text-small font-medium text-ink-muted hover:text-danger-fg hover:bg-danger-bg rounded-[var(--r-md)] transition-colors"
                 >
-                    <LogOut size={16} className="shrink-0" />
+                    <LogOut size={18} className="shrink-0" />
                     Sign Out
                 </button>
             </div>
@@ -99,7 +101,7 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="md:hidden fixed top-3 left-3 z-40 p-2 bg-white border border-gray-200 rounded-xl shadow-md text-gray-700 hover:bg-gray-50 active:scale-95 transition"
+                className="md:hidden fixed top-3 left-3 z-40 p-2 bg-surface border border-hairline rounded-[var(--r-md)] shadow-md text-ink hover:bg-surface-muted transition-colors"
             >
                 <Menu size={20} />
             </button>
@@ -108,11 +110,11 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
                 <div className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40" onClick={() => setIsOpen(false)} />
             )}
 
-            <aside className={`md:hidden fixed top-0 left-0 bottom-0 w-64 bg-white z-50 shadow-2xl transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <aside className={`md:hidden fixed top-0 left-0 bottom-0 w-[248px] bg-surface z-50 shadow-lg transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 {content}
             </aside>
 
-            <aside className="hidden md:block w-60 bg-white border-r border-gray-100 shrink-0 z-20 h-screen sticky top-0 overflow-hidden">
+            <aside className="hidden md:block w-[248px] bg-surface border-r border-hairline shadow-sm shrink-0 z-20 h-screen sticky top-0 overflow-hidden">
                 {content}
             </aside>
         </>
@@ -121,7 +123,7 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
-        <p className="px-3 pt-4 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+        <p className="px-3 pt-4 pb-1 text-[10px] font-bold text-ink-subtle uppercase tracking-widest">
             {children}
         </p>
     )
@@ -132,16 +134,16 @@ function NavItem({ href, icon: Icon, label, path }: { href: string; icon: React.
     return (
         <Link
             href={href}
-            className={`relative flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all active:scale-[0.97] ${
+            className={`relative flex items-center gap-3 px-3 h-9 rounded-[var(--r-md)] text-sm font-medium transition-colors ${
                 isActive
-                    ? 'bg-[var(--color-primary)]/8 text-[var(--color-primary)]'
-                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                    ? 'bg-brand-50 text-brand-700'
+                    : 'text-ink-muted hover:bg-surface-muted hover:text-ink'
             }`}
         >
             {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-[var(--color-primary)]" />
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-brand-500" />
             )}
-            <Icon size={16} className={`shrink-0 ${isActive ? 'text-[var(--color-primary)]' : 'text-gray-400'}`} />
+            <Icon size={18} className={`shrink-0 ${isActive ? 'text-brand-600' : 'text-ink-subtle'}`} />
             {label}
         </Link>
     )

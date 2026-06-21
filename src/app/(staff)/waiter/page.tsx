@@ -145,7 +145,7 @@ export default async function WaiterPage() {
         .sort((a, b) => a.tableLabel.localeCompare(b.tableLabel, undefined, { numeric: true }))
 
     return (
-        <div className="space-y-4 md:space-y-5">
+        <div className="space-y-6 md:space-y-7">
 
             {/* Floor Stats — always-visible at-a-glance bar */}
             <FloorStats

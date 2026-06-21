@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { Users, Package, Bell, ChefHat } from 'lucide-react'
+import { StatCard } from '@/components/ui'
+import type { StatCardProps } from '@/components/ui'
 
 interface Props {
     occupiedTables: number
@@ -64,71 +66,18 @@ export default function FloorStats({
         }
     })
 
-    const stats = [
-        {
-            icon: Users,
-            label: 'Tables',
-            value: `${occupied}`,
-            sub: `of ${totalTables}`,
-            active: occupied > 0,
-            urgency: 'blue' as const,
-        },
-        {
-            icon: Package,
-            label: 'Ready',
-            value: String(ready),
-            sub: 'to deliver',
-            active: ready > 0,
-            urgency: 'green' as const,
-            pulse: ready > 0,
-        },
-        {
-            icon: ChefHat,
-            label: 'Kitchen',
-            value: String(kitchen),
-            sub: 'in prep',
-            active: kitchen > 0,
-            urgency: 'orange' as const,
-        },
-        {
-            icon: Bell,
-            label: 'Requests',
-            value: String(pending),
-            sub: 'pending',
-            active: pending > 0,
-            urgency: 'red' as const,
-            pulse: pending > 0,
-        },
+    const stats: (StatCardProps & { key: string })[] = [
+        { key: 'tables',   icon: Users,   tone: 'info',    label: 'Tables',   value: occupied, hint: `of ${totalTables} occupied` },
+        { key: 'ready',    icon: Package, tone: ready > 0 ? 'success' : 'neutral', label: 'Ready', value: ready, hint: 'to deliver' },
+        { key: 'kitchen',  icon: ChefHat, tone: 'neutral', label: 'Kitchen',  value: kitchen, hint: 'in prep' },
+        { key: 'requests', icon: Bell,    tone: pending > 0 ? 'warning' : 'neutral', label: 'Requests', value: pending, hint: 'pending' },
     ]
 
-    const COLORS = {
-        blue:   { card: 'border-blue-100 bg-blue-50',   icon: 'bg-blue-100 text-blue-600',   num: 'text-blue-700' },
-        green:  { card: 'border-emerald-100 bg-emerald-50', icon: 'bg-emerald-100 text-emerald-600', num: 'text-emerald-700' },
-        orange: { card: 'border-orange-100 bg-orange-50',  icon: 'bg-orange-100 text-orange-600',  num: 'text-orange-700' },
-        red:    { card: 'border-red-100 bg-red-50',     icon: 'bg-red-100 text-red-600',     num: 'text-red-700' },
-        none:   { card: 'border-gray-100 bg-white',     icon: 'bg-gray-100 text-gray-400',   num: 'text-gray-800' },
-    }
-
     return (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {stats.map((s) => {
-                const c = s.active ? COLORS[s.urgency] : COLORS.none
-                const Icon = s.icon
-                return (
-                    <div key={s.label} className={`rounded-xl border ${c.card} p-4 flex items-center gap-3`}>
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${c.icon} ${s.pulse ? 'animate-pulse' : ''}`}>
-                            <Icon size={18} />
-                        </div>
-                        <div>
-                            <div className="flex items-baseline gap-1">
-                                <p className={`text-2xl font-bold tabular-nums leading-none ${c.num}`}>{s.value}</p>
-                                {s.sub && <p className="text-[11px] text-gray-400 font-medium">{s.sub}</p>}
-                            </div>
-                            <p className="text-xs text-gray-500 font-medium mt-0.5">{s.label}</p>
-                        </div>
-                    </div>
-                )
-            })}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {stats.map(({ key, ...s }) => (
+                <StatCard key={key} {...s} />
+            ))}
         </div>
     )
 }

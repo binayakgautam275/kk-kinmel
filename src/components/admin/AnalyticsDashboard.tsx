@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import StatCard from '@/components/ui/StatCard'
 import { TrendingUp, ShoppingBag, BarChart3, Star, XCircle, Trophy, Clock, ArrowUp, ArrowDown, Minus } from 'lucide-react'
 
 interface DayBucket {
@@ -33,7 +34,7 @@ function fmt(n: number) {
 }
 
 function trendInfo(cur: number, prev: number) {
-    if (prev === 0 && cur === 0) return { txt: '—', cls: 'text-gray-400 bg-gray-50', Icon: Minus }
+    if (prev === 0 && cur === 0) return { txt: '—', cls: 'text-ink-subtle bg-surface-muted', Icon: Minus }
     if (prev === 0) return { txt: 'New', cls: 'text-emerald-700 bg-emerald-50', Icon: ArrowUp }
     const p = ((cur - prev) / prev) * 100
     const up = p >= 0
@@ -72,7 +73,7 @@ function BarChart({ data, color, fmtVal }: {
                             {hovered === i && (
                                 <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 z-10 bg-gray-900 text-white text-[10px] font-semibold px-2 py-1 rounded-lg whitespace-nowrap shadow-lg pointer-events-none">
                                     <div>{fmtVal(d.value)}</div>
-                                    <div className="text-gray-400">{d.dayNum} {d.monthStr}</div>
+                                    <div className="text-ink-subtle">{d.dayNum} {d.monthStr}</div>
                                 </div>
                             )}
                             <div
@@ -98,33 +99,13 @@ function BarChart({ data, color, fmtVal }: {
                     return (
                         <div key={d.date} className="flex-1 text-center overflow-hidden">
                             {showLabel && (
-                                <span className="text-[9px] text-gray-400 block truncate leading-tight">
+                                <span className="text-[9px] text-ink-subtle block truncate leading-tight">
                                     {is30 ? `${d.dayNum} ${d.monthStr}` : d.label}
                                 </span>
                             )}
                         </div>
                     )
                 })}
-            </div>
-        </div>
-    )
-}
-
-function KpiCard({ label, value, trend, icon: Icon, bg, ic }: {
-    label: string; value: string
-    trend: { txt: string; cls: string; Icon: React.ElementType }
-    icon: React.ElementType; bg: string; ic: string
-}) {
-    return (
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${bg} mb-3`}>
-                <Icon size={16} className={ic} />
-            </div>
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate">{label}</p>
-            <p className="text-xl font-bold text-gray-900 mt-0.5 tabular-nums">{value}</p>
-            <div className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md mt-2 ${trend.cls}`}>
-                <trend.Icon size={9} />
-                {trend.txt}
             </div>
         </div>
     )
@@ -169,15 +150,15 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900">Analytics</h1>
-                    <p className="text-sm text-gray-400 mt-0.5">Revenue, trends & insights</p>
+                    <h1 className="text-xl font-bold text-ink">Analytics</h1>
+                    <p className="text-sm text-ink-subtle mt-0.5">Revenue, trends & insights</p>
                 </div>
-                <div className="flex items-center bg-gray-100 rounded-xl p-1 gap-0.5">
+                <div className="flex items-center bg-surface-muted rounded-xl p-1 gap-0.5">
                     {(['7d', '30d'] as const).map(p => (
                         <button
                             key={p}
                             onClick={() => setPeriod(p)}
-                            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${period === p ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                         >
                             {p === '7d' ? 'Last 7 days' : 'Last 30 days'}
                         </button>
@@ -186,56 +167,52 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
             </div>
 
             {/* KPI cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <KpiCard
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <StatCard
                     label="Revenue"
                     value={fmt(rev)}
-                    trend={revTrend}
+                    delta={revTrend.txt !== '—' && revTrend.txt !== 'New' ? parseFloat(revTrend.txt) : undefined}
                     icon={TrendingUp}
-                    bg="bg-orange-50"
-                    ic="text-orange-500"
+                    tone="brand"
                 />
-                <KpiCard
+                <StatCard
                     label="Orders"
                     value={String(ord)}
-                    trend={ordTrend}
+                    delta={ordTrend.txt !== '—' && ordTrend.txt !== 'New' ? parseFloat(ordTrend.txt) : undefined}
                     icon={ShoppingBag}
-                    bg="bg-emerald-50"
-                    ic="text-emerald-600"
+                    tone="success"
                 />
-                <KpiCard
+                <StatCard
                     label="Avg Order Value"
                     value={fmt(aov)}
-                    trend={aovTrend}
+                    delta={aovTrend.txt !== '—' && aovTrend.txt !== 'New' ? parseFloat(aovTrend.txt) : undefined}
                     icon={BarChart3}
-                    bg="bg-blue-50"
-                    ic="text-blue-600"
+                    tone="info"
                 />
-                <KpiCard
+                <StatCard
                     label="Avg Rating"
                     value={kpis.avgRating !== null ? `★ ${kpis.avgRating.toFixed(1)}` : '—'}
-                    trend={{ txt: `${kpis.ratingCount} reviews`, cls: 'text-gray-400 bg-gray-50', Icon: Minus }}
+                    hint={`${kpis.ratingCount} reviews`}
                     icon={Star}
-                    bg="bg-amber-50"
-                    ic="text-amber-500"
+                    tone="warning"
                 />
             </div>
 
             {/* Main chart */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div className="bg-surface rounded-card border border-hairline shadow-sm p-5">
                 <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                    <h2 className="font-semibold text-gray-900 text-sm">
+                    <h2 className="font-semibold text-ink text-sm">
                         {chartMetric === 'revenue' ? 'Revenue' : 'Order Count'}
-                        <span className="text-gray-400 font-normal ml-2 text-xs">
+                        <span className="text-ink-subtle font-normal ml-2 text-xs">
                             {period === '7d' ? 'last 7 days' : 'last 30 days'}
                         </span>
                     </h2>
-                    <div className="flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
+                    <div className="flex items-center bg-surface-muted rounded-lg p-0.5 gap-0.5">
                         {(['revenue', 'orders'] as const).map(m => (
                             <button
                                 key={m}
                                 onClick={() => setChartMetric(m)}
-                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${chartMetric === m ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`px-3 py-1 rounded-md text-xs font-medium transition-all capitalize ${chartMetric === m ? 'bg-surface text-ink shadow-sm' : 'text-ink-muted hover:text-ink'}`}
                             >
                                 {m}
                             </button>
@@ -252,11 +229,11 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
             {/* Rush hour + Top items */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* Rush hour heatmap */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="bg-surface rounded-card border border-hairline shadow-sm p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <Clock size={14} className="text-blue-500" />
-                        <h2 className="font-semibold text-gray-900 text-sm">Rush Hours</h2>
-                        <span className="text-xs text-gray-400 ml-auto">last 30 days</span>
+                        <h2 className="font-semibold text-ink text-sm">Rush Hours</h2>
+                        <span className="text-xs text-ink-subtle ml-auto">last 30 days</span>
                     </div>
                     <div className="grid grid-cols-6 gap-1.5">
                         {peakHours.map(h => {
@@ -278,16 +255,16 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
                                     >
                                         {h.orders > 0 ? h.orders : ''}
                                     </div>
-                                    <span className="text-[9px] text-gray-400 leading-none">{HOUR_LABELS[h.hour]}</span>
+                                    <span className="text-[9px] text-ink-subtle leading-none">{HOUR_LABELS[h.hour]}</span>
                                 </div>
                             )
                         })}
                     </div>
                     {maxHourOrders <= 0 && (
-                        <p className="text-sm text-gray-400 text-center py-4 mt-2">No order data yet.</p>
+                        <p className="text-sm text-ink-subtle text-center py-4 mt-2">No order data yet.</p>
                     )}
                     {maxHourOrders > 0 && (
-                        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-50">
+                        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-hairline">
                             <div className="flex items-center gap-1">
                                 {[0.1, 0.35, 0.6, 0.85, 1].map((v, i) => (
                                     <div
@@ -297,20 +274,20 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
                                     />
                                 ))}
                             </div>
-                            <span className="text-[10px] text-gray-400">Low → Peak</span>
+                            <span className="text-[10px] text-ink-subtle">Low → Peak</span>
                         </div>
                     )}
                 </div>
 
                 {/* Top items */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="bg-surface rounded-card border border-hairline shadow-sm p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <Trophy size={14} className="text-amber-500" />
-                        <h2 className="font-semibold text-gray-900 text-sm">Most Ordered</h2>
-                        <span className="text-xs text-gray-400 ml-auto">last 30 days</span>
+                        <h2 className="font-semibold text-ink text-sm">Most Ordered</h2>
+                        <span className="text-xs text-ink-subtle ml-auto">last 30 days</span>
                     </div>
                     {topItems.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-6">No order data yet.</p>
+                        <p className="text-sm text-ink-subtle text-center py-6">No order data yet.</p>
                     ) : (
                         <div className="space-y-3">
                             {topItems.map((item, i) => (
@@ -319,14 +296,14 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
                                         <div className="flex items-center gap-2 min-w-0">
                                             <span className="text-sm shrink-0">
                                                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (
-                                                    <span className="text-[10px] font-bold text-gray-400 w-4 text-center inline-block">{i + 1}</span>
+                                                    <span className="text-[10px] font-bold text-ink-subtle w-4 text-center inline-block">{i + 1}</span>
                                                 )}
                                             </span>
-                                            <span className="text-sm text-gray-800 font-medium truncate">{item.name}</span>
+                                            <span className="text-sm text-ink font-medium truncate">{item.name}</span>
                                         </div>
-                                        <span className="text-xs text-gray-500 shrink-0 ml-2 tabular-nums">{item.count}×</span>
+                                        <span className="text-xs text-ink-muted shrink-0 ml-2 tabular-nums">{item.count}×</span>
                                     </div>
-                                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">
                                         <div
                                             className="h-full rounded-full bg-amber-400 transition-all duration-500"
                                             style={{ width: `${(item.count / maxItemCount) * 100}%` }}
@@ -340,14 +317,14 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
             </div>
 
             {/* Cancelled orders */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
+            <div className="bg-surface rounded-card border border-hairline shadow-sm overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-hairline flex items-center gap-2">
                     <XCircle size={14} className="text-red-400" />
-                    <h2 className="font-semibold text-gray-900 text-sm">Cancelled Orders</h2>
-                    <span className="ml-auto text-xs text-gray-400">{cancelled.length} in last 30 days</span>
+                    <h2 className="font-semibold text-ink text-sm">Cancelled Orders</h2>
+                    <span className="ml-auto text-xs text-ink-subtle">{cancelled.length} in last 30 days</span>
                 </div>
                 {cancelled.length === 0 ? (
-                    <div className="px-5 py-10 text-center text-sm text-gray-400">
+                    <div className="px-5 py-10 text-center text-sm text-ink-subtle">
                         No cancellations in the last 30 days — great work!
                     </div>
                 ) : (
@@ -359,26 +336,26 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-mono text-gray-500 uppercase">
+                                        <span className="text-[10px] font-mono text-ink-muted uppercase">
                                             #{c.id.substring(0, 8)}
                                         </span>
-                                        <span className="text-[10px] text-gray-400">
+                                        <span className="text-[10px] text-ink-subtle">
                                             {new Date(c.placed_at).toLocaleDateString('en-IN', {
                                                 day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                                             })}
                                         </span>
                                     </div>
                                     {c.note ? (
-                                        <p className="text-sm text-gray-700 mt-0.5">"{c.note}"</p>
+                                        <p className="text-sm text-ink mt-0.5">"{c.note}"</p>
                                     ) : (
-                                        <p className="text-xs text-gray-400 mt-0.5 italic">No reason provided</p>
+                                        <p className="text-xs text-ink-subtle mt-0.5 italic">No reason provided</p>
                                     )}
                                 </div>
-                                <span className="text-sm font-semibold text-gray-700 shrink-0 tabular-nums">{fmt(c.total)}</span>
+                                <span className="text-sm font-semibold text-ink shrink-0 tabular-nums">{fmt(c.total)}</span>
                             </div>
                         ))}
                         {cancelled.length > 10 && (
-                            <div className="px-5 py-2.5 text-xs text-gray-400 text-center">
+                            <div className="px-5 py-2.5 text-xs text-ink-subtle text-center">
                                 +{cancelled.length - 10} more cancellations
                             </div>
                         )}
@@ -388,11 +365,11 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
 
             {/* Customer feedback */}
             {kpis.ratingCount > 0 && (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
+                <div className="bg-surface rounded-card border border-hairline shadow-sm overflow-hidden">
+                    <div className="px-5 py-3.5 border-b border-hairline flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <Star size={14} className="text-amber-500" />
-                            <h2 className="font-semibold text-gray-900 text-sm">Customer Feedback</h2>
+                            <h2 className="font-semibold text-ink text-sm">Customer Feedback</h2>
                         </div>
                         {kpis.avgRating !== null && (
                             <span className="text-xs text-amber-600 font-semibold">
@@ -402,36 +379,36 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
                     </div>
                     <div className="p-5 grid md:grid-cols-2 gap-6">
                         <div>
-                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Rating Breakdown</p>
+                            <p className="text-[10px] font-semibold text-ink-subtle uppercase tracking-wider mb-3">Rating Breakdown</p>
                             <div className="space-y-2">
                                 {ratingCounts.slice().reverse().map(({ star, count }) => {
                                     const pct = kpis.ratingCount > 0 ? Math.round((count / kpis.ratingCount) * 100) : 0
                                     return (
                                         <div key={star} className="flex items-center gap-2">
-                                            <span className="text-xs w-4 text-right text-gray-600 font-medium">{star}</span>
+                                            <span className="text-xs w-4 text-right text-ink-muted font-medium">{star}</span>
                                             <span className="text-amber-400 text-xs">★</span>
-                                            <div className="flex-1 bg-gray-100 rounded-full h-2">
+                                            <div className="flex-1 bg-surface-muted rounded-full h-2">
                                                 <div
                                                     className="bg-amber-400 h-2 rounded-full transition-all"
                                                     style={{ width: `${pct}%` }}
                                                 />
                                             </div>
-                                            <span className="text-xs text-gray-400 w-6 text-right tabular-nums">{count}</span>
+                                            <span className="text-xs text-ink-subtle w-6 text-right tabular-nums">{count}</span>
                                         </div>
                                     )
                                 })}
                             </div>
                         </div>
                         <div>
-                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Recent Comments</p>
+                            <p className="text-[10px] font-semibold text-ink-subtle uppercase tracking-wider mb-3">Recent Comments</p>
                             {topComments.length === 0 ? (
-                                <p className="text-sm text-gray-400">No comments yet.</p>
+                                <p className="text-sm text-ink-subtle">No comments yet.</p>
                             ) : (
                                 <ul className="space-y-3">
                                     {topComments.map((f, i) => (
                                         <li key={i} className="border-l-2 border-amber-200 pl-3">
-                                            <p className="text-sm text-gray-700">"{f.comment}"</p>
-                                            <p className="text-[10px] text-gray-400 mt-0.5">
+                                            <p className="text-sm text-ink">"{f.comment}"</p>
+                                            <p className="text-[10px] text-ink-subtle mt-0.5">
                                                 {'★'.repeat(f.rating)}{'☆'.repeat(5 - f.rating)}
                                                 {' · '}{new Date(f.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                                             </p>

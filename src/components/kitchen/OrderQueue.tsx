@@ -57,12 +57,12 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
             playNewOrder().catch(() => {})
             const tbl = order.sessions?.tables?.label
             toast.custom((t) => (
-                <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full shadow-2xl rounded-xl px-4 py-3 flex items-start gap-3 border border-yellow-500/30`}
+                <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-xs w-full shadow-2xl rounded-card px-4 py-3 flex items-start gap-3 border border-yellow-500/30`}
                      style={{ background: '#1a1d27' }}>
                     <span className="text-xl mt-0.5">🔔</span>
                     <div>
                         <p className="font-bold text-sm text-yellow-400">New Order!</p>
-                        <p className="text-xs text-white/40 mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
+                        <p className="text-xs text-dark-muted mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
                     </div>
                 </div>
             ), { duration: 6000, position: 'top-right' })
@@ -188,7 +188,7 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
     ]
 
     return (
-        <div className="h-full flex flex-col" style={{ background: '#0f1117' }}>
+        <div className="h-full flex flex-col bg-dark-bg">
             {/* Mobile tab bar */}
             <div className="flex md:hidden gap-2 px-3 pt-3 pb-2 shrink-0 print:hidden">
                 {COLS.map(col => {
@@ -198,10 +198,10 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
                         <button
                             key={col.key}
                             onClick={() => setActiveTab(col.key)}
-                            className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border"
+                            className="flex-1 py-2.5 rounded-card text-xs font-bold flex items-center justify-center gap-1.5 transition-all border"
                             style={isActive
                                 ? { background: col.bgColor, borderColor: col.borderColor, color: col.color }
-                                : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.3)' }
+                                : { background: 'var(--dark-surface)', borderColor: 'var(--dark-border)', color: 'var(--dark-muted)' }
                             }
                         >
                             <Icon size={13} />
@@ -215,10 +215,10 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
                 })}
                 <button
                     onClick={() => setActiveTab('toc')}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border"
+                    className="flex-1 py-2.5 rounded-card text-xs font-bold flex items-center justify-center gap-1.5 transition-all border"
                     style={activeTab === 'toc'
                         ? { background: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.25)', color: '#3b82f6' }
-                        : { background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.3)' }
+                        : { background: 'var(--dark-surface)', borderColor: 'var(--dark-border)', color: 'var(--dark-muted)' }
                     }
                 >
                     <ListOrdered size={13} />
@@ -233,7 +233,7 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
                     <div className="hidden md:block absolute top-4 right-6 z-10 print:hidden">
                         <button
                             onClick={() => setShowTOCDesktop(!showTOCDesktop)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border transition-colors"
+                            className="flex items-center gap-2 px-3 py-2 rounded-[var(--r-md)] text-xs font-bold border transition-colors"
                             style={{ 
                                 background: showTOCDesktop ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
                                 borderColor: showTOCDesktop ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)',
@@ -251,20 +251,20 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
                         <div key={col.key}
                              className={`flex-none w-full md:w-[340px] lg:w-[380px] flex flex-col gap-3 ${isVisible ? 'flex' : 'hidden md:flex'}`}>
                             {/* Column header — desktop only */}
-                            <div className="hidden md:flex items-center justify-between pb-3 border-b border-white/[0.07]">
+                            <div className="hidden md:flex items-center justify-between pb-3 border-b border-dark-border">
                                 <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                                    <div className="w-8 h-8 rounded-[var(--r-md)] flex items-center justify-center"
                                          style={{ background: col.bgColor }}>
                                         <Icon size={15} style={{ color: col.color }} />
                                     </div>
-                                    <h2 className="font-bold text-white/80">{col.label}</h2>
+                                    <h2 className="font-bold text-dark-ink">{col.label}</h2>
                                     <span className="text-xs font-bold px-2 py-0.5 rounded-full"
                                           style={{ background: col.bgColor, color: col.color }}>
                                         {col.orders.length}
                                     </span>
                                 </div>
                                 {col.key === 'pass' && col.orders.length > 0 && (
-                                    <span className="text-[10px] text-white/30">Awaiting waiter</span>
+                                    <span className="text-[10px] text-dark-muted">Awaiting waiter</span>
                                 )}
                             </div>
 
@@ -298,35 +298,35 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
 
                 {/* TOC Sidebar / Panel */}
                 <div 
-                    className={`flex flex-col h-full shrink-0 border-white/[0.07] print:w-full print:border-none ${activeTab === 'toc' ? 'block w-full' : (showTOCDesktop ? 'hidden md:flex md:w-[320px] lg:w-[360px] md:border-l' : 'hidden')} print:block`}
+                    className={`flex flex-col h-full shrink-0 border-dark-border print:w-full print:border-none ${activeTab === 'toc' ? 'block w-full' : (showTOCDesktop ? 'hidden md:flex md:w-[320px] lg:w-[360px] md:border-l' : 'hidden')} print:block`}
                 >
-                    <div className="flex items-center justify-between p-4 border-b border-white/[0.07] shrink-0 print:border-black/10 print:pb-2">
+                    <div className="flex items-center justify-between p-4 border-b border-dark-border shrink-0 print:border-black/10 print:pb-2">
                         <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-blue-500/10 print:hidden">
+                            <div className="w-8 h-8 rounded-[var(--r-md)] flex items-center justify-center bg-blue-500/10 print:hidden">
                                 <ListOrdered size={15} className="text-blue-500" />
                             </div>
-                            <h2 className="font-bold text-white/90 print:text-black print:text-xl">Consolidated (TOC)</h2>
+                            <h2 className="font-bold text-dark-ink print:text-black print:text-xl">Consolidated (TOC)</h2>
                         </div>
-                        <button onClick={() => window.print()} className="p-2 hover:bg-white/5 rounded-lg text-white/50 transition print:hidden">
+                        <button onClick={() => window.print()} className="p-2 hover:bg-white/5 rounded-[var(--r-md)] text-dark-muted transition print:hidden">
                             <Printer size={16} />
                         </button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 print:space-y-1 print:p-0 print:pt-4" style={{ scrollbarWidth: 'none' }}>
                         {tocItems.map((item, i) => (
-                            <div key={i} className="flex items-start gap-3 p-3 rounded-xl border border-white/5 bg-white/[0.02] print:border-black/10 print:bg-transparent print:p-2 print:rounded-none">
+                            <div key={i} className="flex items-start gap-3 p-3 rounded-card border border-dark-border bg-dark-surface print:border-black/10 print:bg-transparent print:p-2 print:rounded-none">
                                 <span className="font-bold text-lg w-8 shrink-0 tabular-nums mt-0.5 text-blue-400 print:text-black">
                                     {item.quantity}×
                                 </span>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-white/90 text-[15px] leading-snug print:text-black">{item.name}</p>
+                                    <p className="font-semibold text-dark-ink text-[15px] leading-snug print:text-black">{item.name}</p>
                                     {item.modifiers && (
-                                        <p className="text-xs text-white/35 mt-0.5 print:text-black/60">{item.modifiers}</p>
+                                        <p className="text-xs text-dark-muted mt-0.5 print:text-black/60">{item.modifiers}</p>
                                     )}
                                     {item.special_request && (
                                         <p className="text-xs text-yellow-400/80 italic mt-0.5 font-medium print:text-black/80">↳ {item.special_request}</p>
                                     )}
                                     {item.constituents && (
-                                        <div className="mt-1 pl-3 border-l border-white/10 text-xs text-white/40 space-y-0.5 print:text-black/70 print:border-black/20">
+                                        <div className="mt-1 pl-3 border-l border-dark-border text-xs text-dark-muted space-y-0.5 print:text-black/70 print:border-black/20">
                                             {item.constituents.map((c, idx) => (
                                                 <div key={idx}>
                                                     • {c.quantity}× {c.name}
@@ -339,8 +339,8 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
                         ))}
                         {tocItems.length === 0 && (
                             <div className="text-center py-12 print:hidden">
-                                <ListOrdered size={28} className="mx-auto mb-2 text-white/10" />
-                                <p className="text-sm font-medium text-white/20">Nothing to prep</p>
+                                <ListOrdered size={28} className="mx-auto mb-2 text-dark-muted" />
+                                <p className="text-sm font-medium text-dark-muted">Nothing to prep</p>
                             </div>
                         )}
                     </div>
@@ -372,13 +372,13 @@ function OrderTicket({ order, comboItems = [], onAction, actionLabel, accentColo
     const ageMin = Math.floor(ageMs / 60000)
 
     return (
-        <div className="rounded-2xl overflow-hidden border" style={{ borderColor, background: '#161820' }}>
+        <div className="rounded-card overflow-hidden border" style={{ borderColor, background: '#161820' }}>
             {/* Ticket header */}
             <div className="px-4 py-2.5 flex items-center justify-between border-b"
                  style={{ borderColor, background: bgColor }}>
                 <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: accentColor }} />
-                    <span className="font-bold text-white/90">Table {tbl}</span>
+                    <span className="font-bold text-dark-ink">Table {tbl}</span>
                 </div>
                 <span className={`text-xs font-mono font-semibold tabular-nums ${isOld && !readOnly ? 'text-red-400 animate-pulse' : ''}`}
                       style={{ color: isOld && !readOnly ? undefined : 'rgba(255,255,255,0.35)' }}>
@@ -395,9 +395,9 @@ function OrderTicket({ order, comboItems = [], onAction, actionLabel, accentColo
                             {item.quantity}×
                         </span>
                         <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-white/90 text-[15px] leading-snug">{item.menu_items?.name}</p>
+                            <p className="font-semibold text-dark-ink text-[15px] leading-snug">{item.menu_items?.name}</p>
                             {item.menu_items?.is_combo && (
-                                <div className="mt-1 pl-3 border-l-2 border-white/10 text-xs text-white/40 space-y-0.5">
+                                <div className="mt-1 pl-3 border-l-2 border-dark-border text-xs text-dark-muted space-y-0.5">
                                     {comboItems
                                         .filter(c => c.combo_id === item.menu_item_id)
                                         .map(c => (
@@ -409,7 +409,7 @@ function OrderTicket({ order, comboItems = [], onAction, actionLabel, accentColo
                                 </div>
                             )}
                             {item.order_item_modifiers && item.order_item_modifiers.length > 0 && (
-                                <p className="text-xs text-white/35 mt-0.5">
+                                <p className="text-xs text-dark-muted mt-0.5">
                                     {item.order_item_modifiers.map((m, i) => (
                                         <span key={i}>{m.modifier_name}{i < (item.order_item_modifiers?.length ?? 0) - 1 ? ', ' : ''}</span>
                                     ))}
@@ -423,7 +423,7 @@ function OrderTicket({ order, comboItems = [], onAction, actionLabel, accentColo
                 ))}
 
                 {order.customer_note && (
-                    <div className="mt-3 px-3 py-2 rounded-xl border border-yellow-500/20 text-yellow-400/80 text-xs"
+                    <div className="mt-3 px-3 py-2 rounded-card border border-yellow-500/20 text-yellow-400/80 text-xs"
                          style={{ background: 'rgba(245,158,11,0.06)' }}>
                         <span className="font-bold text-[9px] uppercase tracking-widest block mb-0.5 text-yellow-500/60">Note</span>
                         {order.customer_note}
@@ -432,14 +432,14 @@ function OrderTicket({ order, comboItems = [], onAction, actionLabel, accentColo
 
                 <div className="pt-2">
                     {readOnly ? (
-                        <div className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-emerald-500/20 text-emerald-400/70 text-sm font-semibold"
+                        <div className="flex items-center justify-center gap-2 py-2.5 rounded-card border border-emerald-500/20 text-emerald-400/70 text-sm font-semibold"
                              style={{ background: 'rgba(16,185,129,0.06)' }}>
                             <CheckCircle2 size={15} /> Ready — awaiting pickup
                         </div>
                     ) : (
                         <button
                             onClick={onAction}
-                            className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 border"
+                            className="w-full py-3 rounded-card font-bold text-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2 border"
                             style={{ background: bgColor, borderColor, color: accentColor }}
                         >
                             <CheckSquare size={16} />

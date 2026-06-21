@@ -86,7 +86,7 @@ function themeToCSS(theme: Record<string, string>): string {
 
   return `
     :root {
-      --color-primary: ${resolveColor(theme.primaryColor, '#E85D04')};
+      --color-primary: ${resolveColor(theme.primaryColor, '#FB6303')};
       --color-secondary: ${resolveColor(theme.secondaryColor, '#1B263B')};
       --color-accent: ${resolveColor(theme.accentColor, '#EC4899')};
       --font-family: ${fontMap[theme.fontFamily] || fontMap.Inter};
@@ -109,8 +109,8 @@ export default async function RootLayout({
       </head>
       <body className={`
         ${inter.variable} ${playfair.variable} ${roboto.variable} ${lato.variable} 
-        font-[family-name:var(--font-family)] 
-        bg-white text-[var(--color-secondary)] 
+        font-[family-name:var(--font-family)]
+        bg-canvas text-ink
         antialiased min-h-screen flex flex-col
       `}>
         {children}

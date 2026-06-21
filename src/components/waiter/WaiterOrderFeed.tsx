@@ -9,7 +9,8 @@ import { playOrderReady, playNewOrder } from '@/lib/audio'
 import { playVoice } from '@/lib/voice'
 import { toast } from 'react-hot-toast'
 import { timeAgo, formatCurrency } from '@/lib/utils'
-import { Package, ChefHat, Loader2, Banknote, Truck, Clock, CheckCircle } from 'lucide-react'
+import { Package, ChefHat, Banknote, Truck, Clock } from 'lucide-react'
+import { Card, Button, Badge, StatusBadge, TableChip, FeedSection, EmptyState } from '@/components/ui'
 import type { Order, OrderItem, MenuItem, Session, Table, OrderStatus } from '@/types/database'
 
 export type WaiterOrder = Order & {
@@ -63,7 +64,7 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                         <span className="text-xl mt-0.5">🛎️</span>
                         <div>
                             <p className="font-bold text-sm text-amber-700">New Order</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
+                            <p className="text-xs text-ink-subtle mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
                         </div>
                     </div>
                 ), { duration: 5000, position: 'top-right' })
@@ -95,7 +96,7 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                         <span className="text-xl mt-0.5">✅</span>
                         <div>
                             <p className="font-bold text-sm text-emerald-700">Ready for Pickup!</p>
-                            <p className="text-xs text-gray-400 mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(payload.new.total_amount)}</p>
+                            <p className="text-xs text-ink-subtle mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(payload.new.total_amount)}</p>
                         </div>
                     </div>
                 ), { duration: 8000, position: 'top-right' })
@@ -136,63 +137,56 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
 
     if (orders.length === 0) {
         return (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-                <ChefHat size={28} className="mx-auto text-gray-200 mb-2" />
-                <p className="text-sm text-gray-400">No active orders right now</p>
-            </div>
+            <FeedSection icon={Package} title="Live Orders">
+                <Card padding={24}>
+                    <EmptyState icon={ChefHat} title="No active orders" description="Incoming orders will appear here in real time." />
+                </Card>
+            </FeedSection>
         )
     }
 
     const totalReady = orders.filter(o => o.status === 'ready').length
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-                <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
-                    <Package className="text-emerald-500" />
-                    Live Orders
-                    <span className="bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-full text-xs font-semibold">{orders.length}</span>
-                </h2>
-                {totalReady > 0 && (
-                    <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold animate-pulse shadow-sm border border-emerald-200">
-                        {totalReady} Ready
-                    </span>
-                )}
-            </div>
-
-            <div className="grid gap-4">
+        <FeedSection
+            icon={Package}
+            title="Live Orders"
+            count={orders.length}
+            tone="neutral"
+            action={totalReady > 0 ? <Badge tone="success" dot>{totalReady} Ready</Badge> : undefined}
+        >
+            <div className="grid gap-3">
                 {sortedOrders.map((order) => {
                     const label = tableLabel(order)
                     const isReady = order.status === 'ready'
-                    const isPreparing = order.status === 'preparing'
                     const ts = (order as unknown as { ready_at?: string | null }).ready_at || order.placed_at
                     const isStale = now - new Date(ts).getTime() > STALE_MS
 
                     return (
-                        <div key={order.id} className={`bg-white rounded-2xl border-2 shadow-sm transition-all duration-200 ${isReady ? 'border-emerald-400 bg-emerald-50/10 shadow-emerald-100' : isPreparing ? 'border-amber-200' : 'border-gray-100 hover:border-gray-200'}`}>
+                        <Card key={order.id} padding={false} className={isReady ? 'border-success/30' : undefined}>
                             <div className="p-4 md:p-5">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
-                                        <div className="flex items-center gap-3 mb-1">
-                                            <span className="text-xl font-bold text-gray-900 bg-gray-100 px-3 py-1 rounded-lg">Tbl {label}</span>
-                                            <StatusPip status={order.status} />
-                                            {isStale && isReady && <span className="text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded-md animate-pulse">Cold warning!</span>}
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <TableChip label={label} size="lg" />
+                                            <StatusBadge status={order.status} />
+                                            {isStale && isReady && <Badge tone="danger" className="animate-pulse">Cold warning!</Badge>}
                                         </div>
-                                        <div className="text-sm text-gray-500 flex items-center gap-2">
-                                            <Clock size={14} /> {timeAgo(order.placed_at)}
+                                        <div className="text-small text-ink-subtle flex items-center gap-2">
+                                            <Clock size={12} /> {timeAgo(order.placed_at)}
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <span className="text-xl font-bold text-gray-900 block">{formatCurrency(order.total_amount)}</span>
-                                        <span className="text-xs font-medium text-gray-400">{order.payment_status}</span>
+                                        <span className="text-display block text-ink">{formatCurrency(order.total_amount)}</span>
+                                        <span className="text-caption text-ink-muted">{order.payment_status}</span>
                                     </div>
                                 </div>
 
-                                <div className="bg-gray-50 rounded-xl p-3 mb-4">
-                                    <ul className="space-y-1.5 text-sm">
+                                <div className="bg-surface-muted rounded-[var(--r-md)] p-3 mb-4">
+                                    <ul className="space-y-1.5 text-body">
                                         {order.order_items?.map(item => (
-                                            <li key={item.id} className="flex gap-3 text-gray-800">
-                                                <span className="font-bold text-gray-400 w-6 text-right">{item.quantity}×</span>
+                                            <li key={item.id} className="flex gap-3 text-ink">
+                                                <span className="font-bold text-ink-muted w-6 text-right tabular">{item.quantity}×</span>
                                                 <span className="font-medium">{item.menu_items?.name}</span>
                                             </li>
                                         ))}
@@ -200,54 +194,44 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                                 </div>
 
                                 {order.customer_note && (
-                                    <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 p-3 rounded-xl mb-4 italic">
-                                        "{order.customer_note}"
-                                    </p>
+                                    <div className="mb-4">
+                                        <Badge tone="warning" className="w-full justify-start p-3 whitespace-normal italic">
+                                            &ldquo;{order.customer_note}&rdquo;
+                                        </Badge>
+                                    </div>
                                 )}
 
                                 {isReady && (
                                     <div className="flex gap-3 pt-2">
-                                        <button
+                                        <Button
+                                            variant="secondary"
+                                            size="lg"
+                                            block
                                             onClick={() => handleCashAndDeliver(order.id)}
                                             disabled={!!cashProcessingId || !!processingId}
-                                            className="flex-1 flex justify-center items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl active:scale-[0.98] transition shadow-sm"
+                                            loading={cashProcessingId === order.id}
+                                            icon={Banknote}
                                         >
-                                            {cashProcessingId === order.id ? <Loader2 size={18} className="animate-spin" /> : <Banknote size={18} />}
                                             Take Cash
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
+                                            variant="primary"
+                                            size="lg"
+                                            block
                                             onClick={() => handleMarkDelivered(order.id)}
                                             disabled={!!processingId || !!cashProcessingId}
-                                            className="flex-1 flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl active:scale-[0.98] transition shadow-sm shadow-emerald-200"
+                                            loading={processingId === order.id}
+                                            icon={Truck}
                                         >
-                                            {processingId === order.id ? <Loader2 size={18} className="animate-spin" /> : <Truck size={18} />}
                                             Deliver
-                                        </button>
+                                        </Button>
                                     </div>
                                 )}
                             </div>
-                        </div>
+                        </Card>
                     )
                 })}
             </div>
-        </div>
-    )
-}
-
-function StatusPip({ status }: { status: string }) {
-    const map: Record<string, { label: string; cls: string; Icon: React.ElementType }> = {
-        ready:     { label: 'Ready',     cls: 'text-emerald-700 bg-emerald-50 border-emerald-200', Icon: CheckCircle },
-        preparing: { label: 'Preparing', cls: 'text-orange-700 bg-orange-50 border-orange-200',   Icon: ChefHat },
-        confirmed: { label: 'Confirmed', cls: 'text-blue-700 bg-blue-50 border-blue-200',          Icon: Clock },
-        pending:   { label: 'Pending',   cls: 'text-amber-700 bg-amber-50 border-amber-200',      Icon: Clock },
-    }
-    const m = map[status
-        
-    ] || map.pending
-    return (
-        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${m.cls}`}>
-            <m.Icon size={9} />
-            {m.label}
-        </span>
+        </FeedSection>
     )
 }
