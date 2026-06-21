@@ -84,18 +84,18 @@ export default function StaffShiftClock({ userId, restaurantId, initialShift, in
     }
 
     const base = dark
-        ? 'bg-gray-800 border-gray-700 text-white'
-        : 'bg-white border-gray-200'
+        ? 'bg-dark-surface border-dark-border text-dark-ink'
+        : 'bg-surface border-hairline'
 
     const t = {
-        elapsed: dark ? 'text-white' : 'text-gray-900',
-        muted: dark ? 'text-gray-400' : 'text-gray-500',
-        label: dark ? 'text-gray-300' : 'text-gray-600',
-        divider: dark ? 'border-gray-700' : 'border-gray-100',
-        hover: dark ? 'hover:bg-gray-700' : 'hover:bg-gray-50',
-        historyRow: dark ? 'bg-gray-700/60' : 'bg-gray-50',
-        historyText: dark ? 'text-gray-200' : 'text-gray-700',
-        iconBg: activeShift ? 'bg-green-500/20' : dark ? 'bg-gray-700' : 'bg-gray-100',
+        elapsed: dark ? 'text-dark-ink' : 'text-ink',
+        muted: dark ? 'text-dark-muted' : 'text-ink-muted',
+        label: dark ? 'text-dark-ink/80' : 'text-ink-muted',
+        divider: dark ? 'border-dark-border' : 'border-hairline',
+        hover: dark ? 'hover:bg-white/5' : 'hover:bg-surface-muted',
+        historyRow: dark ? 'bg-white/5' : 'bg-surface-muted',
+        historyText: dark ? 'text-dark-ink' : 'text-ink',
+        iconBg: activeShift ? 'bg-success/20' : dark ? 'bg-white/5' : 'bg-surface-muted',
     }
 
     return (
@@ -123,7 +123,7 @@ export default function StaffShiftClock({ userId, restaurantId, initialShift, in
                         <button
                             onClick={handleClockOut}
                             disabled={loading}
-                            className="w-full bg-red-600 text-white font-semibold rounded-xl py-3 md:py-4 flex items-center justify-center gap-2 hover:bg-red-700 disabled:opacity-50 transition-colors"
+                            className="w-full bg-danger text-white font-semibold rounded-[var(--r-md)] h-12 flex items-center justify-center gap-2 hover:brightness-95 active:brightness-90 disabled:opacity-50 transition-[filter]"
                         >
                             <LogOut size={18} />
                             {loading ? 'Clocking Out...' : 'Clock Out'}
@@ -132,7 +132,7 @@ export default function StaffShiftClock({ userId, restaurantId, initialShift, in
                         <button
                             onClick={handleClockIn}
                             disabled={loading}
-                            className="w-full bg-green-600 text-white font-semibold rounded-xl py-3 md:py-4 flex items-center justify-center gap-2 hover:bg-green-700 disabled:opacity-50 transition-colors"
+                            className="w-full bg-success text-white font-semibold rounded-[var(--r-md)] h-12 flex items-center justify-center gap-2 hover:brightness-95 active:brightness-90 disabled:opacity-50 transition-[filter]"
                         >
                             <LogIn size={18} />
                             {loading ? 'Clocking In...' : 'Clock In'}

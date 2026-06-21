@@ -52,29 +52,35 @@ export default function KitchenStats({
         }
     })
 
+    // Status-mapped accents (never brand orange): queue=warning, preparing=info,
+    // ready=success, done=neutral. Tinted chip only; number stays neutral.
     const stats = [
-        { icon: Zap,         label: 'In Queue',   value: queued,    color: '#f59e0b', active: queued > 0 },
-        { icon: Clock,       label: 'Preparing',  value: preparing, color: '#f97316', active: preparing > 0 },
-        { icon: CheckCircle2,label: 'Ready',      value: ready,     color: '#10b981', active: ready > 0, pulse: ready > 0 },
-        { icon: Package,     label: 'Done Today', value: completed, color: '#60a5fa', active: true },
+        { icon: Zap,          label: 'In Queue',   value: queued,    accent: 'var(--warning)' },
+        { icon: Clock,        label: 'Preparing',  value: preparing, accent: 'var(--info)' },
+        { icon: CheckCircle2, label: 'Ready',      value: ready,     accent: 'var(--success)', pulse: ready > 0 },
+        { icon: Package,      label: 'Done Today', value: completed, accent: null },
     ]
 
     return (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
             {stats.map((s) => {
                 const Icon = s.icon
+                const chip = s.accent
+                    ? {
+                          background: `color-mix(in srgb, ${s.accent} 16%, transparent)`,
+                          color: `color-mix(in srgb, ${s.accent} 75%, white)`,
+                      }
+                    : undefined
                 return (
                     <div key={s.label}
-                         className={`rounded-card border border-dark-border p-3 md:p-4 flex items-center gap-3 ${!s.active && 'bg-dark-surface'}`}
-                         style={s.active && s.color ? { background: `${s.color}14` } : undefined}>
-                        <div className={`shrink-0 ${s.pulse ? 'animate-pulse' : ''}`}>
-                            <Icon size={20} style={{ color: s.active ? s.color : '#4b5563' }} />
-                        </div>
+                         className="rounded-card border border-dark-border bg-dark-surface p-3 md:p-4 flex items-center gap-3">
+                        <span className={`grid size-9 place-items-center rounded-[var(--r-md)] shrink-0 ${chip ? '' : 'bg-white/5 text-dark-muted'} ${s.pulse ? 'animate-pulse' : ''}`}
+                              style={chip}>
+                            <Icon size={18} />
+                        </span>
                         <div>
-                            <p className="text-2xl font-bold tabular-nums leading-none" style={{ color: s.active ? s.color : '#6b7280' }}>
-                                {s.value}
-                            </p>
-                            <p className="text-[10px] md:text-xs text-dark-muted font-medium mt-0.5">{s.label}</p>
+                            <p className="text-2xl font-bold tabular text-dark-ink leading-none">{s.value}</p>
+                            <p className="text-caption text-dark-muted mt-0.5">{s.label}</p>
                         </div>
                     </div>
                 )

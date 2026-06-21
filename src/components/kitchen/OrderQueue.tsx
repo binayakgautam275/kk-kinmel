@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useRef, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { playNewOrder } from '@/lib/audio'
@@ -9,6 +9,7 @@ import { formatCurrency, timeAgo } from '@/lib/utils'
 import { Clock, ChefHat, CheckCircle2, CheckSquare, ListOrdered, Printer, LayoutPanelLeft } from 'lucide-react'
 import type { OrderStatus, Order, OrderItem, OrderItemModifier, MenuItem, Session, Table } from '@/types/database'
 import { updateOrderStatus } from '@/app/(staff)/kitchen/actions'
+import { AgingTimer, EmptyState } from '@/components/ui'
 
 export type KitchenOrder = Order & {
     sessions?: Session & { tables?: Partial<Table> }
@@ -150,14 +151,16 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
     const [activeTab, setActiveTab] = useState<'new' | 'preparing' | 'pass' | 'toc'>('new')
     const [showTOCDesktop, setShowTOCDesktop] = useState(false)
 
+    // Column accents follow the canonical status map: New=warning (amber),
+    // Preparing=info (blue — never brand orange for status), Pass=success (green).
     const COLS = [
         {
             key: 'new' as const,
             label: 'New Orders',
             icon: Clock,
-            color: '#f59e0b',
-            borderColor: 'rgba(245,158,11,0.25)',
-            bgColor: 'rgba(245,158,11,0.08)',
+            color: 'var(--warning)',
+            borderColor: 'color-mix(in srgb, var(--warning) 28%, transparent)',
+            bgColor: 'color-mix(in srgb, var(--warning) 12%, transparent)',
             orders: newOrders,
             actionLabel: 'Start Preparing',
             emptyLabel: 'Queue is empty',
@@ -166,9 +169,9 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
             key: 'preparing' as const,
             label: 'Preparing',
             icon: ChefHat,
-            color: '#f97316',
-            borderColor: 'rgba(249,115,22,0.25)',
-            bgColor: 'rgba(249,115,22,0.08)',
+            color: 'var(--info)',
+            borderColor: 'color-mix(in srgb, var(--info) 28%, transparent)',
+            bgColor: 'color-mix(in srgb, var(--info) 12%, transparent)',
             orders: preparingOrders,
             actionLabel: 'Mark as Ready',
             emptyLabel: 'Nothing cooking',
@@ -177,9 +180,9 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
             key: 'pass' as const,
             label: 'Pass',
             icon: CheckCircle2,
-            color: '#10b981',
-            borderColor: 'rgba(16,185,129,0.25)',
-            bgColor: 'rgba(16,185,129,0.08)',
+            color: 'var(--success)',
+            borderColor: 'color-mix(in srgb, var(--success) 28%, transparent)',
+            bgColor: 'color-mix(in srgb, var(--success) 12%, transparent)',
             orders: readyOrders,
             actionLabel: undefined,
             emptyLabel: 'Pass is clear ✓',
@@ -285,10 +288,7 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
                                     />
                                 ))}
                                 {col.orders.length === 0 && (
-                                    <div className="text-center py-12">
-                                        <Icon size={28} className="mx-auto mb-2" style={{ color: 'rgba(255,255,255,0.1)' }} />
-                                        <p className="text-sm font-medium" style={{ color: 'rgba(255,255,255,0.2)' }}>{col.emptyLabel}</p>
-                                    </div>
+                                    <EmptyState dark icon={Icon} title={col.emptyLabel} />
                                 )}
                             </div>
                         </div>
@@ -361,30 +361,21 @@ function OrderTicket({ order, comboItems = [], onAction, actionLabel, accentColo
     readOnly?: boolean
 }) {
     const tbl = order.sessions?.tables?.label || '?'
-    const [now, setNow] = useState(Date.now)
-    useEffect(() => {
-        const t = setInterval(() => setNow(Date.now()), 30_000)
-        return () => clearInterval(t)
-    }, [])
-
-    const ageMs = now - new Date(order.placed_at).getTime()
-    const isOld = ageMs > 15 * 60 * 1000
-    const ageMin = Math.floor(ageMs / 60000)
 
     return (
-        <div className="rounded-card overflow-hidden border" style={{ borderColor, background: '#161820' }}>
-            {/* Ticket header */}
+        <div className="rounded-card overflow-hidden border bg-dark-surface" style={{ borderColor }}>
+            {/* Ticket header — status dot + table + aging timer (escalates) */}
             <div className="px-4 py-2.5 flex items-center justify-between border-b"
                  style={{ borderColor, background: bgColor }}>
                 <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: accentColor }} />
                     <span className="font-bold text-dark-ink">Table {tbl}</span>
                 </div>
-                <span className={`text-xs font-mono font-semibold tabular-nums ${isOld && !readOnly ? 'text-red-400 animate-pulse' : ''}`}
-                      style={{ color: isOld && !readOnly ? undefined : 'rgba(255,255,255,0.35)' }}>
-                    {ageMin > 0 ? `${ageMin}m` : timeAgo(order.placed_at)}
-                    {isOld && !readOnly && ' ⚠'}
-                </span>
+                {readOnly ? (
+                    <span className="text-caption font-mono font-semibold tabular text-dark-muted">{timeAgo(order.placed_at)}</span>
+                ) : (
+                    <AgingTimer since={order.placed_at} dark warnAfter={5} dangerAfter={10} />
+                )}
             </div>
 
             {/* Items */}
@@ -432,8 +423,12 @@ function OrderTicket({ order, comboItems = [], onAction, actionLabel, accentColo
 
                 <div className="pt-2">
                     {readOnly ? (
-                        <div className="flex items-center justify-center gap-2 py-2.5 rounded-card border border-emerald-500/20 text-emerald-400/70 text-sm font-semibold"
-                             style={{ background: 'rgba(16,185,129,0.06)' }}>
+                        <div className="flex items-center justify-center gap-2 py-2.5 rounded-card border text-sm font-semibold"
+                             style={{
+                                 background: 'color-mix(in srgb, var(--success) 10%, transparent)',
+                                 borderColor: 'color-mix(in srgb, var(--success) 28%, transparent)',
+                                 color: 'color-mix(in srgb, var(--success) 70%, white)',
+                             }}>
                             <CheckCircle2 size={15} /> Ready — awaiting pickup
                         </div>
                     ) : (

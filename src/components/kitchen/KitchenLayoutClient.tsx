@@ -7,6 +7,7 @@ import SoundEnableButton from '@/components/shared/SoundEnableButton'
 import { createClient } from '@/lib/supabase/client'
 import { setCustomNotificationSound } from '@/lib/audio'
 import { useRouter } from 'next/navigation'
+import CommandPaletteMount from '@/components/ui/CommandPaletteMount'
 
 interface Props {
     children: ReactNode
@@ -38,21 +39,20 @@ export default function KitchenLayoutClient({ children, restaurantName, staffNam
     }
 
     return (
-        <div className="min-h-screen flex flex-col" style={{ background: '#0f1117' }}>
-            <header className="shrink-0 border-b border-white/[0.07] px-4 md:px-6 h-13 flex items-center justify-between gap-4 print:hidden"
-                    style={{ background: 'rgba(255,255,255,0.03)' }}>
+        <div className="min-h-screen flex flex-col bg-dark-bg">
+            <header className="shrink-0 border-b border-dark-border px-4 md:px-6 h-16 flex items-center justify-between gap-4 print:hidden bg-dark-surface">
                 <div className="flex items-center gap-3 min-w-0">
                     <Logo className="h-7 shrink-0" variant="dark" />
                     {restaurantName && (
                         <div className="hidden sm:block">
-                            <p className="text-xs font-bold text-white/70 leading-none truncate max-w-[160px]">{restaurantName}</p>
-                            <p className="text-[9px] text-white/30 font-semibold tracking-widest uppercase mt-0.5">Kitchen Display</p>
+                            <p className="text-small font-bold text-dark-ink leading-none truncate max-w-[160px]">{restaurantName}</p>
+                            <p className="text-[10px] text-dark-muted font-semibold tracking-widest uppercase mt-0.5">Kitchen Display</p>
                         </div>
                     )}
                 </div>
 
                 <div className="absolute left-1/2 -translate-x-1/2">
-                    <span className="font-mono text-base font-bold tabular-nums tracking-wider text-white/60">
+                    <span className="font-mono text-base font-bold tabular tracking-wider text-dark-muted">
                         {time}
                     </span>
                 </div>
@@ -60,11 +60,11 @@ export default function KitchenLayoutClient({ children, restaurantName, staffNam
                 <div className="flex items-center gap-2 shrink-0">
                     <SoundEnableButton variant="dark" />
                     {staffName && (
-                        <span className="hidden md:block text-xs text-white/40 font-medium max-w-28 truncate">{staffName}</span>
+                        <span className="hidden md:block text-caption text-dark-muted font-medium max-w-28 truncate">{staffName}</span>
                     )}
                     <button
                         onClick={handleSignOut}
-                        className="flex items-center gap-1.5 text-xs font-medium text-white/40 hover:text-red-400 transition px-2.5 py-2 rounded-lg hover:bg-red-500/10 active:scale-95"
+                        className="flex items-center gap-1.5 text-caption font-medium text-dark-muted hover:text-danger transition-colors px-2.5 py-2 rounded-[var(--r-md)] hover:bg-danger/10"
                     >
                         <LogOut size={14} />
                         <span className="hidden md:inline">Sign Out</span>
@@ -75,6 +75,7 @@ export default function KitchenLayoutClient({ children, restaurantName, staffNam
             <main className="flex-1 overflow-hidden">
                 {children}
             </main>
+            <CommandPaletteMount />
         </div>
     )
 }

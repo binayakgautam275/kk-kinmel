@@ -3,6 +3,8 @@ import AdminSidebar from '@/components/admin/AdminSidebar'
 import SuperAdminSidebar from '@/components/admin/SuperAdminSidebar'
 import AdminOrderNotifier from '@/components/admin/AdminOrderNotifier'
 import SoundEnableButton from '@/components/shared/SoundEnableButton'
+import { CommandHint } from '@/components/ui/CommandHint'
+import CommandPaletteMount from '@/components/ui/CommandPaletteMount'
 import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -45,6 +47,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         {isSuperAdmin ? 'SaaS Control Panel' : (restaurantName || 'Management Console')}
                     </h2>
                     <div className="flex items-center gap-3">
+                        <CommandHint />
                         {!isSuperAdmin && <SoundEnableButton variant="light" />}
                         <span className={`text-caption font-semibold px-2.5 py-1 rounded-full ${
                             isSuperAdmin
@@ -55,6 +58,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         </span>
                     </div>
                 </header>
+                <CommandPaletteMount />
                 <div className="flex-1 overflow-auto p-5 md:p-8">
                     <div className="max-w-6xl mx-auto">
                         {children}

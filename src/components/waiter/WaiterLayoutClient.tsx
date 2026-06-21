@@ -7,6 +7,8 @@ import SoundEnableButton from '@/components/shared/SoundEnableButton'
 import { createClient } from '@/lib/supabase/client'
 import { setCustomNotificationSound } from '@/lib/audio'
 import { useRouter } from 'next/navigation'
+import { CommandHint } from '@/components/ui/CommandHint'
+import CommandPaletteMount from '@/components/ui/CommandPaletteMount'
 
 interface Props {
     children: ReactNode
@@ -61,6 +63,7 @@ export default function WaiterLayoutClient({ children, restaurantName, staffName
 
                     {/* Right */}
                     <div className="flex items-center gap-1.5 md:gap-2.5 shrink-0">
+                        <CommandHint />
                         <SoundEnableButton variant="light" />
                         {staffName && (
                             <div className="hidden md:flex items-center gap-2">
@@ -86,6 +89,7 @@ export default function WaiterLayoutClient({ children, restaurantName, staffName
             <main className="flex-1 w-full max-w-7xl mx-auto p-3 md:p-6">
                 {children}
             </main>
+            <CommandPaletteMount />
         </div>
     )
 }

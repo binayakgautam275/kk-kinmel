@@ -4,11 +4,15 @@ import Link from 'next/link'
 import Logo from '@/components/shared/Logo'
 import CopyrightYear from '@/components/shared/CopyrightYear'
 import MobileNav from './MobileNav'
+import Image from 'next/image'
 import {
     QrCode, ChefHat, ArrowRight, Smartphone, BarChart3,
-    Clock, ShieldCheck, Globe, Users, Utensils, Bell,
-    Gift, Receipt, Zap, CheckCircle, Layers,
-    ArrowUpRight, ChevronDown, MapPin, CreditCard,
+    Clock, ShieldCheck, Globe, Users, Utensils,
+    Gift, Receipt, CheckCircle, ChevronDown,
+    LayoutGrid, Phone, FileText, PiggyBank, Play, Apple,
+    MessageCircle, Users2, Star,
+    Plus,
+    MapPin, Facebook, Instagram, Youtube, Twitter
 } from 'lucide-react'
 
 const ROLE_LANDING: Record<string, string> = {
@@ -18,6 +22,18 @@ const ROLE_LANDING: Record<string, string> = {
     waiter: '/waiter',
 }
 
+const faqs = [
+    { q: "What is kkkhane?", a: "kkkhane Nepal is a restaurant management software with smart features to run and manage all the operations of restaurant." },
+    { q: "What are the features of kkkhane?", a: "It provides robust features including Order Management, Inventory Tracking, Accounting, Digital QR Menu, and Real-Time Reporting." },
+    { q: "Can I use the kkkhane software for free?", a: "Yes, we offer a completely free tier with essential tools for small businesses." },
+    { q: "How secure is my restaurant data?", a: "We use top-tier cloud encryption and role-based access control to ensure complete security." },
+    { q: "Is kkkhane Nepal available in Android and iOS also?", a: "Yes, you can access our platform on Android, iOS, or any web browser." },
+    { q: "Do you offer a QR code menu feature?", a: "Absolutely. Our digital QR menus allow contactless ordering seamlessly." },
+    { q: "Can I manage my restaurant remotely?", a: "Yes, being cloud-based, you can access your dashboard from anywhere." },
+    { q: "Is kkkhane suitable for small restaurants or cafés?", a: "Yes, our system scales perfectly from small cafes to large chains." },
+    { q: "How do I register for free with kkkhane software?", a: "Simply click 'Start for Free' and set up your account in under 2 minutes." },
+]
+
 export default async function Home() {
     const currentUser = await getOptionalUser()
     if (currentUser) {
@@ -26,148 +42,471 @@ export default async function Home() {
     }
 
     return (
-        <div className="min-h-screen bg-[#FAFAF8] text-gray-900 overflow-x-hidden">
+        <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden font-sans">
 
-            {/* ── Nav ──────────────────────────────────────────── */}
-            <nav className="fixed top-0 inset-x-0 z-50 bg-[#FAFAF8]/90 backdrop-blur-xl border-b border-gray-100/80">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-                    <Link href="/" className="shrink-0">
+            {/* ── 1. Header & Navigation Bar ─────────────────────────────── */}
+            <nav className="fixed top-0 inset-x-0 z-50 bg-white/75 backdrop-blur-md border-b border-gray-100">
+                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+                    <Link href="/" className="shrink-0 flex items-center gap-2">
                         <Logo className="h-8" />
                     </Link>
-                    <div className="hidden lg:flex items-center gap-1 text-sm font-medium text-gray-500">
-                        {[
-                            { href: '#features', label: 'Features' },
-                            { href: '#how-it-works', label: 'How it Works' },
-                            { href: '#pricing', label: 'Pricing' },
-                            { href: '/docs', label: 'Docs' },
-                            { href: '/blog', label: 'Blog' },
-                        ].map(({ href, label }) => (
-                            <a key={href} href={href}
-                               className="px-3.5 py-2 rounded-lg hover:bg-gray-100 hover:text-gray-900 transition-colors">
-                                {label}
-                            </a>
-                        ))}
+
+                    <div className="hidden lg:flex items-center gap-8 text-[15px] font-semibold text-gray-700">
+                        {/* Features Dropdown */}
+                        <div className="group relative h-20 flex items-center">
+                            <button className="flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+                                Features <ChevronDown size={14} className="group-hover:-rotate-180 transition-transform duration-200" />
+                            </button>
+                            <div className="absolute top-[80px] left-1/2 -translate-x-1/2 w-[800px] bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 p-6 flex gap-6">
+                                <div className="flex-1 grid grid-cols-2 gap-4">
+                                    {[
+                                        { title: 'Order & KOT Management', desc: 'Take orders perfectly and reduce errors.', icon: <FileText className="text-gray-500" /> },
+                                        { title: 'Inventory & Waste Control', desc: 'Track real-time stock to lower food costs.', icon: <LayoutGrid className="text-gray-500" /> },
+                                        { title: 'Accounting & Expense', desc: 'Track every expense, bill, and payment.', icon: <PiggyBank className="text-gray-500" /> },
+                                        { title: 'Digital QR Menu', desc: 'Let guests scan and order without waiting.', icon: <QrCode className="text-gray-500" /> },
+                                        { title: 'Table & Space Management', desc: 'Optimize seating and turn tables faster.', icon: <LayoutGrid className="text-gray-500" /> },
+                                        { title: 'Loyalty & Rewards', desc: 'Keep customers coming back for more.', icon: <Gift className="text-gray-500" /> },
+                                    ].map(f => (
+                                        <Link href="/404" key={f.title} className="flex gap-3 hover:bg-gray-50 p-3 rounded-xl cursor-pointer transition-colors block">
+                                            <div className="mt-1">{f.icon}</div>
+                                            <div>
+                                                <h4 className="font-bold text-gray-900 text-sm mb-0.5">{f.title}</h4>
+                                                <p className="text-xs text-gray-500 leading-snug">{f.desc}</p>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                                <div className="w-[280px] flex flex-col gap-4 border-l border-gray-100 pl-6">
+                                    {[
+                                        { title: 'Real-Time Sales Report', desc: 'Monitor live sales and profit analytics.', icon: <Clock size={18} /> },
+                                        { title: 'Mobile & Web App', desc: 'Works on iOS, Android, or Web.', icon: <Globe size={18} /> },
+                                        { title: 'Refer & Earn', desc: 'Refer others, earn free Premium', icon: <Gift size={18} /> },
+                                    ].map(l => (
+                                        <Link href="/404" key={l.title} className="flex gap-3 hover:text-[var(--color-primary)] cursor-pointer transition-colors block">
+                                            <div className="mt-0.5 text-gray-400">{l.icon}</div>
+                                            <div>
+                                                <h4 className="font-bold text-sm mb-0.5">{l.title}</h4>
+                                                <p className="text-xs text-gray-500">{l.desc}</p>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                    <Link href="/signup" className="mt-auto bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl relative overflow-hidden group/card cursor-pointer block">
+                                        <h4 className="font-bold text-sm text-gray-900 mb-4 pr-10 relative z-10">Digital QR Menu to make your Restaurant smart.</h4>
+                                        <span className="text-xs font-bold text-white bg-[var(--color-primary)] px-3 py-1.5 rounded-lg relative z-10">Start for free</span>
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Resources Dropdown */}
+                        <div className="group relative h-20 flex items-center">
+                            <button className="flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
+                                Resources <ChevronDown size={14} className="group-hover:-rotate-180 transition-transform duration-200" />
+                            </button>
+                            <div className="absolute top-[80px] left-0 w-[300px] bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 p-3">
+                                {[
+                                    { title: 'Blog', desc: 'Blogs help you to optimize your restaurant', icon: <FileText size={18} /> },
+                                    { title: 'Reviews', desc: 'Read reviews from our customers', icon: <MessageCircle size={18} /> },
+                                    { title: 'Customer Stories', desc: 'See how we are helping restaurants', icon: <Users2 size={18} /> },
+                                ].map(r => (
+                                    <Link href="/404" key={r.title} className="flex gap-3 hover:bg-gray-50 p-3 rounded-xl cursor-pointer transition-colors block">
+                                        <div className="mt-0.5 text-[var(--color-primary)]">{r.icon}</div>
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 text-sm mb-0.5">{r.title}</h4>
+                                            <p className="text-xs text-gray-500">{r.desc}</p>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+
+                        <Link href="/404" className="hover:text-[var(--color-primary)] transition-colors">Pricing</Link>
+                        <Link href="/404" className="hover:text-[var(--color-primary)] transition-colors">Career</Link>
+                        <Link href="/404" className="hover:text-[var(--color-primary)] transition-colors">Contact</Link>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Link href="/login"
-                              className="hidden sm:inline-flex px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors">
-                            Log in
+
+                    <div className="flex items-center gap-6">
+                        <Link href="/login" className="hidden sm:block font-bold text-gray-700 hover:text-[var(--color-primary)] transition-colors">
+                            Login
                         </Link>
-                        <Link href="/signup"
-                              className="btn-primary text-sm px-5 py-2.5 hidden sm:inline-flex rounded-xl">
-                            Get started free
+                        <Link href="/signup" className="bg-[var(--color-primary)] text-white px-6 py-2.5 rounded-full font-bold hover:scale-105 transition-transform shadow-md hover:shadow-lg">
+                            Start For Free
                         </Link>
                         <MobileNav />
                     </div>
                 </div>
             </nav>
 
-            {/* ── Hero ─────────────────────────────────────────── */}
-            <section className="relative pt-28 pb-16 sm:pt-36 sm:pb-24 lg:pt-44 lg:pb-32 overflow-hidden">
-                <div className="absolute inset-0 -z-10">
-                    <div className="absolute top-[-10%] left-[20%] w-[70vw] h-[70vw] max-w-3xl max-h-3xl rounded-full opacity-70"
-                         style={{ background: 'radial-gradient(circle, rgba(232,93,4,0.07) 0%, transparent 70%)' }} />
-                    <div className="absolute bottom-[-5%] right-[-5%] w-[40vw] h-[40vw] max-w-xl max-h-xl rounded-full"
-                         style={{ background: 'radial-gradient(circle, rgba(251,191,36,0.08) 0%, transparent 70%)' }} />
-                    <div className="absolute inset-0 opacity-[0.015]"
-                         style={{ backgroundImage: 'linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.5) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+            {/* ── 2. Hero Section ────────────────────────────────────────────── */}
+            <section className="relative pt-36 pb-20 overflow-hidden bg-white text-center">
+                {/* Everest Silhouette Watermark (CSS abstract placeholder) */}
+                <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none"
+                    style={{ backgroundImage: 'radial-gradient(ellipse at 50% 100%, #000 0%, transparent 60%)', clipPath: 'polygon(0% 100%, 20% 70%, 35% 85%, 50% 40%, 65% 80%, 80% 60%, 100% 100%)' }}>
                 </div>
 
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="max-w-4xl mx-auto text-center">
-                        <div className="animate-fade-up inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[var(--color-primary)] text-xs font-semibold mb-7 tracking-wide border border-[var(--color-primary)]/20 bg-[var(--color-primary)]/6">
-                            <MapPin size={12} />
-                            Built for Nepal&apos;s restaurants
+                <div className="max-w-[1000px] mx-auto px-4 relative z-10">
+                    <div className="inline-block bg-purple-50 px-4 py-1.5 rounded-full mb-8 border border-purple-100">
+                        <span className="text-[#4B207D] font-bold text-sm tracking-wide">Nepal&apos;s Trusted Restaurant POS 🇳🇵</span>
+                    </div>
+
+                    <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold text-gray-900 leading-[1.1] mb-6 tracking-tight">
+                        Best Restaurant Management <span className="text-[var(--color-primary)]">Software</span> in Nepal
+                    </h1>
+
+                    <p className="text-lg sm:text-xl text-gray-500 mb-10 max-w-3xl mx-auto leading-relaxed font-medium">
+                        With <span className="text-[var(--color-primary)] font-bold">kkkhane</span>, manage all your restaurant operations, orders, menu, inventory, finance and more, all from one system.
+                    </p>
+
+                    <Link href="/signup" className="inline-flex items-center justify-center bg-[var(--color-primary)] text-white px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl shadow-[var(--color-primary)]/20 mb-16">
+                        Start a 14-day Free Trial <ArrowRight size={20} className="ml-2" />
+                    </Link>
+
+                    {/* Hero Graphic & Floating Elements */}
+                    <div className="relative max-w-4xl mx-auto animate-fade-up">
+                        <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-100 bg-gray-100 aspect-video relative">
+                            <Image src="/images/mockups/dashboard_mockup_1782036296571.png" alt="Dashboard Mockup" fill className="object-cover" priority />
                         </div>
 
-                        <h1 className="animate-fade-up delay-100 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight text-[var(--color-secondary)]">
-                            The smarter way to<br />
-                            <span className="text-gradient">run your restaurant</span>
-                        </h1>
-
-                        <p className="animate-fade-up delay-200 mt-6 text-lg sm:text-xl text-gray-500 leading-relaxed max-w-2xl mx-auto">
-                            QR ordering, real-time kitchen display, eSewa payments, loyalty programs,
-                            and analytics — all in one beautifully simple system.
-                        </p>
-
-                        <div className="animate-fade-up delay-300 mt-10 flex flex-col sm:flex-row gap-3 justify-center">
-                            <Link href="/signup"
-                                  className="btn-primary px-8 py-3.5 text-base rounded-xl shadow-lg">
-                                Start for free <ArrowRight size={18} />
-                            </Link>
-                            <Link href="#how-it-works"
-                                  className="btn-secondary px-8 py-3.5 text-base rounded-xl">
-                                See how it works
-                            </Link>
+                        {/* Floating Left Card */}
+                        <div className="absolute top-1/4 -left-4 sm:-left-12 bg-white rounded-2xl shadow-xl p-3 flex items-center gap-3 animate-float border border-gray-100 z-20">
+                            <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-500">🍔</div>
+                            <div className="text-left">
+                                <p className="font-bold text-gray-900 text-sm">Chicken Burger</p>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-md mt-1"><CheckCircle size={10} /> Added</span>
+                            </div>
                         </div>
 
-                        <p className="animate-fade-up delay-400 mt-5 text-xs text-gray-400">
-                            No credit card required · Free plan always available
+                        {/* Floating Right Card */}
+                        <div className="absolute bottom-1/4 -right-4 sm:-right-12 bg-white rounded-2xl shadow-xl p-3 flex flex-col gap-2 animate-float-delayed border border-gray-100 z-20 w-36">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center text-red-500">🍕</div>
+                                <p className="font-bold text-gray-900 text-xs">Pepperoni Pizza</p>
+                            </div>
+                            <button className="w-full bg-green-500 text-white font-bold text-[10px] py-1.5 rounded-lg">Add</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── 3. Client Logo Marquee ─────────────────────────────────────── */}
+            <section className="py-10 border-b border-gray-100 bg-white overflow-hidden">
+                <p className="text-center text-gray-500 font-semibold mb-6">Trusted by 7,500+ restaurants of all sizes</p>
+                <div className="relative flex overflow-x-hidden group">
+                    <div className="animate-marquee flex whitespace-nowrap items-center gap-16 px-8 text-gray-300 font-black text-2xl uppercase tracking-widest">
+                        {['Cafe Mocha', 'The Pizza Hub', 'Himalayan Grill', 'Kathmandu Kitchen', 'Spice Route', 'Urban Burger', 'Everest Dine', 'Bistro Nepal'].map(logo => (
+                            <span key={logo} className="hover:text-gray-400 transition-colors cursor-pointer">{logo}</span>
+                        ))}
+                    </div>
+                    <div className="absolute top-0 animate-marquee2 flex whitespace-nowrap items-center gap-16 px-8 text-gray-300 font-black text-2xl uppercase tracking-widest">
+                        {['Cafe Mocha', 'The Pizza Hub', 'Himalayan Grill', 'Kathmandu Kitchen', 'Spice Route', 'Urban Burger', 'Everest Dine', 'Bistro Nepal'].map(logo => (
+                            <span key={logo + '2'} className="hover:text-gray-400 transition-colors cursor-pointer">{logo}</span>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ── 4. Core Features Grid ("Our Key Features") ─────────────────── */}
+            <section className="py-24 bg-[#FAFAF8]">
+                <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Key Features</h2>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {/* Card 1 */}
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-shadow text-center group">
+                            <div className="h-40 w-full rounded-2xl bg-gradient-to-br from-indigo-50 to-blue-50 mb-6 flex items-center justify-center relative overflow-hidden">
+                                <div className="absolute inset-0 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                                    <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100 flex items-center gap-3">
+                                        <Smartphone className="text-blue-500" size={24} />
+                                        <span className="font-bold text-gray-800 text-sm">Dine In Order</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Order Management</h3>
+                            <p className="text-gray-500 text-sm leading-relaxed">Streamline your ordering process, track order status, and ensure accurate delivery.</p>
+                        </div>
+
+                        {/* Card 2 */}
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-shadow text-center group">
+                            <div className="h-40 w-full rounded-2xl bg-gradient-to-br from-rose-50 to-orange-50 mb-6 flex items-center justify-center relative overflow-hidden">
+                                <div className="absolute inset-0 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                                    <div className="grid grid-cols-2 gap-2 p-2 bg-white rounded-xl shadow-md border border-gray-100">
+                                        <div className="w-12 h-12 bg-rose-100 rounded-lg flex items-center justify-center text-xs font-bold text-rose-600">T1</div>
+                                        <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-xs font-bold text-gray-400">T2</div>
+                                        <div className="w-12 h-12 bg-gray-50 border border-gray-100 rounded-lg flex items-center justify-center text-xs font-bold text-gray-400">T3</div>
+                                        <div className="w-12 h-12 bg-rose-100 rounded-lg flex items-center justify-center text-xs font-bold text-rose-600">T4</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Manage Table & Space</h3>
+                            <p className="text-gray-500 text-sm leading-relaxed">Optimize seating arrangements and efficiently manage table assignments.</p>
+                        </div>
+
+                        {/* Card 3 */}
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-shadow text-center group">
+                            <div className="h-40 w-full rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 mb-6 flex items-center justify-center relative overflow-hidden">
+                                <div className="absolute inset-0 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                                    <div className="bg-white p-3 rounded-xl shadow-md border border-gray-100 text-center">
+                                        <QrCode size={40} className="mx-auto mb-2 text-gray-800" />
+                                        <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-1 rounded">Scan to Order</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Menu Management</h3>
+                            <p className="text-gray-500 text-sm leading-relaxed">Easily update your menu items, categories, and prices across all channels.</p>
+                        </div>
+
+                        {/* Card 4 */}
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-shadow text-center group">
+                            <div className="h-40 w-full rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50 mb-6 flex items-center justify-center relative overflow-hidden">
+                                <div className="absolute inset-0 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                                    <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100 flex items-center gap-3">
+                                        <ShieldCheck className="text-purple-500" size={24} />
+                                        <span className="font-bold text-gray-800 text-sm">Role Access</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Staff & Role Manage</h3>
+                            <p className="text-gray-500 text-sm leading-relaxed">Assign specific roles and permissions to your staff for secure operations.</p>
+                        </div>
+
+                        {/* Card 5 */}
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-shadow text-center group">
+                            <div className="h-40 w-full rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 mb-6 flex items-center justify-center relative overflow-hidden">
+                                <div className="absolute inset-0 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                                    <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100 text-center">
+                                        <span className="text-2xl font-black text-[var(--color-primary)]">POS</span>
+                                        <div className="h-1 w-8 bg-gray-200 mx-auto mt-2 rounded"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Billing & POS Management</h3>
+                            <p className="text-gray-500 text-sm leading-relaxed">Process payments quickly and securely with our integrated POS system.</p>
+                        </div>
+
+                        {/* Card 6 */}
+                        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:shadow-xl transition-shadow text-center group">
+                            <div className="h-40 w-full rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-50 mb-6 flex items-center justify-center relative overflow-hidden">
+                                <div className="absolute inset-0 flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                                    <div className="bg-white p-4 rounded-xl shadow-md border border-gray-100">
+                                        <BarChart3 className="text-amber-500" size={32} />
+                                    </div>
+                                </div>
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Inventory & Finance</h3>
+                            <p className="text-gray-500 text-sm leading-relaxed">Keep a close eye on your stock levels, expenses, and financial health.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── 5. Detailed Features Section ─────────────────────────────────── */}
+            <section className="py-24 bg-white">
+                <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-20">
+                        <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-4">
+                            Restaurant Management Software made for Nepali Restaurant
+                        </h2>
+                        <p className="text-lg text-gray-500 max-w-2xl mx-auto">
+                            Easy Restaurant Software for Every Nepali Restaurant. Do billing, KOT, tables, stock, and reports in one place.
                         </p>
                     </div>
 
-                    {/* Dashboard mockup */}
-                    <div className="animate-fade-up delay-500 mt-16 sm:mt-20 max-w-5xl mx-auto relative">
-                        <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)]"
-                             style={{ background: 'linear-gradient(135deg, #1B263B 0%, #243447 100%)' }}>
-                            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10 bg-white/5">
-                                <div className="flex gap-1.5">
-                                    {['bg-red-400','bg-amber-400','bg-green-400'].map(c => (
-                                        <div key={c} className={`w-3 h-3 rounded-full ${c} opacity-70`} />
+                    <div className="space-y-32">
+                        {/* Row 1: Manage Orders */}
+                        <div className="grid md:grid-cols-2 gap-12 items-center">
+                            <div>
+                                <h3 className="text-3xl font-extrabold text-gray-900 mb-6">Manage Orders, <span className="text-[#4B207D]">effortlessly</span></h3>
+                                <ul className="space-y-4">
+                                    {['Track real-time status of orders', 'Dine-in, delivery, takeaway in one dashboard', 'Send orders directly to Kitchen Display System'].map(item => (
+                                        <li key={item} className="flex items-start gap-3">
+                                            <CheckCircle className="text-green-500 shrink-0 mt-0.5" size={20} />
+                                            <span className="text-gray-600 font-medium">{item}</span>
+                                        </li>
                                     ))}
-                                </div>
-                                <div className="flex-1 mx-4 h-6 rounded-md bg-white/10 flex items-center px-3">
-                                    <span className="text-xs text-white/40 font-mono">dashboard.kkkhane.com</span>
+                                </ul>
+                            </div>
+                            <div className="rounded-3xl bg-gray-50 p-6 sm:p-10 border border-gray-100">
+                                <div className="relative rounded-xl overflow-hidden shadow-2xl aspect-video bg-white">
+                                    <Image src="/images/mockups/staff_orders_mockup_1782036323207.png" alt="Manage Orders" fill className="object-cover object-left-top" />
                                 </div>
                             </div>
-                            <div className="p-4 sm:p-6 grid sm:grid-cols-3 gap-4">
+                        </div>
+
+                        {/* Row 2: Inventory Management */}
+                        <div className="grid md:grid-cols-2 gap-12 items-center">
+                            <div className="order-2 md:order-1 rounded-3xl bg-gradient-to-br from-indigo-50 to-purple-50 p-6 sm:p-10 flex flex-col gap-4">
+                                <div className="bg-white p-6 rounded-2xl shadow-sm flex items-center justify-between border border-gray-100">
+                                    <span className="font-bold text-gray-700">Total Stock Items</span>
+                                    <span className="font-black text-xl text-indigo-600">1,245</span>
+                                </div>
+                                <div className="bg-white p-6 rounded-2xl shadow-sm flex items-center justify-between border border-gray-100">
+                                    <span className="font-bold text-gray-700">Low Stock Alert</span>
+                                    <span className="font-black text-xl text-[var(--color-primary)]">12 Items</span>
+                                </div>
+                            </div>
+                            <div className="order-1 md:order-2">
+                                <h3 className="text-3xl font-extrabold text-gray-900 mb-6">Inventory Management, <span className="text-[var(--color-primary)]">know your stock before it runs out</span></h3>
+                                <p className="text-gray-600 font-medium leading-relaxed">
+                                    Keep track of raw materials, manage suppliers, and automate low-stock alerts so you never run out of your best-selling ingredients.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Row 3: IRD Approved Billing */}
+                        <div className="grid md:grid-cols-2 gap-12 items-center">
+                            <div>
+                                <h3 className="text-3xl font-extrabold text-gray-900 mb-6">IRD Approved <span className="text-green-600">Billing</span></h3>
+                                <p className="text-gray-600 font-medium leading-relaxed">
+                                    Generate legal, VAT/PAN compliant invoices instantly. Fully approved by the Inland Revenue Department of Nepal.
+                                </p>
+                            </div>
+                            <div className="rounded-3xl bg-green-50 p-6 sm:p-10 flex items-center justify-center">
+                                <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 border-dashed max-w-sm w-full text-center">
+                                    <ShieldCheck size={48} className="mx-auto text-green-500 mb-4" />
+                                    <h4 className="font-black text-xl text-gray-900 mb-2">TAX INVOICE</h4>
+                                    <div className="h-1 w-full bg-gray-100 my-4"></div>
+                                    <div className="flex justify-between text-xs text-gray-500 font-mono mb-2"><span>PAN:</span><span>123456789</span></div>
+                                    <div className="flex justify-between text-xs text-gray-500 font-mono"><span>Date:</span><span>2080-04-12</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Row 4: Digital QR Menus */}
+                        <div className="grid md:grid-cols-2 gap-12 items-center">
+                            <div className="order-2 md:order-1 rounded-3xl bg-blue-50 p-6 sm:p-10 flex items-center justify-center">
+                                <div className="bg-white p-6 rounded-2xl shadow-xl max-w-[200px] text-center border border-gray-100 rotate-[-3deg] hover:rotate-0 transition-transform">
+                                    <h4 className="font-black text-sm text-gray-900 mb-4 uppercase tracking-widest">Scan to Order</h4>
+                                    <QrCode size={120} className="mx-auto text-gray-800 mb-4" />
+                                    <p className="text-[10px] font-bold text-gray-400">Table 05</p>
+                                </div>
+                            </div>
+                            <div className="order-1 md:order-2">
+                                <h3 className="text-3xl font-extrabold text-gray-900 mb-6">Digital <span className="text-blue-600">QR Menus</span></h3>
+                                <p className="text-gray-600 font-medium leading-relaxed">
+                                    Replace printed menus with dynamic digital menus. Update prices, hide out-of-stock items, and add photos in real-time.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Full Width: Available on any device */}
+                        <div className="grid lg:grid-cols-2 gap-8 items-stretch">
+                            <div className="bg-gray-50 rounded-3xl p-10 flex flex-col items-center text-center border border-gray-100">
+                                <h3 className="text-3xl font-extrabold text-gray-900 mb-2">Available on any <span className="text-[var(--color-primary)]">device</span></h3>
+                                <p className="text-gray-500 font-medium mb-10">Manage your business from your phone, tablet, or desktop.</p>
+
+                                <div className="relative w-full max-w-sm aspect-[3/4] bg-white rounded-[2rem] shadow-2xl border-8 border-gray-900 overflow-hidden mb-8 transform -rotate-2">
+                                    <div className="absolute top-0 inset-x-0 h-6 bg-gray-900 rounded-b-xl z-10 w-32 mx-auto"></div>
+                                    <Image src="/images/mockups/dashboard_mockup_1782036296571.png" alt="Mobile View" fill className="object-cover object-left" />
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <div className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                                        <Play size={16} className="fill-current" /> <span className="text-xs font-bold">Google Play</span>
+                                    </div>
+                                    <div className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                                        <Apple size={16} className="fill-current" /> <span className="text-xs font-bold">App Store</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-lg flex flex-col gap-6 overflow-hidden">
+                                <h4 className="text-xl font-bold text-gray-900 mb-2">What our users say</h4>
                                 {[
-                                    { label: 'Revenue today', value: 'Rs. 24,800', delta: '+18%', color: 'text-green-400' },
-                                    { label: 'Active tables', value: '7 / 12', delta: '3 pending', color: 'text-amber-400' },
-                                    { label: 'Orders today', value: '43', delta: '+6 this hour', color: 'text-blue-400' },
-                                ].map(s => (
-                                    <div key={s.label} className="bg-white/5 rounded-xl p-4 border border-white/8">
-                                        <p className="text-xs text-white/40 mb-1">{s.label}</p>
-                                        <p className="text-xl font-bold text-white">{s.value}</p>
-                                        <p className={`text-xs mt-0.5 ${s.color}`}>{s.delta}</p>
+                                    { name: 'Sandesh Thapa', stars: 5, text: 'This system changed how we run our cafe. Everything is automated and easy!' },
+                                    { name: 'Jahith Mohammed', stars: 5, text: 'Best customer support and the UI is incredibly simple for my staff to learn.' },
+                                    { name: 'Prakash Shrestha', stars: 5, text: 'Inventory tracking has saved me so much money on food waste. Highly recommend.' }
+                                ].map((review, i) => (
+                                    <div key={i} className="bg-gray-50 p-6 rounded-2xl border border-gray-100 relative group hover:bg-white hover:shadow-md transition-all">
+                                        <div className="flex gap-1 text-amber-400 mb-3">
+                                            {[...Array(review.stars)].map((_, idx) => <Star key={idx} size={14} fill="currentColor" />)}
+                                        </div>
+                                        <p className="text-sm font-medium text-gray-700 leading-relaxed mb-4">"{review.text}"</p>
+                                        <p className="text-xs font-bold text-gray-900">- {review.name}</p>
                                     </div>
                                 ))}
-                                <div className="sm:col-span-2 bg-white/5 rounded-xl p-4 border border-white/8">
-                                    <p className="text-xs font-semibold text-white/60 mb-3 uppercase tracking-wider">Live Orders</p>
-                                    <div className="space-y-2">
-                                        {[
-                                            { table: 'T-04', items: 'Momo × 2, Chowmein × 1', status: 'Preparing', c: 'bg-amber-400/20 text-amber-300' },
-                                            { table: 'T-07', items: 'Dal Bhat × 3', status: 'Ready', c: 'bg-green-400/20 text-green-300' },
-                                            { table: 'T-02', items: 'Thukpa × 1, Juice × 2', status: 'Sent', c: 'bg-blue-400/20 text-blue-300' },
-                                        ].map(o => (
-                                            <div key={o.table} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2.5">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-xs font-mono font-bold text-white/70">{o.table}</span>
-                                                    <span className="text-xs text-white/40">{o.items}</span>
-                                                </div>
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${o.c}`}>{o.status}</span>
-                                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── 6. Onboarding Timeline ─────────────────────────────────────── */}
+            <section id="how-it-works" className="py-24 bg-[#FAFAF8]">
+                <div className="max-w-[1000px] mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-extrabold text-gray-900">
+                            The fastest way to setup & run your restaurant
+                        </h2>
+                    </div>
+
+                    <div className="relative border-[3px] border-dashed border-gray-200 rounded-3xl p-8 sm:p-12 bg-white">
+                        <div className="space-y-24">
+                            {/* Step 1 */}
+                            <div className="grid md:grid-cols-2 gap-10 items-center">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-6">1. Create Your Account</h3>
+                                    <p className="text-gray-500 mb-6 font-medium">Get started from any device, anywhere, anytime. Whether you have an email or phone number, creating your account takes less than 2 minutes.</p>
+                                    <ul className="space-y-4">
+                                        {['Quick 2-minute setup', 'No credit card required', 'You get access to all features instantly'].map(item => (
+                                            <li key={item} className="flex items-center gap-3 font-medium text-gray-700">
+                                                <div className="bg-green-100 text-green-600 rounded-full p-0.5"><CheckCircle size={14} /></div>
+                                                {item}
+                                            </li>
                                         ))}
+                                    </ul>
+                                </div>
+                                <div className="bg-gray-50 rounded-2xl p-6 relative border border-gray-100 shadow-sm">
+                                    <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 w-3/4 mx-auto animate-float">
+                                        <div className="flex items-center gap-2 text-green-600 mb-2 font-bold text-xs"><CheckCircle size={14} /> OTP sent successfully</div>
+                                        <div className="h-2 bg-gray-100 rounded w-full mb-2"></div>
+                                        <div className="h-2 bg-gray-100 rounded w-1/2"></div>
                                     </div>
                                 </div>
-                                <div className="bg-white/5 rounded-xl p-4 border border-white/8">
-                                    <p className="text-xs font-semibold text-white/60 mb-3 uppercase tracking-wider">Payments</p>
-                                    <div className="space-y-3">
-                                        {[
-                                            { method: 'eSewa', amt: 'Rs. 850', ok: true },
-                                            { method: 'Cash', amt: 'Rs. 1,200', ok: true },
-                                            { method: 'eSewa', amt: 'Rs. 650', ok: false },
-                                        ].map((p, i) => (
-                                            <div key={i} className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-xs font-medium text-white/70">{p.method}</p>
-                                                    <p className="text-xs text-white/30">{p.amt}</p>
-                                                </div>
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${p.ok ? 'bg-green-400/20 text-green-300' : 'bg-amber-400/20 text-amber-300'}`}>
-                                                    {p.ok ? 'Verified' : 'Pending'}
-                                                </span>
-                                            </div>
+                            </div>
+
+                            {/* Step 2 */}
+                            <div className="grid md:grid-cols-2 gap-10 items-center">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-6">2. Setup Menu & Table</h3>
+                                    <p className="text-gray-500 mb-6 font-medium">Add your food items, categories, prices, and variants in a clean, simple interface. Setup your table layout for dine-in.</p>
+                                    <ul className="space-y-4">
+                                        {['Add food items, combos, and add-ons', 'Assign QR codes to tables', 'Enable online, dine-in, or takeaway menus'].map(item => (
+                                            <li key={item} className="flex items-center gap-3 font-medium text-gray-700">
+                                                <div className="bg-green-100 text-green-600 rounded-full p-0.5"><CheckCircle size={14} /></div>
+                                                {item}
+                                            </li>
                                         ))}
+                                    </ul>
+                                </div>
+                                <div className="bg-gray-50 rounded-2xl p-6 relative border border-gray-100 shadow-sm flex items-center justify-center">
+                                    <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 animate-float-delayed">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center text-green-600 font-black">20</div>
+                                            <span className="font-bold text-gray-900 text-sm">Active Tables</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Step 3 */}
+                            <div className="grid md:grid-cols-2 gap-10 items-center">
+                                <div>
+                                    <h3 className="text-2xl font-bold text-gray-900 mb-6">3. Start Taking Order</h3>
+                                    <p className="text-gray-500 mb-6 font-medium">Begin billing and managing orders instantly. Within seconds you can start.</p>
+                                    <ul className="space-y-4">
+                                        {['Take customer orders', 'Print bills or send them digitally', 'Start earning from the first day'].map(item => (
+                                            <li key={item} className="flex items-center gap-3 font-medium text-gray-700">
+                                                <div className="bg-green-100 text-green-600 rounded-full p-0.5"><CheckCircle size={14} /></div>
+                                                {item}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                <div className="bg-gray-50 rounded-2xl p-6 relative border border-gray-100 shadow-sm flex items-center justify-center">
+                                    <div className="bg-[var(--color-primary)] text-white font-bold px-8 py-4 rounded-xl shadow-xl shadow-[var(--color-primary)]/20 animate-pulse">
+                                        Order now
                                     </div>
                                 </div>
                             </div>
@@ -176,330 +515,255 @@ export default async function Home() {
                 </div>
             </section>
 
-            {/* ── Social proof ─────────────────────────────────── */}
-            <div className="border-y border-gray-100 bg-white py-8">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-wrap items-center justify-center gap-8 sm:gap-16">
-                    {[
-                        { value: '500+', label: 'restaurants' },
-                        { value: '2M+', label: 'orders processed' },
-                        { value: '99.9%', label: 'uptime' },
-                        { value: '4.9★', label: 'avg. rating' },
-                    ].map(s => (
-                        <div key={s.label} className="text-center">
-                            <p className="text-2xl sm:text-3xl font-bold text-[var(--color-secondary)]">{s.value}</p>
-                            <p className="text-xs text-gray-400 mt-0.5 uppercase tracking-wide">{s.label}</p>
+            {/* ── 7. Additional Features Row ─────────────────────────────────── */}
+            <section className="py-20 bg-white">
+                <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid md:grid-cols-3 gap-8">
+                        <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-shadow">
+                            <h4 className="text-xl font-bold text-gray-900 mb-4 flex justify-between items-center">
+                                Invite Your Staff <Plus className="text-gray-400" />
+                            </h4>
+                            <p className="text-gray-500 font-medium leading-relaxed">Role-based access with staff activity logs for data control.</p>
                         </div>
-                    ))}
+                        <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-shadow">
+                            <h4 className="text-xl font-bold text-gray-900 mb-4 flex justify-between items-center">
+                                Add Customer <Plus className="text-gray-400" />
+                            </h4>
+                            <p className="text-gray-500 font-medium leading-relaxed">Add your customers and manage their orders & transactions.</p>
+                        </div>
+                        <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm hover:shadow-md transition-shadow">
+                            <h4 className="text-xl font-bold text-gray-900 mb-4 flex justify-between items-center">
+                                Tracking Inventory <Plus className="text-gray-400" />
+                            </h4>
+                            <p className="text-gray-500 font-medium leading-relaxed">Track your inventory and manage your stock with ease.</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </section>
 
-            {/* ── Features ─────────────────────────────────────── */}
-            <section id="features" className="section-pad bg-white">
-                <div className="container-pad">
-                    <div className="text-center mb-14 sm:mb-20">
-                        <p className="text-[var(--color-primary)] text-sm font-semibold tracking-widest uppercase mb-3">Features</p>
-                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--color-secondary)] leading-tight">
-                            Everything your restaurant needs
+            {/* ── 8. Testimonials Masonry ────────────────────────────────────── */}
+            <section className="py-24 bg-[#FAFAF8]">
+                <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-extrabold text-gray-900 mb-4">
+                            Hear from Our Happy Users!
                         </h2>
-                        <p className="mt-4 text-gray-500 text-lg max-w-xl mx-auto">
-                            From QR menus to payroll — built for Nepal, works anywhere.
-                        </p>
+                        <p className="text-gray-500 font-medium text-lg">Stories, feedback, and experiences shared by businesses growing with our software.</p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
                         {[
-                            {
-                                icon: <QrCode size={22} />,
-                                title: 'QR Code Ordering',
-                                desc: 'Customers scan, browse, and order instantly. No app download, no friction.',
-                                points: ['Works on any phone', 'Real-time menu updates', 'Modifier groups & notes'],
-                            },
-                            {
-                                icon: <ChefHat size={22} />,
-                                title: 'Kitchen Display System',
-                                desc: "Orders appear on kitchen screens the moment they're placed. No paper tickets.",
-                                points: ['Audio new-order alerts', 'Status tracking', 'Separate takeout queue'],
-                            },
-                            {
-                                icon: <CreditCard size={22} />,
-                                title: 'eSewa & Cash Payments',
-                                desc: 'Customers pay via eSewa, Khalti, or cash — staff verify with one tap.',
-                                points: ['Screenshot proof upload', 'Waiter verification feed', 'Bill splitting'],
-                            },
-                            {
-                                icon: <BarChart3 size={22} />,
-                                title: 'Analytics & Reports',
-                                desc: 'Revenue trends, top items, peak hours, and Z-reports for daily reconciliation.',
-                                points: ['Daily/monthly revenue', 'Top-selling items', 'Staff performance'],
-                            },
-                            {
-                                icon: <Gift size={22} />,
-                                title: 'Loyalty Program',
-                                desc: 'Reward repeat customers with points redeemable on future orders.',
-                                points: ['Points on every order', 'Custom redemption rules', 'Member phone lookup'],
-                            },
-                            {
-                                icon: <Users size={22} />,
-                                title: 'Staff & Shift Management',
-                                desc: 'Manage roles, clock-ins, and permissions from a single dashboard.',
-                                points: ['Role-based access control', 'Clock in / clock out', 'Active shift tracking'],
-                            },
-                        ].map(f => (
-                            <div key={f.title} className="card card-hover p-6 sm:p-8 group">
-                                <div className="w-11 h-11 rounded-xl bg-[var(--color-primary)]/8 flex items-center justify-center text-[var(--color-primary)] mb-5 group-hover:scale-105 transition-transform">
-                                    {f.icon}
+                            { name: "Prakash Shrestha", role: "Owner", platform: "Google", text: "I have been using this app since a year now. I like all features. It is simple to setup and it helps me to take orders from customers. The main features I liked of this app is, <highlight>customer can scan qr code and oder from their phone which best... UI is nice</highlight>" },
+                            { name: "Shrutika Gurung", role: "Cafe Owner", platform: "Google", text: "As a cafe owner in Nepal, kkkhane has been a game-changer for my daily operations. Order taking, billing, stock tracking—sabal kura ekdam sajilo bhayo. <highlight>Customers love the QR menu, and the support team is quick and friendly.</highlight> Perfect software for Nepali restaurants!" },
+                            { name: "Raj Kumar Gurung", role: "Owner", platform: "Google", text: "The dashboard is clean and easy to understand. <highlight>I love how I can see daily reports and trends at a glance.</highlight> really helps me plan ahead." },
+                            { name: "Darshan Thapa", role: "Owner", platform: "Google", text: "I've been using this POS software for my two cafés, and it's been a great experience so far. The system is <highlight>easy to use, with a clean and minimal interface that makes daily operations smooth and efficient.</highlight>" },
+                            { name: "Celina Dangol", role: "Owner", platform: "AppStore", text: "What I love most is I don't need extra hardware. <highlight>I can manage everything on my phone.</highlight> It's the most flexible restaurant management software in Nepal." },
+                            { name: "Anup Gautam", role: "Owner", platform: "Google", text: "<highlight>No more paper menus or miscommunication.</highlight> Our customers love the QR code menu and easy ordering. keeps everything digital and efficient." }
+                        ].map((r, i) => (
+                            <div key={i} className="break-inside-avoid mb-6 bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-lg transition-shadow">
+                                <div className="flex justify-between items-start mb-6">
+                                    <div className="flex gap-4 items-center">
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center font-bold text-gray-700 text-lg uppercase">
+                                            {r.name.substring(0, 2)}
+                                        </div>
+                                        <div>
+                                            <h5 className="font-bold text-gray-900">{r.name}</h5>
+                                            <p className="text-xs text-gray-500">{r.role}</p>
+                                        </div>
+                                    </div>
+                                    <Globe size={20} className="text-blue-500" />
                                 </div>
-                                <h3 className="text-base font-bold text-[var(--color-secondary)] mb-2">{f.title}</h3>
-                                <p className="text-sm text-gray-500 leading-relaxed mb-4">{f.desc}</p>
-                                <ul className="space-y-1.5">
-                                    {f.points.map(p => (
-                                        <li key={p} className="flex items-center gap-2 text-xs text-gray-400">
-                                            <CheckCircle size={12} className="text-[var(--color-primary)] shrink-0" />
-                                            {p}
-                                        </li>
-                                    ))}
-                                </ul>
+                                <div className="flex gap-1 mb-4 text-amber-400">
+                                    {[...Array(5)].map((_, idx) => <Star key={idx} size={16} fill="currentColor" />)}
+                                </div>
+                                <p className="text-gray-600 text-balance font-medium leading-relaxed" dangerouslySetInnerHTML={{
+                                    __html: r.text.replace(/<highlight>(.*?)<\/highlight>/g, '<span class="bg-pink-100 text-gray-900 px-1.5 py-0.5 rounded font-bold shadow-sm">$1</span>')
+                                }} />
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* ── Nepal highlight ───────────────────────────────── */}
-            <section className="section-pad relative overflow-hidden"
-                     style={{ background: 'linear-gradient(135deg, #1B263B 0%, #243447 100%)' }}>
-                <div className="absolute inset-0 opacity-[0.04]"
-                     style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '32px 32px' }} />
-                <div className="container-pad relative">
-                    <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-                        <div>
-                            <p className="text-[var(--color-primary)] text-sm font-semibold tracking-widest uppercase mb-4">Made for Nepal</p>
-                            <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight">
-                                Built around how<br />Nepali restaurants work
+            {/* ── 9. FAQ Section ─────────────────────────────────────────────── */}
+            <section id="faq" className="py-24 bg-white">
+                <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl font-extrabold text-gray-900">People Often <span className="text-[var(--color-primary)]">Ask Questions?</span></h2>
+                        <p className="text-gray-500 font-medium mt-4">Here are some of the most common questions we get asked.</p>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-x-8 gap-y-4 items-start">
+                        {/* Column 1 */}
+                        <div className="space-y-4">
+                            {faqs.slice(0, Math.ceil(faqs.length / 2)).map((faq, i) => (
+                                <details key={i} className="group bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                                    <summary className="flex justify-between items-center font-bold text-gray-900 cursor-pointer list-none p-6">
+                                        <span className="pr-6">{faq.q}</span>
+                                        <Plus className="text-gray-400 group-open:hidden shrink-0" size={20} />
+                                        <span className="text-[var(--color-primary)] hidden group-open:block shrink-0">—</span>
+                                    </summary>
+                                    <div className="px-6 pb-6 text-gray-600 font-medium leading-relaxed bg-[var(--color-primary)]/5 rounded-b-2xl pt-2">
+                                        {faq.a}
+                                    </div>
+                                </details>
+                            ))}
+                        </div>
+                        {/* Column 2 */}
+                        <div className="space-y-4">
+                            {faqs.slice(Math.ceil(faqs.length / 2)).map((faq, i) => (
+                                <details key={i} className="group bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                                    <summary className="flex justify-between items-center font-bold text-gray-900 cursor-pointer list-none p-6">
+                                        <span className="pr-6">{faq.q}</span>
+                                        <Plus className="text-gray-400 group-open:hidden shrink-0" size={20} />
+                                        <span className="text-[var(--color-primary)] hidden group-open:block shrink-0">—</span>
+                                    </summary>
+                                    <div className="px-6 pb-6 text-gray-600 font-medium leading-relaxed bg-[var(--color-primary)]/5 rounded-b-2xl pt-2">
+                                        {faq.a}
+                                    </div>
+                                </details>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ── 10. CTA Banner ─────────────────────────────────────────────── */}
+            <section className="py-24 bg-white relative overflow-hidden">
+                <div className="max-w-[1200px] mx-auto px-4">
+                    <div className="relative bg-gradient-to-b from-blue-50/50 to-white rounded-[3rem] p-16 sm:p-24 text-center border border-gray-100 shadow-2xl overflow-hidden">
+                        {/* Decorative dashed target rings */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-dashed border-gray-200 rounded-full opacity-50 pointer-events-none"></div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-dashed border-gray-200 rounded-full opacity-50 pointer-events-none"></div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-dashed border-gray-200 rounded-full opacity-50 pointer-events-none"></div>
+
+                        {/* Floating Badges */}
+                        <div className="absolute top-10 left-[10%] bg-white border border-gray-100 shadow-xl rounded-xl p-4 animate-float-slow z-10 w-48">
+                            <div className="flex items-center gap-2 mb-2 text-green-500 font-bold text-xs"><CheckCircle size={14} /> Order Created</div>
+                            <div className="h-2 bg-gray-100 rounded w-full mb-1"></div>
+                        </div>
+                        <div className="absolute bottom-10 right-[10%] bg-white border border-gray-100 shadow-xl rounded-xl p-4 animate-float z-10 w-48">
+                            <div className="flex items-center gap-2 mb-2 text-blue-500 font-bold text-xs"><FileText size={14} /> KOT Created</div>
+                            <div className="h-2 bg-gray-100 rounded w-full mb-1"></div>
+                        </div>
+
+                        <div className="relative z-20 max-w-2xl mx-auto">
+                            <h2 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">
+                                Ready to improve your <span className="text-[#4B207D]">productivity?</span>
                             </h2>
-                            <p className="mt-5 text-gray-400 text-lg leading-relaxed">
-                                VAT invoicing, eSewa QR payments, Bikram Sambat dates,
-                                Nepali menu translations, and NPR currency — not bolt-ons, built in from day one.
+                            <p className="text-lg text-gray-500 font-medium mb-10">
+                                Start with kkkhane today and make service smoother for your team and customers.
                             </p>
-                        </div>
-                        <div className="grid sm:grid-cols-2 gap-4">
-                            {[
-                                { icon: <Receipt size={18} />, title: 'IRD-compliant invoices', desc: 'PAN/VAT invoices with BS dates and sequential invoice numbering.' },
-                                { icon: <CreditCard size={18} />, title: 'eSewa & Khalti QR', desc: 'Native QR payment with screenshot verification workflow.' },
-                                { icon: <Globe size={18} />, title: 'Nepali translations', desc: 'Menu items in Nepali with one-click AI translation support.' },
-                                { icon: <ShieldCheck size={18} />, title: 'NPR currency', desc: 'All amounts in Nepali Rupees — no conversion needed.' },
-                            ].map(f => (
-                                <div key={f.title} className="bg-white/5 border border-white/8 rounded-xl p-5">
-                                    <div className="w-9 h-9 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] mb-3">
-                                        {f.icon}
-                                    </div>
-                                    <h4 className="text-sm font-semibold text-white mb-1">{f.title}</h4>
-                                    <p className="text-xs text-gray-400 leading-relaxed">{f.desc}</p>
-                                </div>
-                            ))}
+                            <Link href="/signup" className="inline-flex items-center justify-center bg-[var(--color-primary)] text-white px-8 py-4 rounded-full font-bold text-lg hover:scale-105 transition-transform shadow-xl shadow-[var(--color-primary)]/20">
+                                Get 14 days for free <ArrowRight size={20} className="ml-2" />
+                            </Link>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* ── How it works ─────────────────────────────────── */}
-            <section id="how-it-works" className="section-pad bg-[#FAFAF8]">
-                <div className="container-pad">
-                    <div className="text-center mb-14">
-                        <p className="text-[var(--color-primary)] text-sm font-semibold tracking-widest uppercase mb-3">Process</p>
-                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--color-secondary)]">
-                            Live in under 10 minutes
-                        </h2>
-                    </div>
-                    <div className="relative max-w-4xl mx-auto">
-                        <div className="hidden md:block absolute top-8 left-[14%] right-[14%] h-px bg-gradient-to-r from-transparent via-[var(--color-primary)]/25 to-transparent" />
-                        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-8">
-                            {[
-                                { n: '01', icon: <Utensils size={20} />, title: 'Add your menu', desc: 'Upload items, set prices, add photos and modifiers.' },
-                                { n: '02', icon: <QrCode size={20} />, title: 'Print QR codes', desc: 'One QR per table — generated instantly from the dashboard.' },
-                                { n: '03', icon: <Smartphone size={20} />, title: 'Customers order', desc: 'Scan, browse, order — straight from their phone.' },
-                                { n: '04', icon: <ChefHat size={20} />, title: 'Kitchen fires', desc: 'Orders appear on kitchen screens in real time.' },
-                            ].map(s => (
-                                <div key={s.n} className="relative text-center">
-                                    <div className="relative inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white border-2 border-[var(--color-primary)]/15 text-[var(--color-primary)] mb-4 shadow-sm mx-auto">
+            {/* ── 11. Footer ─────────────────────────────────────────────────── */}
+            <footer className="bg-[#f9fafb] border-t border-gray-200 pt-20 pb-10">
+                <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+                        {/* Col 1 */}
+                        <div>
+                            <Logo className="h-8 mb-6" />
+                            <p className="text-sm text-gray-500 font-medium leading-relaxed mb-8">
+                                #1 Restaurant Software to manage and grow your restaurant - smarter, faster.
+                            </p>
+                            <div className="flex gap-3">
+                                {[
+                                    { icon: <Facebook size={18}/>, url: 'https://facebook.com/kkkhane' },
+                                    { icon: <Instagram size={18}/>, url: 'https://instagram.com/kkkhane' },
+                                    { icon: <Youtube size={18}/>, url: 'https://youtube.com/@kkkhane' },
+                                    { icon: <Twitter size={18}/>, url: 'https://twitter.com/kkkhane' }
+                                ].map(s => (
+                                    <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-colors shadow-sm">
                                         {s.icon}
-                                        <span className="absolute -top-2.5 -right-2.5 w-6 h-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center shadow">
-                                            {s.n}
-                                        </span>
-                                    </div>
-                                    <h3 className="font-bold text-[var(--color-secondary)] mb-1.5 text-sm">{s.title}</h3>
-                                    <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ── Pricing ──────────────────────────────────────── */}
-            <section id="pricing" className="section-pad bg-white">
-                <div className="container-pad">
-                    <div className="text-center mb-14">
-                        <p className="text-[var(--color-primary)] text-sm font-semibold tracking-widest uppercase mb-3">Pricing</p>
-                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--color-secondary)]">
-                            Simple, honest pricing
-                        </h2>
-                        <p className="mt-4 text-gray-500 text-lg">Start free. Upgrade only when you need more.</p>
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
-                        {[
-                            { tier: 'Free', price: 'रू 0', period: '/month', desc: 'Try before you commit.', features: ['5 menu items', '3 tables', '1 staff account', 'QR ordering', 'Basic analytics'], cta: 'Get started', href: '/signup', highlight: false },
-                            { tier: 'Basic', price: 'रू 1,999', period: '/month', desc: 'Perfect for small restaurants.', features: ['100 menu items', '10 tables', '5 staff accounts', 'Nepal QR payments', 'Promo codes', 'Email support'], cta: 'Start free trial', href: '/signup', highlight: false },
-                            { tier: 'Pro', price: 'रू 4,999', period: '/month', desc: 'Full power for growing restaurants.', features: ['Unlimited menu items', '30 tables', '15 staff accounts', 'Loyalty program', 'Dynamic pricing', 'Ingredient tracking', 'Takeout orders', 'Z-reports', 'Priority support'], cta: 'Start free trial', href: '/signup', highlight: true },
-                            { tier: 'Enterprise', price: 'Custom', period: '', desc: 'Multi-location chains.', features: ['Everything in Pro', 'Unlimited everything', 'Multi-location panel', 'Custom integrations', 'SLA guarantee', 'Dedicated support'], cta: 'Contact sales', href: 'mailto:hello@kkkhane.com', highlight: false },
-                        ].map(p => (
-                            <div key={p.tier}
-                                 className={`relative rounded-2xl p-6 flex flex-col transition-all ${
-                                     p.highlight
-                                         ? 'bg-[var(--color-secondary)] text-white ring-2 ring-[var(--color-primary)] shadow-2xl lg:scale-[1.03] lg:-mt-2 lg:mb-2'
-                                         : 'bg-white border border-gray-200 hover:border-gray-300 hover:shadow-lg'
-                                 }`}>
-                                {p.highlight && (
-                                    <div className="absolute -top-4 inset-x-0 flex justify-center">
-                                        <span className="bg-[var(--color-primary)] text-white text-xs font-bold px-4 py-1 rounded-full shadow">Most Popular</span>
-                                    </div>
-                                )}
-                                <div className="mb-5">
-                                    <h3 className={`text-lg font-bold ${p.highlight ? 'text-white' : 'text-gray-900'}`}>{p.tier}</h3>
-                                    <p className={`text-xs mt-1 ${p.highlight ? 'text-gray-400' : 'text-gray-500'}`}>{p.desc}</p>
-                                </div>
-                                <div className="mb-6 flex items-end gap-1">
-                                    <span className={`text-3xl font-black ${p.highlight ? 'text-white' : 'text-[var(--color-secondary)]'}`}>{p.price}</span>
-                                    {p.period && <span className={`text-sm mb-1 ${p.highlight ? 'text-gray-400' : 'text-gray-400'}`}>{p.period}</span>}
-                                </div>
-                                <ul className="space-y-2.5 mb-8 flex-1">
-                                    {p.features.map(f => (
-                                        <li key={f} className={`flex items-start gap-2 text-sm ${p.highlight ? 'text-gray-300' : 'text-gray-600'}`}>
-                                            <CheckCircle size={13} className={`shrink-0 mt-0.5 ${p.highlight ? 'text-[var(--color-primary)]' : 'text-emerald-500'}`} />
-                                            {f}
-                                        </li>
-                                    ))}
-                                </ul>
-                                <a href={p.href}
-                                   className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${
-                                       p.highlight ? 'bg-[var(--color-primary)] text-white hover:opacity-90 shadow-lg' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                                   }`}>
-                                    {p.cta}
-                                </a>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── Tech stack ───────────────────────────────────── */}
-            <div className="py-10 border-y border-gray-100 bg-gray-50/60">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6">
-                    <p className="text-center text-xs font-semibold uppercase tracking-widest text-gray-400 mb-6">Built with modern, reliable technology</p>
-                    <div className="flex flex-wrap justify-center gap-x-10 gap-y-4">
-                        {[
-                            { icon: <Zap size={15} />, label: 'Next.js 16' },
-                            { icon: <Layers size={15} />, label: 'Supabase / Postgres' },
-                            { icon: <ShieldCheck size={15} />, label: 'Row Level Security' },
-                            { icon: <Globe size={15} />, label: 'PWA Enabled' },
-                            { icon: <Clock size={15} />, label: 'Real-time Sync' },
-                            { icon: <CreditCard size={15} />, label: 'QR & Cash Payments' },
-                        ].map(t => (
-                            <span key={t.label} className="flex items-center gap-2 text-sm text-gray-500 font-medium">
-                                {t.icon} {t.label}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* ── FAQ ──────────────────────────────────────────── */}
-            <section id="faq" className="section-pad bg-[#FAFAF8]">
-                <div className="max-w-3xl mx-auto px-4 sm:px-6">
-                    <div className="text-center mb-12">
-                        <p className="text-[var(--color-primary)] text-sm font-semibold tracking-widest uppercase mb-3">FAQ</p>
-                        <h2 className="text-3xl sm:text-4xl font-bold text-[var(--color-secondary)]">Common questions</h2>
-                    </div>
-                    <div className="space-y-3">
-                        {[
-                            { q: 'Do my customers need to download an app?', a: 'No. Customers scan the QR code on their table with their phone camera and the menu opens in their browser instantly — no app download, no sign-up required.' },
-                            { q: 'How does eSewa payment verification work?', a: 'Customers pay via eSewa, Khalti, or Fonepay and upload a screenshot of their payment. Your waiter sees the claim in their feed and verifies or rejects it with one tap. Every transaction is recorded for your accounts.' },
-                            { q: 'Can I customize the menu and branding?', a: 'Yes. Fully manage menu items, categories, modifiers, prices, and images. Customize brand colors, fonts, and border radius through the theme editor. Supports Nepali translations.' },
-                            { q: 'Is the Free plan really free forever?', a: 'Yes. The Free plan has no time limit — use it with up to 5 menu items, 3 tables, and 1 staff account. Upgrade whenever your restaurant grows and needs more.' },
-                            { q: 'Can I manage multiple restaurant locations?', a: 'Yes. The Enterprise plan includes a centralized SaaS admin panel to manage all your restaurants, staff, and subscriptions from one place.' },
-                        ].map(({ q, a }) => (
-                            <details key={q} className="group bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
-                                <summary className="flex items-center justify-between px-6 py-4 cursor-pointer text-left font-semibold text-gray-900 hover:bg-gray-50 transition-colors list-none">
-                                    <span>{q}</span>
-                                    <ChevronDown size={16} className="text-gray-400 group-open:rotate-180 transition-transform shrink-0 ml-4" />
-                                </summary>
-                                <div className="px-6 pb-4 text-sm text-gray-500 leading-relaxed">{a}</div>
-                            </details>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── Final CTA ────────────────────────────────────── */}
-            <section className="section-pad relative overflow-hidden"
-                     style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, #f97316 50%, #f59e0b 100%)' }}>
-                <div className="absolute inset-0 opacity-[0.06]"
-                     style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-                <div className="container-pad relative text-center">
-                    <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight">
-                        Ready to transform<br />your restaurant?
-                    </h2>
-                    <p className="mt-5 text-white/75 text-lg max-w-xl mx-auto">
-                        Join hundreds of restaurants across Nepal already running smarter with kkkhane.
-                    </p>
-                    <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
-                        <Link href="/signup"
-                              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[var(--color-primary)] font-bold rounded-xl shadow-xl hover:shadow-2xl transition-all text-base active:scale-[0.98]">
-                            Start free today <ArrowRight size={18} />
-                        </Link>
-                        <Link href="/login"
-                              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/15 backdrop-blur-sm border border-white/25 text-white font-semibold rounded-xl hover:bg-white/25 transition-all text-base">
-                            Staff login <ArrowUpRight size={16} />
-                        </Link>
-                    </div>
-                    <p className="mt-6 text-white/50 text-sm">No credit card · Free plan available · Setup in minutes</p>
-                </div>
-            </section>
-
-            {/* ── Footer ───────────────────────────────────────── */}
-            <footer className="bg-[var(--color-secondary)]">
-                <div className="container-pad py-14">
-                    <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-10">
-                        <div className="lg:col-span-2">
-                            <Logo className="h-8" variant="dark" />
-                            <p className="mt-4 text-sm text-gray-400 leading-relaxed max-w-xs">
-                                All-in-one restaurant management system built for Nepal&apos;s food industry.
-                            </p>
-                            <div className="mt-5 flex items-center gap-2 text-xs text-gray-500">
-                                <MapPin size={12} /> Made with care in Nepal
+                                    </a>
+                                ))}
                             </div>
                         </div>
-                        {[
-                            { title: 'Product', links: [{ href: '#features', label: 'Features' }, { href: '#pricing', label: 'Pricing' }, { href: '#how-it-works', label: 'How it Works' }, { href: '#faq', label: 'FAQ' }] },
-                            { title: 'Resources', links: [{ href: '/docs', label: 'Documentation' }, { href: '/blog', label: 'Blog' }, { href: '/about', label: 'About Us' }, { href: '/contact', label: 'Contact' }] },
-                            { title: 'Legal', links: [{ href: '#', label: 'Privacy Policy' }, { href: '#', label: 'Terms of Service' }, { href: '/contact', label: 'Support' }] },
-                        ].map(col => (
-                            <div key={col.title}>
-                                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">{col.title}</h4>
-                                <ul className="space-y-3">
-                                    {col.links.map(l => (
-                                        <li key={l.href}>
-                                            <a href={l.href} className="text-sm text-gray-400 hover:text-white transition-colors">{l.label}</a>
-                                        </li>
-                                    ))}
-                                </ul>
+
+                        {/* Col 2 */}
+                        <div>
+                            <h4 className="font-bold text-gray-900 mb-6 text-lg">Features</h4>
+                            <ul className="space-y-4">
+                                {['Order Management with KOT', 'Inventory & Waste Control', 'Accounting & Expense Manager', 'Digital QR Menu', 'Menu & Table Management', 'Real Time Sales Report', 'Loyalty & Rewards', 'Refer & Earn'].map(l => (
+                                    <li key={l}><Link href="/404" className="text-sm text-gray-600 font-medium hover:text-[var(--color-primary)] transition-colors">{l}</Link></li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* Col 3 */}
+                        <div>
+                            <h4 className="font-bold text-gray-900 mb-6 text-lg">Resources</h4>
+                            <ul className="space-y-4">
+                                {['Blogs', 'Contact Us', 'Reviews', 'Customer Stories'].map(l => (
+                                    <li key={l}><Link href="/404" className="text-sm text-gray-600 font-medium hover:text-[var(--color-primary)] transition-colors">{l}</Link></li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        {/* Col 4 */}
+                        <div>
+                            <h4 className="font-bold text-gray-900 mb-6 text-lg">Download our App</h4>
+                            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm inline-block mb-6">
+                                <QrCode size={80} className="text-gray-800" />
                             </div>
-                        ))}
+                            <div className="flex flex-col gap-3">
+                                <Link href="/404" className="bg-black text-white px-4 py-2.5 rounded-xl flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-md">
+                                    <Play size={24} className="fill-current" />
+                                    <div className="text-left">
+                                        <div className="text-[10px] uppercase font-bold text-gray-400">Get it on</div>
+                                        <div className="text-sm font-bold leading-tight">Google Play</div>
+                                    </div>
+                                </Link>
+                                <Link href="/404" className="bg-black text-white px-4 py-2.5 rounded-xl flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-md">
+                                    <Apple size={24} className="fill-current" />
+                                    <div className="text-left">
+                                        <div className="text-[10px] uppercase font-bold text-gray-400">Download on the</div>
+                                        <div className="text-sm font-bold leading-tight">App Store</div>
+                                    </div>
+                                </Link>
+                            </div>
+                        </div>
                     </div>
-                    <div className="mt-12 pt-8 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-                        <p>&copy; <CopyrightYear /> kkkhane. All rights reserved.</p>
-                        <p>Built with <span className="text-red-400">♥</span> in Nepal</p>
+
+                    {/* Pre-footer */}
+                    <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-3xl p-8 sm:p-10 mb-12 border border-gray-100 shadow-sm">
+                        <div className="mb-8">
+                            <h3 className="text-2xl font-extrabold text-gray-900 flex items-center gap-2 mb-2">Get in Touch 👋</h3>
+                            <p className="text-gray-600 font-medium">Ready to transform your restaurant? Contact our team today.</p>
+                        </div>
+                        <div className="grid md:grid-cols-3 gap-6">
+                            <div className="bg-white/80 backdrop-blur p-6 rounded-2xl border border-white shadow-sm">
+                                <div className="flex items-center gap-2 text-blue-600 font-bold mb-4"><Phone size={18} /> Sales Team</div>
+                                <p className="text-sm font-bold text-gray-900 mb-2">+977 9800000000</p>
+                                <p className="text-sm font-bold text-gray-900">sales@kkkhane.com</p>
+                            </div>
+                            <div className="bg-white/80 backdrop-blur p-6 rounded-2xl border border-white shadow-sm">
+                                <div className="flex items-center gap-2 text-green-600 font-bold mb-4"><Phone size={18} /> Support Team</div>
+                                <p className="text-sm font-bold text-gray-900 mb-2">+977 9800000000</p>
+                                <p className="text-sm font-bold text-gray-900">support@kkkhane.com</p>
+                            </div>
+                            <div className="bg-white/80 backdrop-blur p-6 rounded-2xl border border-white shadow-sm">
+                                <div className="flex items-center gap-2 text-[var(--color-primary)] font-bold mb-4"><MapPin size={18} /> Service Location</div>
+                                <p className="text-sm text-gray-600 font-medium leading-relaxed">
+                                    We provide comprehensive restaurant management solutions across all regions of Nepal.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 font-medium">
+                        <div className="flex gap-6">
+                            <Link href="/404" className="hover:text-gray-900 transition-colors">Refund</Link>
+                            <Link href="/404" className="hover:text-gray-900 transition-colors">Privacy Policy</Link>
+                            <Link href="/404" className="hover:text-gray-900 transition-colors">Terms & Conditions</Link>
+                        </div>
+                        <p>&copy; <CopyrightYear /> kkkhane. All Rights Reserved.</p>
                     </div>
                 </div>
             </footer>

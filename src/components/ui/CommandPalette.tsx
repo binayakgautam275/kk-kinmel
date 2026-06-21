@@ -13,6 +13,7 @@ import {
     ChefHat,
     ShoppingBag,
 } from 'lucide-react'
+import { COMMAND_OPEN_EVENT } from './CommandHint'
 
 export function CommandPalette() {
     const [open, setOpen] = useState(false)
@@ -25,8 +26,14 @@ export function CommandPalette() {
                 setOpen((open) => !open)
             }
         }
+        // Allow opening by click (touch devices / the hint button).
+        const openEvt = () => setOpen(true)
         document.addEventListener('keydown', down)
-        return () => document.removeEventListener('keydown', down)
+        window.addEventListener(COMMAND_OPEN_EVENT, openEvt)
+        return () => {
+            document.removeEventListener('keydown', down)
+            window.removeEventListener(COMMAND_OPEN_EVENT, openEvt)
+        }
     }, [])
 
     const runCommand = (command: () => void) => {
@@ -37,11 +44,16 @@ export function CommandPalette() {
     if (!open) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-ink/40 backdrop-blur-sm animate-fade-in">
+        <div
+            className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] bg-ink/40 backdrop-blur-sm animate-fade-in"
+            onClick={() => setOpen(false)}
+            role="presentation"
+        >
             <Command
-                className="w-full max-w-lg overflow-hidden bg-surface rounded-[var(--r-lg)] shadow-lg border border-hairline"
+                className="w-full max-w-lg overflow-hidden bg-surface rounded-[var(--r-lg)] shadow-lg border border-hairline animate-scale-in"
                 loop
                 onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false) }}
             >
                 <div className="flex items-center px-4 border-b border-hairline">
                     <Search className="size-5 text-ink-subtle mr-2" />
@@ -65,25 +77,25 @@ export function CommandPalette() {
 
                     <Command.Group heading="Navigation" className="text-caption text-ink-subtle px-2 py-1.5 font-semibold uppercase tracking-wider">
                         <Command.Item
-                            onSelect={() => runCommand(() => router.push('/dashboard'))}
+                            onSelect={() => runCommand(() => router.push('/admin/dashboard'))}
                             className="flex items-center gap-2 px-3 py-2 text-sm text-ink rounded-md cursor-pointer aria-selected:bg-brand-50 aria-selected:text-brand-700 transition-colors"
                         >
                             <LayoutDashboard size={16} /> Admin Overview
                         </Command.Item>
                         <Command.Item
-                            onSelect={() => runCommand(() => router.push('/dashboard/menu'))}
+                            onSelect={() => runCommand(() => router.push('/admin/menu'))}
                             className="flex items-center gap-2 px-3 py-2 text-sm text-ink rounded-md cursor-pointer aria-selected:bg-brand-50 aria-selected:text-brand-700 transition-colors"
                         >
                             <UtensilsCrossed size={16} /> Menu Management
                         </Command.Item>
                         <Command.Item
-                            onSelect={() => runCommand(() => router.push('/dashboard/team'))}
+                            onSelect={() => runCommand(() => router.push('/admin/staff'))}
                             className="flex items-center gap-2 px-3 py-2 text-sm text-ink rounded-md cursor-pointer aria-selected:bg-brand-50 aria-selected:text-brand-700 transition-colors"
                         >
                             <Users size={16} /> Staff & Team
                         </Command.Item>
                         <Command.Item
-                            onSelect={() => runCommand(() => router.push('/dashboard/settings'))}
+                            onSelect={() => runCommand(() => router.push('/admin/settings'))}
                             className="flex items-center gap-2 px-3 py-2 text-sm text-ink rounded-md cursor-pointer aria-selected:bg-brand-50 aria-selected:text-brand-700 transition-colors"
                         >
                             <Settings size={16} /> Settings
@@ -112,16 +124,6 @@ export function CommandPalette() {
                     </Command.Group>
                 </Command.List>
             </Command>
-        </div>
-    )
-}
-
-export function CommandHint({ className }: { className?: string }) {
-    return (
-        <div className={`hidden sm:flex items-center gap-1.5 text-caption text-ink-subtle ${className}`}>
-            <span>Press</span>
-            <kbd className="px-1.5 py-0.5 rounded border border-hairline-strong bg-surface-muted font-sans tabular font-medium">⌘K</kbd>
-            <span>to jump</span>
         </div>
     )
 }
