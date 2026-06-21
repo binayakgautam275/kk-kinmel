@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import { createClient } from '@/lib/supabase/client'
 
 const BASE = '/admin/super-admin'
@@ -38,7 +38,7 @@ export default function SuperAdminSidebar() {
             {/* Header */}
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5">
-                    <VideoLogo className="h-7 shrink-0" />
+                    <Logo className="h-7 shrink-0" />
                 </div>
                 <button onClick={() => setIsOpen(false)}
                         className="md:hidden p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">

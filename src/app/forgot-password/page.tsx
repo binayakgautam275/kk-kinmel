@@ -3,7 +3,7 @@
 import { useActionState } from 'react'
 import Link from 'next/link'
 import { forgotPasswordAction } from './actions'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import { Mail, ArrowLeft, CheckCircle2, ArrowRight } from 'lucide-react'
 
 const initialState = { error: null as string | null, success: false }
@@ -35,7 +35,7 @@ export default function ForgotPasswordPage() {
         <div className="min-h-screen flex items-center justify-center bg-[#FAFAF8] p-6">
             <div className="w-full max-w-sm animate-fade-up">
                 <div className="flex justify-center mb-8">
-                    <VideoLogo className="h-8" />
+                    <Logo className="h-8" />
                 </div>
 
                 <div className="mb-7">

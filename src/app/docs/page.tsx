@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowLeft, ChevronRight } from 'lucide-react'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 
 export default function DocsPage() {
     return (
@@ -11,7 +11,7 @@ export default function DocsPage() {
             <nav className="border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2">
-                        <VideoLogo className="h-7" />
+                        <Logo className="h-7" />
                     </Link>
                     <Link href="/" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
                         <ArrowLeft size={16} />
@@ -27,7 +27,7 @@ export default function DocsPage() {
                         Documentation
                     </h1>
                     <p className="mt-6 text-lg text-gray-600">
-                        Complete guides to set up, manage, and scale your restaurant with KKhane.
+                        Complete guides to set up, manage, and scale your restaurant with kkkhane.
                     </p>
                 </div>
             </section>

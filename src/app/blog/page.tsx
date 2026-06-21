@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 
 export default function BlogPage() {
     return (
@@ -11,7 +11,7 @@ export default function BlogPage() {
             <nav className="border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2">
-                        <VideoLogo className="h-7" />
+                        <Logo className="h-7" />
                     </Link>
                     <Link href="/" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
                         <ArrowLeft size={16} />
@@ -27,7 +27,7 @@ export default function BlogPage() {
                         Blog
                     </h1>
                     <p className="mt-6 text-lg text-gray-600">
-                        Tips, insights, and stories from the KKhane team about running restaurants in Nepal.
+                        Tips, insights, and stories from the kkkhane team about running restaurants in Nepal.
                     </p>
                 </div>
             </section>
@@ -97,7 +97,7 @@ const BLOG_POSTS = [
         id: 4,
         emoji: '📊',
         category: 'Analytics',
-        title: 'Understanding Your KKhane Reports',
+        title: 'Understanding Your kkkhane Reports',
         excerpt: 'A complete guide to reading Z-reports, revenue trends, and making data-driven decisions.',
         date: 'May 5, 2024',
     },

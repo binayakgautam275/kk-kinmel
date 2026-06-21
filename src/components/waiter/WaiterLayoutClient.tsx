@@ -2,7 +2,7 @@
 
 import { ReactNode, useState, useEffect } from 'react'
 import { LogOut, Volume2 } from 'lucide-react'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import SoundEnableButton from '@/components/shared/SoundEnableButton'
 import { createClient } from '@/lib/supabase/client'
 import { setCustomNotificationSound } from '@/lib/audio'
@@ -43,7 +43,7 @@ export default function WaiterLayoutClient({ children, restaurantName, staffName
                 <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-4">
                     {/* Left */}
                     <div className="flex items-center gap-3 min-w-0">
-                        <VideoLogo className="h-7 shrink-0" />
+                        <Logo className="h-7 shrink-0" />
                         {restaurantName && (
                             <div className="hidden sm:block">
                                 <p className="text-xs font-bold text-gray-800 leading-none truncate max-w-[160px]">{restaurantName}</p>

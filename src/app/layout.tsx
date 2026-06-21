@@ -20,7 +20,7 @@ export const viewport: Viewport = {
 }
 
 export const metadata = {
-  title: 'KKhane',
+  title: 'kkkhane',
   description: 'Mobile-first restaurant ordering system',
   manifest: '/manifest.json',
   icons: {

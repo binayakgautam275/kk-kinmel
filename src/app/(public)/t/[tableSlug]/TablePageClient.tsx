@@ -7,7 +7,7 @@ import type { MenuItem, MenuCategory } from '@/types/database'
 import MenuSection from '@/components/customer/MenuSection'
 import CartSummary from '@/components/customer/CartSummary'
 import ServiceRequestPanel from '@/components/customer/ServiceRequestPanel'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
@@ -154,7 +154,7 @@ export default function TablePageClient({
                     {/* Right side: language switcher + platform logo */}
                     <div className="flex items-center gap-2 shrink-0">
                         {multiLanguageEnabled && <LanguageSwitcher />}
-                        <VideoLogo className="h-6 opacity-60" />
+                        <Logo className="h-6 opacity-60" />
                     </div>
                 </div>
             </header>

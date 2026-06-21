@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useActionState } from 'react'
 import Link from 'next/link'
 import { loginAction } from './actions'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import { Eye, EyeOff, ArrowRight, ChefHat, QrCode, BarChart3 } from 'lucide-react'
 
 const initialState = { error: null as string | null }
@@ -21,7 +21,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                 <div className="absolute inset-0 opacity-[0.05]"
                      style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '28px 28px' }} />
 
-                <VideoLogo className="h-9 relative z-10" variant="dark" />
+                <Logo className="h-9 relative z-10" variant="dark" />
 
                 <div className="relative z-10 space-y-8">
                     <div>
@@ -51,14 +51,14 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                     </div>
                 </div>
 
-                <p className="text-xs text-gray-600 relative z-10">© {new Date().getFullYear()} KKhane · Built for Nepal</p>
+                <p className="text-xs text-gray-600 relative z-10">© {new Date().getFullYear()} kkkhane · Built for Nepal</p>
             </div>
 
             {/* Right — form */}
             <div className="flex-1 flex items-center justify-center p-6 bg-[#FAFAF8]">
                 <div className="w-full max-w-sm">
                     <div className="lg:hidden flex justify-center mb-8">
-                        <VideoLogo className="h-8" />
+                        <Logo className="h-8" />
                     </div>
 
                     <div className="mb-8">

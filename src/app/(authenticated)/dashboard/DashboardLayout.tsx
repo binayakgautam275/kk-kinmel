@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import { LayoutDashboard, Settings, Users, CreditCard, ExternalLink, Menu, X, LogOut } from 'lucide-react'
 
 interface Props {
@@ -34,7 +34,7 @@ export default function DashboardLayout({ children, restaurantName, userName }: 
     const navContent = (
         <nav className="flex flex-col h-full">
             <div className="px-4 py-5 border-b border-gray-100">
-                <VideoLogo className="h-7" />
+                <Logo className="h-7" />
                 <p className="text-xs text-gray-500 mt-1 truncate font-medium">{restaurantName}</p>
             </div>
 
@@ -112,7 +112,7 @@ export default function DashboardLayout({ children, restaurantName, userName }: 
                 <button onClick={() => setMobileOpen(true)} className="p-2 text-gray-500 hover:text-gray-900">
                     <Menu size={20} />
                 </button>
-                <VideoLogo className="h-6" />
+                <Logo className="h-6" />
                 <button onClick={handleSignOut} className="p-2 text-gray-500 hover:text-gray-900">
                     <LogOut size={18} />
                 </button>

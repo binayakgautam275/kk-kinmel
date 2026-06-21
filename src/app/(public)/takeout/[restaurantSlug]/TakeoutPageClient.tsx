@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import TakeoutForm from '@/components/customer/TakeoutForm'
 import { useCartStore } from '@/lib/stores/cart'
 import { Plus, Minus, ShoppingBag } from 'lucide-react'
@@ -70,7 +70,7 @@ function TakeoutMenu({ restaurant, categories, menuItems }: {
             {/* Header */}
             <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
                 <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
-                    <VideoLogo className="h-7" />
+                    <Logo className="h-7" />
                     <div className="flex-1">
                         <h1 className="font-bold text-gray-900">{restaurant.name}</h1>
                         <p className="text-xs text-gray-500">Takeout Order</p>

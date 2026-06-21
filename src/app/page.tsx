@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getOptionalUser } from '@/lib/auth'
 import Link from 'next/link'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import CopyrightYear from '@/components/shared/CopyrightYear'
 import MobileNav from './MobileNav'
 import {
@@ -32,7 +32,7 @@ export default async function Home() {
             <nav className="fixed top-0 inset-x-0 z-50 bg-[#FAFAF8]/90 backdrop-blur-xl border-b border-gray-100/80">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
                     <Link href="/" className="shrink-0">
-                        <VideoLogo className="h-8" />
+                        <Logo className="h-8" />
                     </Link>
                     <div className="hidden lg:flex items-center gap-1 text-sm font-medium text-gray-500">
                         {[
@@ -451,7 +451,7 @@ export default async function Home() {
                         Ready to transform<br />your restaurant?
                     </h2>
                     <p className="mt-5 text-white/75 text-lg max-w-xl mx-auto">
-                        Join hundreds of restaurants across Nepal already running smarter with KKhane.
+                        Join hundreds of restaurants across Nepal already running smarter with kkkhane.
                     </p>
                     <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">
                         <Link href="/signup"
@@ -472,7 +472,7 @@ export default async function Home() {
                 <div className="container-pad py-14">
                     <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-10">
                         <div className="lg:col-span-2">
-                            <VideoLogo className="h-8" variant="dark" />
+                            <Logo className="h-8" variant="dark" />
                             <p className="mt-4 text-sm text-gray-400 leading-relaxed max-w-xs">
                                 All-in-one restaurant management system built for Nepal&apos;s food industry.
                             </p>
@@ -498,7 +498,7 @@ export default async function Home() {
                         ))}
                     </div>
                     <div className="mt-12 pt-8 border-t border-white/8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-                        <p>&copy; <CopyrightYear /> KKhane. All rights reserved.</p>
+                        <p>&copy; <CopyrightYear /> kkkhane. All rights reserved.</p>
                         <p>Built with <span className="text-red-400">♥</span> in Nepal</p>
                     </div>
                 </div>

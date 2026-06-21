@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowLeft, ArrowRight, Mail } from 'lucide-react'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import { useState } from 'react'
 
 export default function ContactPage() {
@@ -22,7 +22,7 @@ export default function ContactPage() {
             <nav className="border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2">
-                        <VideoLogo className="h-7" />
+                        <Logo className="h-7" />
                     </Link>
                     <Link href="/" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
                         <ArrowLeft size={16} />

@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 import { createClient } from '@/lib/supabase/client'
 
 export default function AdminSidebar({ userRole, restaurantName }: { userRole?: string; restaurantName?: string }) {
@@ -36,7 +36,7 @@ export default function AdminSidebar({ userRole, restaurantName }: { userRole?: 
             {/* Header */}
             <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5 min-w-0">
-                    <VideoLogo className="h-7 shrink-0" />
+                    <Logo className="h-7 shrink-0" />
                     {restaurantName && (
                         <div className="min-w-0">
                             <p className="text-xs font-bold text-gray-800 truncate leading-none">{restaurantName}</p>

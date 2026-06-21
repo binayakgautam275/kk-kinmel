@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import VideoLogo from '@/components/shared/VideoLogo'
+import Logo from '@/components/shared/Logo'
 
 export default function AboutPage() {
     return (
@@ -11,7 +11,7 @@ export default function AboutPage() {
             <nav className="border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2">
-                        <VideoLogo className="h-7" />
+                        <Logo className="h-7" />
                     </Link>
                     <Link href="/" className="flex items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-900">
                         <ArrowLeft size={16} />
@@ -24,10 +24,10 @@ export default function AboutPage() {
             <section className="py-16 md:py-24">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6">
                     <h1 className="text-4xl md:text-5xl font-bold text-[var(--color-secondary)]">
-                        About KKhane
+                        About kkkhane
                     </h1>
                     <p className="mt-6 text-lg text-gray-600 leading-relaxed">
-                        Built by restaurateurs, for restaurateurs. KKhane is reimagining how restaurants in Nepal operate — from customer ordering to kitchen management, staff coordination, and business analytics.
+                        Built by restaurateurs, for restaurateurs. kkkhane is reimagining how restaurants in Nepal operate — from customer ordering to kitchen management, staff coordination, and business analytics.
                     </p>
                 </div>
             </section>
@@ -43,12 +43,12 @@ export default function AboutPage() {
                     </div>
 
                     <div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Why We Built KKhane</h2>
+                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Why We Built kkkhane</h2>
                         <p className="text-lg text-gray-600 leading-relaxed mb-4">
                             We spent years working in Nepal's hospitality industry and saw the same problems repeated: paper tickets piling up in the kitchen, walkie-talkies creating confusion, payment verification taking forever, and no way to track business metrics in real-time.
                         </p>
                         <p className="text-lg text-gray-600 leading-relaxed">
-                            Existing solutions were either built for Western restaurants (with features restaurants here don't need) or ignored Nepal's unique payment methods, tax requirements, and operational workflows. So we built KKhane from scratch — designed for how Nepal does business.
+                            Existing solutions were either built for Western restaurants (with features restaurants here don't need) or ignored Nepal's unique payment methods, tax requirements, and operational workflows. So we built kkkhane from scratch — designed for how Nepal does business.
                         </p>
                     </div>
                 </div>
@@ -57,7 +57,7 @@ export default function AboutPage() {
             {/* Features */}
             <section className="py-16 md:py-24">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6">
-                    <h2 className="text-3xl font-bold text-gray-900 mb-8">What Makes KKhane Different</h2>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-8">What Makes kkkhane Different</h2>
                     <div className="space-y-8">
                         {[
                             {
@@ -91,7 +91,7 @@ export default function AboutPage() {
                 <div className="max-w-3xl mx-auto px-4 sm:px-6">
                     <h2 className="text-3xl font-bold text-gray-900 mb-8">Backed by Experts</h2>
                     <p className="text-lg text-gray-600 mb-8">
-                        KKhane is backed by hospitality industry veterans, software engineers from top companies, and Y Combinator's expertise in building scalable businesses.
+                        kkkhane is backed by hospitality industry veterans, software engineers from top companies, and Y Combinator's expertise in building scalable businesses.
                     </p>
                 </div>
             </section>
@@ -100,7 +100,7 @@ export default function AboutPage() {
             <section className="py-16 md:py-24 bg-[var(--color-secondary)]">
                 <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
                     <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                        Join the KKhane revolution
+                        Join the kkkhane revolution
                     </h2>
                     <p className="text-lg text-gray-400 mb-8">
                         Help us transform how Nepal's restaurants operate. Start your free trial today.
