@@ -208,27 +208,18 @@ export default function TableManager({
                 qrSize * scale
             )
 
-            // 4. Draw Hotel/Restaurant Name
+            // 4. Draw Hotel/Restaurant Name (centered in the gap between QR and footer)
             ctx.fillStyle = '#000000'
             ctx.font = `bold ${26 * scale}px "Outfit", "Inter", system-ui, -apple-system, sans-serif`
             ctx.textAlign = 'center'
-            ctx.textBaseline = 'alphabetic'
+            ctx.textBaseline = 'middle'
             ctx.fillText(
                 restaurantName,
                 exportCanvas.width / 2,
-                525 * scale
+                530 * scale
             )
 
-            // 5. Draw Restaurant Terminal ID
-            ctx.fillStyle = '#4b5563' // gray-600
-            ctx.font = `600 ${16 * scale}px "Outfit", "Inter", system-ui, -apple-system, sans-serif`
-            ctx.fillText(
-                '2222222222222', // terminal ID
-                exportCanvas.width / 2,
-                550 * scale
-            )
-
-            // 6. Draw Bottom Banner
+            // 5. Draw Bottom Banner
             const footerHeight = 55
             const footerY = baseHeight - footerHeight
             
@@ -384,13 +375,10 @@ export default function TableManager({
                                             />
                                         </div>
 
-                                        {/* Hotel Name / Terminal ID */}
-                                        <div className="text-center flex-1 flex flex-col justify-end pb-1 min-h-[40px] px-1 overflow-hidden shrink-0 mt-0.5">
-                                            <p className="font-extrabold text-[12px] text-gray-950 truncate max-w-[190px] leading-tight mb-0.5" title={restaurantName}>
+                                        {/* Hotel / Restaurant Name */}
+                                        <div className="text-center flex-1 flex flex-col justify-center pb-1 min-h-[40px] px-1 overflow-hidden shrink-0 mt-0.5">
+                                            <p className="font-extrabold text-[12px] text-gray-950 truncate max-w-[190px] leading-tight" title={restaurantName}>
                                                 {restaurantName}
-                                            </p>
-                                            <p className="text-[9px] text-gray-500 font-semibold uppercase tracking-wider leading-none">
-                                                2222222222222
                                             </p>
                                         </div>
 

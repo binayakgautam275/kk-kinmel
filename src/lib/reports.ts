@@ -19,10 +19,10 @@ export async function generateEodReport(restaurantId: string, reportDate: string
     const start = new Date(`${reportDate}T00:00:00+05:45`).toISOString()
     const end = new Date(`${reportDate}T23:59:59.999+05:45`).toISOString()
 
-    // 2. Fetch all orders for this day
+    // 2. Fetch all orders for this day (only the columns the aggregation needs)
     const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('*')
+        .select('id, total_amount, tax_amount, tip_amount, discount_amount, payment_status, status, session_id, placed_at')
         .eq('restaurant_id', restaurantId)
         .gte('placed_at', start)
         .lte('placed_at', end)
@@ -94,50 +94,51 @@ export async function generateEodReport(restaurantId: string, reportDate: string
         unverifiedOrdersCount = paidOrders.filter(o => !orderVerMap.has(o.id)).length
     }
 
-    // Set other digital payment totals
+    // Build a mutually-exclusive breakdown that sums to totalRevenue: verified
+    // cash / card / each digital method, plus a single "unverified" bucket for
+    // paid orders with no verification row. (The old version set
+    // card = revenue − cash AND also spread the digital methods, double-counting.)
+    const verifiedDigitalTotal = Object.values(digitalBreakdown).reduce((s, n) => s + n, 0)
+    const unverifiedTotal = totalRevenue - cashTotal - cardTotal - verifiedDigitalTotal
     const paymentBreakdown: Record<string, number> = {
         cash: cashTotal,
-        card: totalRevenue - cashTotal,
-        ...digitalBreakdown
+        card: cardTotal,
+        ...digitalBreakdown,
+        // Only surface the bucket when it's materially non-zero.
+        ...(unverifiedTotal > 0.005 ? { unverified: unverifiedTotal } : {}),
     }
 
-    // 6. Top 5 Best Sellers
-    let topSellers: Array<{ name: string; quantity: number; revenue: number }> = []
-
+    // Fetch each paid order's line items ONCE; both best-sellers and COGS reuse it.
+    type SoldItem = { menu_item_id: string; quantity: number | null; unit_price: number | null; menu_items: { name?: string } | { name?: string }[] | null }
+    let soldItems: SoldItem[] = []
     if (paidOrderIds.length > 0) {
         const { data: items, error: itemsError } = await supabase
             .from('order_items')
-            .select(`
-                menu_item_id,
-                quantity,
-                unit_price,
-                menu_items (
-                    name
-                )
-            `)
+            .select('menu_item_id, quantity, unit_price, menu_items ( name )')
             .in('order_id', paidOrderIds)
 
         if (itemsError) throw new Error(`Failed to fetch order items: ${itemsError.message}`)
-
-        const itemMap = new Map<string, { name: string; quantity: number; revenue: number }>()
-        for (const item of items || []) {
-            const menuItem = item.menu_items as any
-            const name = menuItem?.name || 'Unknown Item'
-            const qty = item.quantity || 0
-            const rev = (item.unit_price || 0) * qty
-            const existing = itemMap.get(item.menu_item_id)
-            if (existing) {
-                existing.quantity += qty
-                existing.revenue += rev
-            } else {
-                itemMap.set(item.menu_item_id, { name, quantity: qty, revenue: rev })
-            }
-        }
-
-        topSellers = Array.from(itemMap.values())
-            .sort((a, b) => b.quantity - a.quantity)
-            .slice(0, 5)
+        soldItems = (items || []) as unknown as SoldItem[]
     }
+
+    // 6. Top 5 Best Sellers
+    const itemMap = new Map<string, { name: string; quantity: number; revenue: number }>()
+    for (const item of soldItems) {
+        const mi = item.menu_items
+        const name = (Array.isArray(mi) ? mi[0]?.name : mi?.name) || 'Unknown Item'
+        const qty = item.quantity || 0
+        const rev = (item.unit_price || 0) * qty
+        const existing = itemMap.get(item.menu_item_id)
+        if (existing) {
+            existing.quantity += qty
+            existing.revenue += rev
+        } else {
+            itemMap.set(item.menu_item_id, { name, quantity: qty, revenue: rev })
+        }
+    }
+    const topSellers = Array.from(itemMap.values())
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5)
 
     // 7. Most Rush Hour calculation
     const hourCounts = new Map<number, { count: number; revenue: number }>()
@@ -167,19 +168,10 @@ export async function generateEodReport(restaurantId: string, reportDate: string
         rushHourStr = `${startHourStr} - ${endHourStr} (${stats.count} orders, Rs. ${stats.revenue.toFixed(2)})`
     }
 
-    // 8. COGS and Gross Profit calculation
+    // 8. COGS and Gross Profit calculation (reuses the single soldItems fetch above)
     let totalCogs = 0
-    if (paidOrderIds.length > 0) {
-        // Fetch order items for the report day
-        const { data: items, error: orderItemsError } = await supabase
-            .from('order_items')
-            .select('menu_item_id, quantity')
-            .in('order_id', paidOrderIds)
-
-        if (orderItemsError) throw orderItemsError
-
+    if (soldItems.length > 0) {
         // Collect menu item IDs from the paid order items for the report day
-        const soldItems = items || []
         const menuItemIds = Array.from(new Set(soldItems.map(item => item.menu_item_id).filter(Boolean)))
 
         if (menuItemIds.length > 0) {

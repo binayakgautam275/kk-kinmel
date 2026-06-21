@@ -40,8 +40,9 @@ export async function POST(request: NextRequest) {
             try {
                 await generateEodReport(restaurant.id, reportDate)
                 return restaurant.name
-            } catch (err: any) {
-                throw new Error(`${restaurant.name}: ${err.message || 'unknown error'}`)
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : 'unknown error'
+                throw new Error(`${restaurant.name}: ${msg}`)
             }
         })
     )

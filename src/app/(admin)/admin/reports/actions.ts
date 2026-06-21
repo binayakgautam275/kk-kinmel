@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
+import { generateEodReport } from '@/lib/reports'
 
 export type ReconciliationRow = {
     order_id: string
@@ -99,8 +100,6 @@ export async function runPaymentReconciliation(
     }
 }
 
-import { generateEodReport } from '@/lib/reports'
-
 export async function generateEodReportAction(restaurantId: string, reportDate: string) {
     try {
         const currentUser = await requireRole('manager', 'super_admin')
@@ -109,8 +108,8 @@ export async function generateEodReportAction(restaurantId: string, reportDate: 
         }
         const data = await generateEodReport(restaurantId, reportDate)
         return { data }
-    } catch (err: any) {
-        return { error: err.message || 'Failed to generate report' }
+    } catch (err) {
+        return { error: err instanceof Error ? err.message : 'Failed to generate report' }
     }
 }
 
@@ -128,8 +127,8 @@ export async function getEodReportsAction(restaurantId: string, limit = 30) {
             .order('report_date', { ascending: false })
             .limit(limit)
         return { data: data || [] }
-    } catch (err: any) {
-        return { error: err.message || 'Failed to get reports', data: [] }
+    } catch (err) {
+        return { error: err instanceof Error ? err.message : 'Failed to get reports', data: [] }
     }
 }
 
@@ -147,7 +146,7 @@ export async function getEodReportAction(reportId: string) {
             return { error: 'Unauthorized' }
         }
         return { data }
-    } catch (err: any) {
-        return { error: err.message || 'Failed to get report' }
+    } catch (err) {
+        return { error: err instanceof Error ? err.message : 'Failed to get report' }
     }
 }
