@@ -2,9 +2,6 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import OrderTracker from '@/components/customer/OrderTracker'
 import InvoiceBanner from '@/components/customer/InvoiceBanner'
-import OrderPaymentSection from '@/components/customer/OrderPaymentSection'
-import OrderSplitBillSection from '@/components/customer/OrderSplitBillSection'
-import FeedbackPrompt from '@/components/customer/FeedbackPrompt'
 import Link from 'next/link'
 import { getRestaurantFeatures } from '@/lib/features'
 
@@ -17,27 +14,46 @@ export default async function OrderPage(props: {
     const adminSupabase = await createAdminClient()
 
     // Verify the order exists, fetch with nested item relations
-    // Using adminSupabase to bypass RLS (JWT custom claims hook not configured on hosted Supabase)
-    const { data: order } = await adminSupabase
-        .from('orders')
-        .select(`
-      *,
-      invoice_number,
-      order_items (
-        *,
-        menu_items (name),
-        order_item_modifiers (*)
-      )
-    `)
-        .eq('id', params.orderId)
-        .single()
+    // Using adminSupabase to bypass RLS
+    // Implement retry logic to handle potential replication lag or slight delays in DB commits
+    let order = null;
+    let fetchError = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        const { data, error } = await adminSupabase
+            .from('orders')
+            .select(`
+          *,
+          invoice_number,
+          order_items (
+            *,
+            menu_items (name),
+            order_item_modifiers (*)
+          )
+        `)
+            .eq('id', params.orderId)
+            .single()
+
+        if (data) {
+            order = data;
+            break;
+        } else {
+            fetchError = error;
+            if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 800)); // wait 800ms before retrying
+            }
+        }
+    }
+
+    if (fetchError && !order) {
+        console.error("Order fetch error:", fetchError)
+    }
 
     if (!order) {
         return notFound()
     }
 
-    // Fetch restaurant info for invoice display + payment QR + features in parallel
-    const [restaurantResult, features] = await Promise.all([
+    // Fetch restaurant info for invoice display + payment QR + features + table info in parallel
+    const [restaurantResult, features, tableResult] = await Promise.all([
         order.restaurant_id
             ? adminSupabase
                 .from('restaurants')
@@ -48,6 +64,11 @@ export default async function OrderPage(props: {
         order.restaurant_id
             ? getRestaurantFeatures(order.restaurant_id)
             : Promise.resolve(null),
+        adminSupabase
+            .from('tables')
+            .select('label')
+            .eq('qr_token', params.tableSlug)
+            .single()
     ])
 
     const restaurantInfo = restaurantResult?.data as {
@@ -58,69 +79,50 @@ export default async function OrderPage(props: {
         payment_qr_label?: string
     } | null
 
+    const tableInfo = tableResult?.data as { label: string } | null
+
     return (
-        <div className="min-h-screen bg-gray-50 pb-12">
-            {/* Header */}
-            <header className="bg-white px-4 py-4 shadow-sm sticky top-0 z-20">
-                <h1 className="text-xl font-semibold text-gray-900 text-center">Track Order</h1>
-            </header>
+        <div className="min-h-screen bg-[#FFF8F3] pb-12 text-[#1A1006]">
+            <main className="max-w-xl mx-auto">
+                <OrderTracker
+                    orderId={params.orderId}
+                    initialOrder={order}
+                    tableLabel={tableInfo?.label || 'T3'}
+                    features={features}
+                    restaurantInfo={restaurantInfo}
+                    tableSlug={params.tableSlug}
+                />
 
-            <main className="max-w-xl mx-auto px-4 mt-6">
-                <OrderTracker orderId={params.orderId} initialOrder={order} />
+                <div className="px-4">
+                    {/* Invoice / PAN display + print — always show if invoice exists */}
+                    {order.invoice_number && (
+                        <>
+                            <InvoiceBanner
+                                invoiceNumber={order.invoice_number}
+                                panNumber={restaurantInfo?.pan_number}
+                                restaurantName={restaurantInfo?.name}
+                                vatRegistered={restaurantInfo?.vat_registered}
+                            />
+                            <div className="mt-3 text-center">
+                                <a
+                                    href={`/t/${params.tableSlug}/order/${params.orderId}/receipt`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8C6A50] border border-[#EDD9C8] bg-white rounded-xl px-4 py-2.5 hover:bg-gray-50 active:scale-95 transition shadow-sm"
+                                >
+                                    🖨️ Print / Download Receipt
+                                </a>
+                            </div>
+                        </>
+                    )}
 
-                {/* Feedback prompt — shown once order is delivered and feature is enabled */}
-                {order.status === 'delivered' && features?.feedbackEnabled && (
-                    <FeedbackPrompt orderId={params.orderId} />
-                )}
-
-                {/* Pay Now Section — always shown when order isn't paid yet */}
-                {order.restaurant_id && order.payment_status !== 'paid' && (
-                    <OrderPaymentSection
-                        orderId={params.orderId}
-                        restaurantId={order.restaurant_id}
-                        totalAmount={order.total_amount}
-                        paymentStatus={order.payment_status}
-                        paymentQrUrl={restaurantInfo?.payment_qr_url || null}
-                        paymentQrLabel={restaurantInfo?.payment_qr_label || null}
-                    />
-                )}
-
-                {/* Split Bill Section — shown when split billing is enabled and order isn't paid yet */}
-                {order.session_id && features?.splitBillingEnabled && order.payment_status !== 'paid' && (
-                    <OrderSplitBillSection
-                        sessionId={order.session_id}
-                        totalAmount={order.total_amount}
-                    />
-                )}
-
-                {/* Invoice / PAN display + print */}
-                {order.invoice_number && (
-                    <>
-                        <InvoiceBanner
-                            invoiceNumber={order.invoice_number}
-                            panNumber={restaurantInfo?.pan_number}
-                            restaurantName={restaurantInfo?.name}
-                            vatRegistered={restaurantInfo?.vat_registered}
-                        />
-                        <div className="mt-3 text-center">
-                            <a
-                                href={`/t/${params.tableSlug}/order/${params.orderId}/receipt`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-50 transition"
-                            >
-                                🖨️ Print / Download Receipt
-                            </a>
-                        </div>
-                    </>
-                )}
-
-                {/* Support/Extra Actions */}
-                <div className="mt-8 text-center space-y-3">
-                    <Link href={`/t/${params.tableSlug}`} className="inline-block text-[var(--color-primary)] font-medium text-sm hover:underline">
-                        ← Back to Menu
-                    </Link>
-                    <p className="text-sm text-gray-500">Need help? Ask a waiter for assistance.</p>
+                    {/* Support note */}
+                    <div className="mt-8 text-center space-y-3">
+                        <Link href={`/t/${params.tableSlug}`} className="inline-block text-[var(--color-primary)] font-bold text-xs hover:underline">
+                            ← Back to Menu
+                        </Link>
+                        <p className="text-xs text-[#8C6A50] font-semibold">Need help? Ask a waiter for assistance.</p>
+                    </div>
                 </div>
             </main>
         </div>

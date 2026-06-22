@@ -6,8 +6,13 @@ import { playStatusUpdate } from '@/lib/audio'
 import { playVoice } from '@/lib/voice'
 import { toast } from 'react-hot-toast'
 import { formatCurrency, timeAgo } from '@/lib/utils'
-import { CheckCircle2, ChefHat, Package, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { CheckCircle, Clock, ChefHat, Package, PartyPopper, ChevronLeft, MapPin } from 'lucide-react'
 import type { Order, OrderItem, MenuItem, OrderItemModifier } from '@/types/database'
+import Confetti from '@/components/customer/Confetti'
+import { useRouter } from 'next/navigation'
+import OrderPaymentSection from './OrderPaymentSection'
+import OrderSplitBillSection from './OrderSplitBillSection'
+import FeedbackPrompt from './FeedbackPrompt'
 
 type OrderWithItems = Order & {
     order_items?: (OrderItem & {
@@ -17,11 +22,11 @@ type OrderWithItems = Order & {
 }
 
 const STEPS = [
-    { id: 'pending',   label: 'Received',  icon: Clock,        hint: 'Waiting for kitchen to confirm…' },
-    { id: 'confirmed', label: 'Confirmed', icon: CheckCircle,  hint: 'Kitchen has received your order.' },
-    { id: 'preparing', label: 'Preparing', icon: ChefHat,      hint: 'The chef is preparing your food.' },
-    { id: 'ready',     label: 'Ready',     icon: Package,      hint: 'Your order is ready! A waiter is bringing it.' },
-    { id: 'delivered', label: 'Delivered', icon: CheckCircle2, hint: 'Enjoy your meal! 🍽️' },
+    { id: 'pending',   label: 'Order Confirmed', sub: 'We received your order', icon: Clock,  hint: 'Waiting for kitchen to confirm…', time: 'Just now' },
+    { id: 'confirmed', label: 'Confirmed',       sub: 'Kitchen has accepted',   icon: CheckCircle,  hint: 'Kitchen has received your order.', time: '1 min ago' },
+    { id: 'preparing', label: 'Preparing',       sub: 'Chef is cooking',        icon: ChefHat,      hint: 'The chef is preparing your food.', time: '2 mins ago' },
+    { id: 'ready',     label: 'Ready to Serve',  sub: 'Almost at your table!',  icon: Package,      hint: 'Your order is ready! A waiter is bringing it.', time: 'Ready' },
+    { id: 'delivered', label: 'Delivered',       sub: 'Enjoy your meal!',       icon: PartyPopper,  hint: 'Enjoy your meal! 🍽️', time: 'Delivered' },
 ]
 
 const STATUS_TOAST: Record<string, { emoji: string; message: string }> = {
@@ -32,9 +37,27 @@ const STATUS_TOAST: Record<string, { emoji: string; message: string }> = {
     cancelled: { emoji: '✕', message: 'Order has been cancelled.' },
 }
 
-export default function OrderTracker({ orderId, initialOrder }: { orderId: string; initialOrder: OrderWithItems }) {
+export default function OrderTracker({
+    orderId,
+    initialOrder,
+    tableLabel,
+    features,
+    restaurantInfo,
+    tableSlug,
+}: {
+    orderId: string
+    initialOrder: OrderWithItems
+    tableLabel: string
+    features: any
+    restaurantInfo: any
+    tableSlug: string
+}) {
     const [order, setOrder] = useState<OrderWithItems>(initialOrder)
+    const [showConfetti, setShowConfetti] = useState(() => ['pending', 'confirmed'].includes(initialOrder.status))
+    const [showSuccessScreen, setShowSuccessScreen] = useState(true)
+    const [showPayment, setShowPayment] = useState(false)
     const supabaseRef = useRef(createClient())
+    const router = useRouter()
 
     useEffect(() => {
         const supabase = supabaseRef.current
@@ -67,155 +90,268 @@ export default function OrderTracker({ orderId, initialOrder }: { orderId: strin
         return () => { supabase.removeChannel(channel) }
     }, [orderId])
 
+    useEffect(() => {
+        if (showConfetti) {
+            const timer = setTimeout(() => setShowConfetti(false), 5000)
+            return () => clearTimeout(timer)
+        }
+    }, [showConfetti])
+
     const isCancelled = order.status === 'cancelled'
     const currentStepIndex = STEPS.findIndex(s => s.id === order.status)
-    const progressPct = isCancelled || currentStepIndex <= 0 ? 0 : (currentStepIndex / (STEPS.length - 1)) * 100
     const isDelivered = order.status === 'delivered'
+    const preparationMin = order.order_items?.reduce(
+        (max, item) => Math.max(max, item.menu_items?.preparation_min ?? 0),
+        0
+    ) || 0
 
-    return (
-        <div className="space-y-4">
-            {/* Status card */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                {/* Top accent band */}
-                <div className="h-1 w-full" style={{
-                    background: isCancelled
-                        ? '#ef4444'
-                        : isDelivered
-                            ? '#22c55e'
-                            : 'var(--color-primary)',
-                }} />
+    if (showSuccessScreen) {
+        return (
+            <div className="flex flex-col min-h-screen bg-[#FFF8F3] text-[#1A1006] font-sans select-none pb-12">
+                {showConfetti && <Confetti />}
 
-                <div className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <h2 className="text-lg font-bold text-gray-900">
-                                {isCancelled ? 'Order Cancelled' : isDelivered ? 'Delivered!' : 'Order Status'}
-                            </h2>
-                            <p className="text-xs text-gray-400 mt-0.5">
-                                #{orderId.substring(0, 6).toUpperCase()} · {timeAgo(order.placed_at)}
-                            </p>
-                        </div>
-                        {isCancelled && (
-                            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
-                                <XCircle size={20} className="text-red-500" />
-                            </div>
-                        )}
-                        {isDelivered && (
-                            <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-                                <CheckCircle2 size={20} className="text-green-500" />
-                            </div>
-                        )}
-                    </div>
-
-                    {isCancelled && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl">
-                            <p className="text-sm font-medium text-red-700">This order has been cancelled.</p>
-                            <p className="text-xs text-red-500 mt-0.5">Please contact your waiter for assistance.</p>
-                        </div>
-                    )}
-
-                    {/* Steps */}
-                    <div className="relative">
-                        {/* Vertical track */}
-                        <div className="absolute left-[18px] top-5 bottom-5 w-0.5 bg-gray-100 rounded-full" />
-                        {/* Progress fill */}
-                        {!isCancelled && (
-                            <div
-                                className="absolute left-[18px] top-5 w-0.5 rounded-full origin-top transition-all duration-700 ease-in-out"
-                                style={{
-                                    height: `calc(100% - 40px)`,
-                                    transform: `scaleY(${progressPct / 100})`,
-                                    background: 'var(--color-primary)',
-                                }}
-                            />
-                        )}
-
-                        <div className="space-y-6 relative">
-                            {STEPS.map((step, index) => {
-                                const Icon = step.icon
-                                const isCompleted = !isCancelled && index < currentStepIndex
-                                const isCurrent = !isCancelled && index === currentStepIndex
-                                const isFuture = isCancelled || index > currentStepIndex
-
-                                return (
-                                    <div key={step.id} className="flex items-start gap-4 pl-1">
-                                        <div className={`relative w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-500 ${
-                                            isCurrent
-                                                ? 'text-white shadow-lg'
-                                                : isCompleted
-                                                    ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                                                    : 'bg-gray-50 text-gray-300'
-                                        }`} style={isCurrent ? { background: 'var(--color-primary)', boxShadow: '0 4px 12px color-mix(in srgb, var(--color-primary) 35%, transparent)' } : {}}>
-                                            {isCompleted ? (
-                                                <CheckCircle size={15} className="text-[var(--color-primary)]" />
-                                            ) : (
-                                                <Icon size={15} className={isCurrent ? 'animate-pulse' : ''} />
-                                            )}
-                                            {isCurrent && (
-                                                <span className="absolute inset-0 rounded-full animate-ping opacity-20"
-                                                      style={{ background: 'var(--color-primary)' }} />
-                                            )}
-                                        </div>
-                                        <div className="pt-1.5">
-                                            <p className={`text-sm font-semibold leading-none ${
-                                                isFuture ? 'text-gray-300' : isCurrent ? 'text-gray-900' : 'text-gray-600'
-                                            }`}>
-                                                {step.label}
-                                            </p>
-                                            {isCurrent && (
-                                                <p className="text-xs text-gray-400 mt-1">{step.hint}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                )
-                            })}
+                {/* Top Orange Section */}
+                <div className="bg-[#E85D04] pt-12 pb-16 px-4 text-white text-center relative overflow-hidden shrink-0 rounded-b-[40px] shadow-lg">
+                    <div className="absolute top-0 right-0 w-36 h-36 rounded-full bg-white/10 -translate-y-1/2 translate-x-1/2" />
+                    
+                    {/* Circle Checkmark Icon */}
+                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg mx-auto mb-4 animate-scale-in">
+                        <div className="w-16 h-16 rounded-full border-4 border-[#E85D04] flex items-center justify-center">
+                            <CheckCircle size={28} className="text-[#E85D04] fill-white" />
                         </div>
                     </div>
-                </div>
-            </div>
 
-            {/* Order details */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-50">
-                    <h3 className="font-semibold text-gray-900 text-sm">Your Order</h3>
+                    <h1 className="text-2xl font-black tracking-wide">🎉 Order Placed! 🎉</h1>
+                    <p className="text-white/80 text-xs font-semibold mt-1">Sit back and relax — the kitchen is on it!</p>
+
+                    <div className="mt-4 inline-block bg-white/20 text-white font-black text-xs px-4 py-2 rounded-xl backdrop-blur-sm border border-white/10 tracking-widest uppercase">
+                        Order #{orderId.substring(0, 6).toUpperCase()}
+                    </div>
                 </div>
-                <div className="divide-y divide-gray-50">
-                    {order.order_items?.map((item) => (
-                        <div key={item.id} className="px-5 py-3 flex justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-baseline gap-1.5">
-                                    <span className="text-[11px] font-semibold text-gray-400 tabular-nums">{item.quantity}×</span>
-                                    <span className="text-sm font-medium text-gray-800 leading-snug">{item.menu_items?.name}</span>
-                                </div>
-                                {item.order_item_modifiers && item.order_item_modifiers.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-1.5">
-                                        {item.order_item_modifiers.map(mod => (
-                                            <span key={mod.id} className="text-[10px] bg-gray-50 border border-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
-                                                {mod.modifier_name}
-                                                {mod.price_adjustment !== 0 && (
-                                                    <span className="ml-0.5 text-gray-400">
-                                                        {mod.price_adjustment > 0 ? `+${formatCurrency(mod.price_adjustment)}` : formatCurrency(mod.price_adjustment)}
-                                                    </span>
-                                                )}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                                {item.special_request && (
-                                    <p className="text-[11px] text-gray-400 mt-1 italic">"{item.special_request}"</p>
-                                )}
-                            </div>
-                            <span className="text-sm font-semibold text-gray-700 tabular-nums shrink-0">
-                                {formatCurrency(item.unit_price * item.quantity)}
+
+                {/* White Card Section */}
+                <div className="px-4 -mt-8 flex-1 max-w-md mx-auto w-full relative z-10">
+                    <div className="bg-white rounded-3xl border border-[#EDD9C8] p-5 shadow-xl">
+                        <div className="flex items-center justify-between border-b border-[#F5EDE6] pb-3 mb-4">
+                            <span className="font-black text-xs text-[#8C6A50] uppercase tracking-wider flex items-center gap-1">
+                                📋 Your Order
+                            </span>
+                            <span className="font-black text-xs text-[#1A1006] bg-[#FFF0E6] px-2.5 py-1 rounded-lg">
+                                Table {tableLabel}
                             </span>
                         </div>
-                    ))}
-                </div>
-                <div className="px-5 py-4 flex justify-between items-center border-t border-gray-100">
-                    <span className="text-sm font-medium text-gray-500">Total</span>
-                    <span className="font-bold text-lg text-gray-900 tabular-nums">{formatCurrency(order.total_amount)}</span>
+
+                        {/* Items List */}
+                        <div className="divide-y divide-[#F5EDE6] max-h-48 overflow-y-auto scrollbar-thin pr-1">
+                            {order.order_items?.map((item) => (
+                                <div key={item.id} className="py-2.5 flex justify-between gap-3 text-sm">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-baseline gap-1">
+                                            <span className="font-bold text-[#8C6A50] tabular-nums text-xs">{item.quantity}×</span>
+                                            <span className="font-bold text-[#1A1006] leading-snug">{item.menu_items?.name}</span>
+                                        </div>
+                                        {item.order_item_modifiers && item.order_item_modifiers.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                {item.order_item_modifiers.map(m => (
+                                                    <span key={m.id} className="text-[9px] bg-gray-50 border border-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                                                        {m.modifier_name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="font-black text-[#E85D04] tabular-nums">
+                                        {formatCurrency(item.unit_price * item.quantity)}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Total amount */}
+                        <div className="flex justify-between items-center border-t border-[#EDD9C8] pt-4 mt-3">
+                            <span className="text-sm font-bold text-[#8C6A50]">Total Amount</span>
+                            <span className="font-black text-lg text-[#E85D04] tabular-nums">
+                                {formatCurrency(order.total_amount)}
+                            </span>
+                        </div>
+
+                        {/* Estimated time callout */}
+                        <div className="mt-5 bg-[#FFF0E6] rounded-2xl p-3 border border-[#EDD9C8] flex items-center gap-3">
+                            <div className="text-[#E85D04] shrink-0 bg-white size-8 rounded-full flex items-center justify-center shadow-sm">
+                                <Clock size={16} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] text-[#8C6A50] font-black uppercase tracking-wider">Estimated time</p>
+                                <p className="text-sm font-black text-[#1A1006]">
+                                    {preparationMin > 0 ? `${preparationMin} minutes` : '20–30 minutes'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Track Your Order Button */}
+                    <div className="mt-8">
+                        <button
+                            onClick={() => setShowSuccessScreen(false)}
+                            className="w-full bg-[#E85D04] text-white font-black text-sm py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-md shadow-[#E85D04]/15 flex items-center justify-center gap-2"
+                        >
+                            <MapPin size={16} />
+                            Track Your Order
+                        </button>
+                    </div>
                 </div>
             </div>
+        )
+    }
+
+    return (
+        <div className="flex flex-col min-h-screen bg-[#FFF8F3] text-[#1A1006] font-sans pb-28 select-none">
+            {showConfetti && <Confetti />}
+
+            {/* Tracking Header */}
+            <div className="bg-[#E85D04] pt-6 pb-8 px-4 relative overflow-hidden shrink-0">
+                <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/10 -translate-y-1/2 translate-x-1/2" />
+                <button
+                    onClick={() => setShowSuccessScreen(true)}
+                    className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center mb-4 transition-transform active:scale-95 text-white hover:bg-white/30"
+                >
+                    <ChevronLeft size={20} />
+                </button>
+                <p className="text-white/70 text-xs font-semibold tracking-widest uppercase mb-1">Live Tracking</p>
+                <h1 className="text-2xl font-black text-white">Order #{orderId.substring(0, 6).toUpperCase()}</h1>
+                <p className="text-white/80 text-sm font-semibold mt-1">
+                    Table {tableLabel} • {formatCurrency(order.total_amount)}
+                </p>
+            </div>
+
+            <div className="px-4 pt-6 flex-1 max-w-md mx-auto w-full">
+                {/* Status card */}
+                <div className="bg-white rounded-2xl border border-[#EDD9C8] p-4 mb-6 shadow-sm" style={{ boxShadow: "0 2px 12px rgba(232,93,4,0.04)" }}>
+                    <div className="flex items-center gap-2 mb-1">
+                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <span className="text-[10px] font-bold text-green-600 uppercase tracking-wide">Live Updates</span>
+                    </div>
+                    {isCancelled ? (
+                        <>
+                            <p className="text-base font-black text-red-650">Order Cancelled</p>
+                            <p className="text-xs text-[#8C6A50] font-semibold mt-0.5">Please contact a waiter for assistance.</p>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-base font-black text-[#1A1006]">
+                                {STEPS[currentStepIndex]?.label || 'Pending Confirmation'}
+                            </p>
+                            <p className="text-xs text-[#8C6A50] font-semibold mt-0.5">
+                                {STEPS[currentStepIndex]?.hint || 'Waiting for the kitchen...'}
+                            </p>
+                        </>
+                    )}
+                </div>
+
+                {/* Timeline */}
+                {!isCancelled && (
+                    <div className="relative mb-6 pl-1">
+                        {STEPS.map((step, i) => {
+                            const isDone = i <= currentStepIndex
+                            const isActive = i === currentStepIndex
+                            const Icon = step.icon
+                            return (
+                                <div key={step.id} className="flex gap-4">
+                                    {/* Line + Dot */}
+                                    <div className="flex flex-col items-center">
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 shrink-0 z-10 transition-all duration-500 ${
+                                            isDone
+                                                ? isActive
+                                                    ? "bg-[#E85D04] border-[#E85D04] shadow-md shadow-[#E85D04]/20 animate-pulse"
+                                                    : "bg-[#E85D04] border-[#E85D04]"
+                                                : "bg-white border-[#EDD9C8]"
+                                        }`}
+                                            style={isActive ? { boxShadow: "0 0 0 6px rgba(232,93,4,0.15)" } : {}}
+                                        >
+                                            <Icon size={16} className={isDone ? "text-white" : "text-[#C4A882]"} />
+                                        </div>
+                                        {i < STEPS.length - 1 && (
+                                            <div className={`w-0.5 h-10 transition-all duration-700 ${
+                                                i < currentStepIndex ? "bg-[#E85D04]" : "bg-[#EDD9C8]"
+                                            }`} />
+                                        )}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className="pt-1.5 pb-8">
+                                        <p className={`text-xs font-black ${isDone ? "text-[#1A1006]" : "text-[#C4A882]"}`}>{step.label}</p>
+                                        <p className={`text-[10px] font-semibold ${isDone ? "text-[#8C6A50]" : "text-[#C4A882]"}`}>{step.sub}</p>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+
+                {/* Chef note */}
+                <div className="bg-[#FFF0E6] rounded-2xl px-4 py-4 flex items-center gap-3 mb-6 border border-[#EDD9C8]">
+                    <div className="text-2xl">👨‍🍳</div>
+                    <div>
+                        <p className="text-xs text-[#8C6A50] font-semibold">Chef's note</p>
+                        <p className="text-sm font-black text-[#1A1006]">"Made with love, just for you!"</p>
+                    </div>
+                </div>
+
+                {/* Order Details list */}
+                <div className="bg-white rounded-2xl border border-[#EDD9C8] shadow-sm overflow-hidden mb-6" style={{ boxShadow: "0 2px 12px rgba(232,93,4,0.04)" }}>
+                    <div className="px-4 py-3.5 border-b border-[#EDD9C8] bg-[#FFF0E6]/30">
+                        <h3 className="font-black text-[#1A1006] text-xs uppercase tracking-wider">Your Order Items</h3>
+                    </div>
+                    <div className="divide-y divide-[#F5EDE6]">
+                        {order.order_items?.map((item) => (
+                            <div key={item.id} className="px-4 py-3 flex justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-xs font-bold text-[#8C6A50] tabular-nums">{item.quantity}×</span>
+                                        <span className="text-xs font-bold text-[#1A1006] leading-snug">{item.menu_items?.name}</span>
+                                    </div>
+                                    {item.order_item_modifiers && item.order_item_modifiers.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {item.order_item_modifiers.map(mod => (
+                                                <span key={mod.id} className="text-[9px] bg-gray-50 border border-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                                                    {mod.modifier_name}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="text-xs font-black text-[#E85D04] tabular-nums shrink-0">
+                                    {formatCurrency(item.unit_price * item.quantity)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+            </div>
+
+            {/* Persistent Bottom Payment Control Button */}
+            {!isCancelled && order.payment_status !== 'paid' && (
+                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#EDD9C8] px-4 py-4 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
+                    <div className="max-w-md mx-auto">
+                        {!isDelivered ? (
+                            <button
+                                disabled
+                                className="w-full bg-gray-200 text-gray-400 font-black text-sm py-3.5 rounded-2xl cursor-not-allowed flex items-center justify-center gap-2 border border-gray-300"
+                            >
+                                Pay Now (Pending Delivery)
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => router.push(`/t/${tableSlug}/order/${orderId}/payment`)}
+                                className="w-full bg-[#E85D04] text-white font-black text-sm py-3.5 rounded-2xl active:scale-[0.98] transition-transform shadow-md shadow-[#E85D04]/15 flex items-center justify-center gap-2"
+                            >
+                                Pay Now
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

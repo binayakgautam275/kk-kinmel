@@ -92,12 +92,65 @@ export async function updateItemAction(id: string, updates: Record<string, unkno
 
 export async function deleteItemAction(id: string) {
     const supabase = await createAdminClient()
-    const { error } = await supabase
-        .from('menu_items')
-        .delete()
-        .eq('id', id)
 
-    if (error) return { error: error.message }
+    // 1. Check if the item has been ordered
+    const { count, error: countErr } = await supabase
+        .from('order_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('menu_item_id', id)
+
+    if (countErr) return { error: countErr.message }
+
+    const isOrdered = (count ?? 0) > 0
+
+    if (isOrdered) {
+        // Soft delete since it has historical orders
+        const { error: updateErr } = await supabase
+            .from('menu_items')
+            .update({ is_deleted: true, is_available: false, category_id: null })
+            .eq('id', id)
+
+        if (updateErr) {
+            // Check if is_deleted column doesn't exist yet, try fallback update without it
+            if (updateErr.message.includes('is_deleted') || updateErr.code === 'PGRST205' || updateErr.code === '42703') {
+                const { error: fallbackErr } = await supabase
+                    .from('menu_items')
+                    .update({ is_available: false, category_id: null })
+                    .eq('id', id)
+                if (fallbackErr) return { error: fallbackErr.message }
+            } else {
+                return { error: updateErr.message }
+            }
+        }
+    } else {
+        // Hard delete since it has no orders
+        const { error: deleteErr } = await supabase
+            .from('menu_items')
+            .delete()
+            .eq('id', id)
+
+        if (deleteErr) {
+            // Fallback to soft delete in case of other hidden relations (e.g. combo items)
+            const { error: updateErr } = await supabase
+                .from('menu_items')
+                .update({ is_deleted: true, is_available: false, category_id: null })
+                .eq('id', id)
+
+            if (updateErr) {
+                if (updateErr.message.includes('is_deleted') || updateErr.code === 'PGRST205' || updateErr.code === '42703') {
+                    const { error: fallbackErr } = await supabase
+                        .from('menu_items')
+                        .update({ is_available: false, category_id: null })
+                        .eq('id', id)
+                    if (fallbackErr) return { error: fallbackErr.message }
+                } else {
+                    return { error: updateErr.message }
+                }
+            }
+        }
+    }
+
     revalidatePath('/admin/menu')
     return { success: true }
 }
+
