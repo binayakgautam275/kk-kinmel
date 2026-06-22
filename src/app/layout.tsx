@@ -103,7 +103,7 @@ export default async function RootLayout({
   const theme = await getThemeConfig()
 
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <style dangerouslySetInnerHTML={{ __html: themeToCSS(theme) }} />
       </head>
