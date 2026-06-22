@@ -56,7 +56,7 @@ export default async function AnalyticsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Platform Analytics</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Platform Analytics</h1>
                 <p className="text-gray-500 mt-1 text-sm">Business intelligence across all restaurant tenants.</p>
             </div>
 
@@ -129,7 +129,7 @@ export default async function AnalyticsPage() {
                     {Object.entries(tierCount).map(([tier, count]) => (
                         <div key={tier} className="flex-1 min-w-[100px] bg-gray-50 rounded-xl p-4 text-center border border-gray-100">
                             <div className={`w-3 h-3 rounded-full ${TIER_COLORS[tier] || 'bg-gray-300'} mx-auto mb-2`} />
-                            <div className={`text-xl font-bold ${TIER_TEXT[tier] || 'text-gray-700'}`}>{count}</div>
+                            <div className={`text-xl font-extrabold ${TIER_TEXT[tier] || 'text-gray-700'}`}>{count}</div>
                             <div className="text-xs text-gray-500 mt-0.5 capitalize">{tier}</div>
                         </div>
                     ))}

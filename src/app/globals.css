@@ -20,23 +20,23 @@
     --brand-800: #97380C;
     --brand-900: #7A300D;
 
-    /* NEUTRALS — light mode (slate-based to pair with the navy) */
-    --bg:            #F6F7F9;
+    /* NEUTRALS — light mode (warm stone/ivory to pair with orange) */
+    --bg:            #FDFBF7;
     --surface:       #FFFFFF;
-    --surface-muted: #F1F3F6;
-    --border:        #E8EBF0;
-    --border-strong: #D7DCE3;
-    --text:          #0F172A;
-    --text-muted:    #64748B;
-    --text-subtle:   #94A3B8;
+    --surface-muted: #F4F1EB;
+    --border:        #EBE6DF;
+    --border-strong: #DED8CF;
+    --text:          #181614;
+    --text-muted:    #6B655F;
+    --text-subtle:   #9C968F;
 
-    /* DARK SURFACES — for KDS + dark mode */
-    --dark-bg:        #0E1622;
-    --dark-surface:   #16202E;
-    --dark-raised:    #1B263B;
-    --dark-border:    #25324A;
-    --dark-text:      #E6ECF5;
-    --dark-muted:     #8A98AD;
+    /* DARK SURFACES — for KDS + dark mode (warm dark/onyx) */
+    --dark-bg:        #11100E;
+    --dark-surface:   #1A1916;
+    --dark-raised:    #22201C;
+    --dark-border:    #33302B;
+    --dark-text:      #EDEDE8;
+    --dark-muted:     #9E9A91;
 
     /* SEMANTIC / STATUS */
     --success:   #16A34A;  --success-bg:  #ECFDF3;  --success-fg: #15803D;
@@ -49,9 +49,11 @@
     --r-sm: 8px;   
     --r-md: 12px;   
     --r-lg: 16px;   
-    --r-xl: 20px;   
+    --r-xl: 20px;
+    --r-2xl: 24px;
+    --r-3xl: 32px;
     --r-full: 9999px;
-    --border-radius: var(--r-lg);
+    --border-radius: var(--r-2xl);
 
     /* ELEVATION */
     --shadow-sm: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
@@ -162,10 +164,10 @@ input[type='number'] { -moz-appearance: textfield; }
     }
 
     /* Typography scale */
-    .text-display { font-size: 32px; line-height: 40px; font-weight: 700; }
-    .text-h1      { font-size: 24px; line-height: 32px; font-weight: 700; }
-    .text-h2      { font-size: 20px; line-height: 28px; font-weight: 600; }
-    .text-h3      { font-size: 16px; line-height: 24px; font-weight: 600; }
+    .text-display { font-size: 32px; line-height: 40px; font-weight: 800; letter-spacing: -0.02em; }
+    .text-h1      { font-size: 24px; line-height: 32px; font-weight: 800; letter-spacing: -0.015em; }
+    .text-h2      { font-size: 20px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em; }
+    .text-h3      { font-size: 16px; line-height: 24px; font-weight: 700; }
     .text-body    { font-size: 14px; line-height: 22px; font-weight: 400; }
     .text-body-strong { font-size: 14px; line-height: 22px; font-weight: 500; }
     .text-small   { font-size: 13px; line-height: 18px; font-weight: 500; }

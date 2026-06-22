@@ -144,7 +144,7 @@ export default function PaymentVerificationPanel({
                                 <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${method.bg}`}>
                                     {method.icon} {method.label}
                                 </span>
-                                <span className="text-lg font-bold text-gray-900">Rs. {claim.amount.toFixed(2)}</span>
+                                <span className="text-lg font-extrabold text-gray-900">Rs. {claim.amount.toFixed(2)}</span>
                                 {claim.reference_code && (
                                     <span className="text-xs text-gray-500">· {claim.reference_code}</span>
                                 )}

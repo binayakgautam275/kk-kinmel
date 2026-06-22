@@ -150,7 +150,7 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                    <h1 className="text-xl font-bold text-ink">Analytics</h1>
+                    <h1 className="text-xl font-extrabold text-ink">Analytics</h1>
                     <p className="text-sm text-ink-subtle mt-0.5">Revenue, trends & insights</p>
                 </div>
                 <div className="flex items-center bg-surface-muted rounded-xl p-1 gap-0.5">

@@ -150,7 +150,7 @@ export default function ThemeCustomizer({
         <div className="space-y-6">
             <div className="flex justify-between items-center bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Brand & Theme</h1>
+                    <h1 className="text-2xl font-extrabold text-gray-900">Brand & Theme</h1>
                     <p className="text-gray-500 mt-1">Configure the look and feel of your customer-facing ordering app.</p>
                 </div>
                 <button

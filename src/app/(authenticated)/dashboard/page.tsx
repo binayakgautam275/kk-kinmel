@@ -80,7 +80,7 @@ export default async function DashboardPage() {
             {/* Header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">{restaurant?.name || 'Your Restaurant'}</h1>
+                    <h1 className="text-2xl font-extrabold text-gray-900">{restaurant?.name || 'Your Restaurant'}</h1>
                     <p className="text-sm text-gray-500 mt-0.5">Owner portal</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -202,7 +202,7 @@ function KpiCard({ icon: Icon, label, value, color }: {
                 <Icon size={20} className={c.icon} />
             </div>
             <div className="min-w-0">
-                <p className={`text-xl font-bold tabular-nums ${c.text}`}>{value}</p>
+                <p className={`text-xl font-extrabold tabular-nums ${c.text}`}>{value}</p>
                 <p className="text-xs text-gray-500 truncate">{label}</p>
             </div>
         </div>

@@ -32,21 +32,21 @@ export default async function TablesPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Tables & QR Codes</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Tables & QR Codes</h1>
                 <p className="text-gray-500 mt-1 text-sm">All tables across every restaurant tenant with active session status.</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{tables.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{tables.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Tables</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-emerald-600">{activeSessions}</div>
+                    <div className="text-2xl font-extrabold text-emerald-600">{activeSessions}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Active Sessions</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{Object.keys(grouped).length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{Object.keys(grouped).length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Restaurants</div>
                 </div>
             </div>

@@ -28,21 +28,21 @@ export default async function PricingPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Dynamic Pricing</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Dynamic Pricing</h1>
                 <p className="text-gray-500 mt-1 text-sm">Read-only overview of dynamic pricing feature across all tenants.</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{rows.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{rows.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Restaurants</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-purple-600">{enabledCount}</div>
+                    <div className="text-2xl font-extrabold text-purple-600">{enabledCount}</div>
                     <div className="text-xs text-gray-500 mt-0.5">With Pricing Enabled</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{totalRules}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{totalRules}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Active Rules</div>
                 </div>
             </div>

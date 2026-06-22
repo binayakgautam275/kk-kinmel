@@ -123,13 +123,13 @@ export default function CashierClient({ restaurantId, initialUnpaid, initialActi
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900">Counter</h1>
+                    <h1 className="text-xl font-extrabold text-gray-900">Counter</h1>
                     <p className="text-sm text-gray-400 mt-0.5">Collect payments & close bills</p>
                 </div>
                 {unpaid.length > 0 && (
                     <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-right">
                         <p className="text-xs text-red-500 font-semibold">{unpaid.length} unpaid bill{unpaid.length !== 1 ? 's' : ''}</p>
-                        <p className="text-lg font-bold text-red-700 tabular-nums">{formatCurrency(totalUnpaid)}</p>
+                        <p className="text-lg font-extrabold text-red-700 tabular-nums">{formatCurrency(totalUnpaid)}</p>
                     </div>
                 )}
             </div>

@@ -40,17 +40,17 @@ export default async function ShiftsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Staff Shifts</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Staff Shifts</h1>
                 <p className="text-gray-500 mt-1 text-sm">Active and recent staff shifts across all restaurant tenants.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-                    <div className="text-2xl font-bold text-emerald-700">{activeShifts.length}</div>
+                    <div className="text-2xl font-extrabold text-emerald-700">{activeShifts.length}</div>
                     <div className="text-xs text-emerald-600 mt-0.5 font-medium">Currently Clocked In</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{recentShifts.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{recentShifts.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Recent Shifts</div>
                 </div>
             </div>

@@ -62,22 +62,22 @@ export default function MenusPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Menu Catalog</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Menu Catalog</h1>
                 <p className="text-gray-500 mt-1 text-sm">Read-only view of all restaurant menus across the platform.</p>
             </div>
 
             {/* Summary */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                    <div className="text-2xl font-bold text-gray-900">{groups.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{groups.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Restaurants</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                    <div className="text-2xl font-bold text-gray-900">{groups.reduce((s, g) => s + g.totalItems, 0)}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{groups.reduce((s, g) => s + g.totalItems, 0)}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Items</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-                    <div className="text-2xl font-bold text-gray-900">{groups.reduce((s, g) => s + g.availableItems, 0)}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{groups.reduce((s, g) => s + g.availableItems, 0)}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Available Items</div>
                 </div>
             </div>

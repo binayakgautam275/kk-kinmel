@@ -41,21 +41,21 @@ export default async function PromosPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Promo Codes</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Promo Codes</h1>
                 <p className="text-gray-500 mt-1 text-sm">All promo codes across every restaurant tenant.</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{promos.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{promos.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Promo Codes</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-emerald-600">{activeCount}</div>
+                    <div className="text-2xl font-extrabold text-emerald-600">{activeCount}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Active</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{totalUses}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{totalUses}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Uses</div>
                 </div>
             </div>

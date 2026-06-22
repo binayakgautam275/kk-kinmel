@@ -94,8 +94,8 @@ export default async function AdminDashboardPage() {
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-display text-ink">Today&apos;s Overview</h1>
-                <p className="text-body text-ink-muted mt-1">Real-time operations snapshot</p>
+                <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">Today&apos;s Overview</h1>
+                <p className="text-body text-ink-muted mt-1.5">Real-time operations snapshot</p>
             </div>
 
             {/* Onboarding */}

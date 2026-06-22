@@ -261,7 +261,7 @@ export default function SuperAdminDashboard({
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <h1 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
                         <Crown size={18} className="text-indigo-500" />
                         Tenant Management
                     </h1>
@@ -689,7 +689,7 @@ export default function SuperAdminDashboard({
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                             <div>
-                                <h2 className="text-lg font-bold text-gray-900">Record Subscription Payment</h2>
+                                <h2 className="text-lg font-extrabold text-gray-900">Record Subscription Payment</h2>
                                 <p className="text-sm text-gray-500 mt-0.5">{paymentModal.restaurant.name}</p>
                             </div>
                             <button onClick={() => setPaymentModal({ isOpen: false, restaurant: null })} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
@@ -807,7 +807,7 @@ function MetricCard({
             </div>
             <div className="min-w-0">
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider truncate">{label}</p>
-                <p className="text-xl font-bold text-gray-900 leading-tight tabular-nums">{value.toLocaleString()}</p>
+                <p className="text-xl font-extrabold text-gray-900 leading-tight tabular-nums">{value.toLocaleString()}</p>
             </div>
         </div>
     )

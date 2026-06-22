@@ -58,7 +58,7 @@ export default async function BillingPage() {
 
     return (
         <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-3xl mx-auto space-y-6">
-            <h1 className="text-2xl font-bold text-gray-900">Billing &amp; Subscription</h1>
+            <h1 className="text-2xl font-extrabold text-gray-900">Billing &amp; Subscription</h1>
 
             {/* Expiry alert */}
             {daysLeft !== null && daysLeft <= 7 && daysLeft >= 0 && (
@@ -76,7 +76,7 @@ export default async function BillingPage() {
             <div className={`bg-white rounded-xl border-2 ${tierC.border} overflow-hidden`}>
                 <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3">
-                        <h2 className={`text-2xl font-bold capitalize ${tierC.title}`}>{tier}</h2>
+                        <h2 className={`text-2xl font-extrabold capitalize ${tierC.title}`}>{tier}</h2>
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide ${tierC.badge}`}>plan</span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">

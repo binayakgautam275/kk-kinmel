@@ -34,21 +34,21 @@ export default async function TakeoutPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Takeout Orders</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Takeout Orders</h1>
                 <p className="text-gray-500 mt-1 text-sm">Platform-wide takeout order overview across all restaurants.</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{orders.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{orders.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Orders</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-orange-600">{activeCount}</div>
+                    <div className="text-2xl font-extrabold text-orange-600">{activeCount}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Active Orders</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-extrabold text-gray-900">
                         Rs. {orders.reduce((s, o) => s + (o.total_amount || 0), 0).toLocaleString()}
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Revenue</div>

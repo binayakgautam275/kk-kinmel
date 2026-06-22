@@ -561,7 +561,7 @@ export default function StaffManager({
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         <div className="p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">Change Role</h3>
+                            <h3 className="text-lg font-extrabold text-gray-900 mb-2">Change Role</h3>
                             <p className="text-sm text-gray-500 mb-6">
                                 Select a new role for <span className="font-semibold text-gray-900">{changeRoleModal.user.full_name}</span>.
                             </p>
@@ -618,7 +618,7 @@ export default function StaffManager({
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         <div className="p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">Create Staff Account</h3>
+                            <h3 className="text-lg font-extrabold text-gray-900 mb-2">Create Staff Account</h3>
                             <p className="text-sm text-gray-500 mb-6">Add a new staff member to your restaurant.</p>
 
                             <div className="space-y-4">
@@ -715,7 +715,7 @@ export default function StaffManager({
                     <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                         <div className="p-6">
                             <div className="flex items-center justify-between mb-2">
-                                <h3 className="text-lg font-bold text-gray-900">Scan Join QR Code</h3>
+                                <h3 className="text-lg font-extrabold text-gray-900">Scan Join QR Code</h3>
                                 <button onClick={() => setQrScanModal({ isOpen: false, scanning: false, roleId: 4 })} className="text-gray-400 hover:text-gray-600">×</button>
                             </div>
                             <p className="text-sm text-gray-500 mb-6">Point your camera at a user's Join QR Code to invite them to this restaurant.</p>

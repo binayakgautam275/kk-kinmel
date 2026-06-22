@@ -43,22 +43,22 @@ export default async function StaffPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Platform Staff</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Platform Staff</h1>
                 <p className="text-gray-500 mt-1 text-sm">All staff members across every restaurant tenant.</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{staff.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{staff.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Staff</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-emerald-600">{activeCount}</div>
+                    <div className="text-2xl font-extrabold text-emerald-600">{activeCount}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Active</div>
                 </div>
                 {Object.entries(byRole).slice(0, 2).map(([role, count]) => (
                     <div key={role} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                        <div className="text-2xl font-bold text-gray-900">{count}</div>
+                        <div className="text-2xl font-extrabold text-gray-900">{count}</div>
                         <div className="text-xs text-gray-500 mt-0.5 capitalize">{role.replace('_', ' ')}</div>
                     </div>
                 ))}

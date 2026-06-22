@@ -181,7 +181,7 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
                                     isSelected ? 'ring-2 ring-offset-1 ring-[var(--color-primary)] scale-105 z-10 shadow-md' : 'hover:scale-[1.03] hover:shadow-sm active:scale-95'
                                 }`}
                             >
-                                <span className="text-xl font-bold text-ink">{table.label}</span>
+                                <span className="text-xl font-extrabold text-ink">{table.label}</span>
                                 {table.capacity && (
                                     <span className="flex items-center gap-0.5 text-caption text-ink-subtle mt-0.5">
                                         <Users size={9} />{table.capacity}

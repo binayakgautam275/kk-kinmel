@@ -316,7 +316,7 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 print:space-y-1 print:p-0 print:pt-4" style={{ scrollbarWidth: 'none' }}>
                         {tocItems.map((item, i) => (
                             <div key={i} className="flex items-start gap-3 p-3 rounded-card border border-dark-border bg-dark-surface print:border-black/10 print:bg-transparent print:p-2 print:rounded-none">
-                                <span className="font-bold text-lg w-8 shrink-0 tabular-nums mt-0.5 text-blue-400 print:text-black">
+                                <span className="font-extrabold text-lg w-8 shrink-0 tabular-nums mt-0.5 text-blue-400 print:text-black">
                                     {item.quantity}×
                                 </span>
                                 <div className="flex-1 min-w-0">

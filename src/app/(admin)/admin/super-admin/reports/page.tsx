@@ -17,7 +17,7 @@ export default async function ReportsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">EOD Reports</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">EOD Reports</h1>
                 <p className="text-gray-500 mt-1 text-sm">End-of-day reports across all restaurant tenants.</p>
             </div>
             <ReportsClient reports={(reportsResult.data || []) as unknown as Report[]} restaurants={restaurants} />

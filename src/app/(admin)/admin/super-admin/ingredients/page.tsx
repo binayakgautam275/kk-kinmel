@@ -31,21 +31,21 @@ export default async function IngredientsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Ingredients</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Ingredients</h1>
                 <p className="text-gray-500 mt-1 text-sm">Cross-tenant ingredient inventory overview.</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{ingredients.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{ingredients.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Ingredients</div>
                 </div>
                 <div className={`rounded-xl border shadow-sm p-4 ${lowStock.length > 0 ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-200'}`}>
-                    <div className={`text-2xl font-bold ${lowStock.length > 0 ? 'text-amber-700' : 'text-gray-900'}`}>{lowStock.length}</div>
+                    <div className={`text-2xl font-extrabold ${lowStock.length > 0 ? 'text-amber-700' : 'text-gray-900'}`}>{lowStock.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Low Stock Alerts</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{Object.keys(grouped).length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{Object.keys(grouped).length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Restaurants Tracking</div>
                 </div>
             </div>

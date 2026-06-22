@@ -31,21 +31,21 @@ export default async function LoyaltyPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Loyalty Programs</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Loyalty Programs</h1>
                 <p className="text-gray-500 mt-1 text-sm">Platform-wide loyalty program overview across all tenants.</p>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-pink-600">{activeCount}</div>
+                    <div className="text-2xl font-extrabold text-pink-600">{activeCount}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Active Programs</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{totalMembers}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{totalMembers}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Members</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{rows.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{rows.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Restaurants Configured</div>
                 </div>
             </div>

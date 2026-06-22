@@ -26,7 +26,7 @@ export default async function SuperAdminDashboardPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <h1 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
                         <Crown size={18} className="text-indigo-500" />
                         Platform Dashboard
                     </h1>

@@ -18,7 +18,7 @@ export default async function TeamPage() {
     return (
         <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-3xl mx-auto">
             <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Team</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Team</h1>
                 <p className="text-sm text-gray-500 mt-1">Manage staff access to kitchen and waiter portals.</p>
             </div>
             <TeamManager initialStaff={staff || []} />

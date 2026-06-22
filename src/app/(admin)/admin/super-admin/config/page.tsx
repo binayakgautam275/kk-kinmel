@@ -94,7 +94,7 @@ export default async function ConfigPage() {
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Platform Config</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Platform Config</h1>
                 <p className="text-gray-500 mt-1 text-sm">Tier feature matrix, subscription limits, and platform defaults.</p>
             </div>
 
@@ -236,7 +236,7 @@ function DefaultField({
                     : <XCircle size={14} className="text-gray-300 shrink-0" />
                 )}
             </div>
-            <div className={`text-lg font-bold mt-1 ${isBoolean ? (enabled ? 'text-emerald-700' : 'text-gray-400') : 'text-gray-900'}`}>
+            <div className={`text-lg font-extrabold mt-1 ${isBoolean ? (enabled ? 'text-emerald-700' : 'text-gray-400') : 'text-gray-900'}`}>
                 {value}
             </div>
             <p className="text-xs text-gray-400 mt-0.5">{note}</p>

@@ -57,22 +57,22 @@ export default async function PaymentsPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Subscription Payments</h1>
+                <h1 className="text-2xl font-extrabold text-gray-900">Subscription Payments</h1>
                 <p className="text-gray-500 mt-1 text-sm">Track subscription billing and tenant payment history.</p>
             </div>
 
             {/* KPI row */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">Rs. {totalMrr.toLocaleString()}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">Rs. {totalMrr.toLocaleString()}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Revenue Last 30 Days</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className="text-2xl font-bold text-gray-900">{payments.length}</div>
+                    <div className="text-2xl font-extrabold text-gray-900">{payments.length}</div>
                     <div className="text-xs text-gray-500 mt-0.5">Total Payments Recorded</div>
                 </div>
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                    <div className={`text-2xl font-bold ${expiringSoon.length > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
+                    <div className={`text-2xl font-extrabold ${expiringSoon.length > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
                         {expiringSoon.length}
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5">Expiring This Week</div>

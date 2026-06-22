@@ -79,7 +79,7 @@ export default function KitchenStats({
                             <Icon size={18} />
                         </span>
                         <div>
-                            <p className="text-2xl font-bold tabular text-dark-ink leading-none">{s.value}</p>
+                            <p className="text-2xl font-extrabold tabular text-dark-ink leading-none">{s.value}</p>
                             <p className="text-caption text-dark-muted mt-0.5">{s.label}</p>
                         </div>
                     </div>
