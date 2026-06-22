@@ -146,8 +146,8 @@ export default async function SuperAdminDashboardPage() {
             </div>
 
             {/* Quick actions */}
-            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5">
-                <h2 className="font-semibold text-indigo-900 text-sm mb-3">Quick Actions</h2>
+            <div className="bg-surface border border-hairline rounded-card p-5 shadow-sm">
+                <h2 className="text-h3 text-ink mb-3">Quick Actions</h2>
                 <div className="flex flex-wrap gap-2">
                     {[
                         { href: '/admin/super-admin/restaurants', label: 'Manage Tenants' },
@@ -157,7 +157,7 @@ export default async function SuperAdminDashboardPage() {
                         { href: '/admin/super-admin/config',      label: 'Platform Config' },
                     ].map(({ href, label }) => (
                         <Link key={href} href={href}
-                              className="px-3 py-1.5 rounded-xl bg-white border border-indigo-200 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">
+                              className="px-3.5 py-1.5 rounded-full bg-surface border border-hairline-strong text-xs font-semibold text-ink-muted transition-colors hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700">
                             {label}
                         </Link>
                     ))}

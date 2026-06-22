@@ -27,7 +27,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                 
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">{isSignUp ? 'Create Account' : 'Welcome 👋'}</h1>
+                    <h1 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">{isSignUp ? 'Create Account' : 'Welcome 👋'}</h1>
                     <p className="text-sm text-gray-500 font-medium">{isSignUp ? 'Sign up to get started' : 'Login to manage your restaurant'}</p>
                 </div>
 
@@ -116,7 +116,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                     <button
                         type="submit"
                         disabled={isPending}
-                        className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white h-11 rounded-xl text-sm font-bold shadow-md shadow-[var(--color-primary)]/20 transition-all flex items-center justify-center mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                        className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white h-12 rounded-full text-sm font-bold shadow-lg shadow-[var(--color-primary)]/20 transition-all hover:scale-[1.02] flex items-center justify-center mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                         {isPending ? (
                             <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -144,7 +144,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                 </div>
 
                 <div className="w-full flex flex-col gap-3 mb-6">
-                    <button type="button" className="w-full h-11 flex items-center justify-center gap-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors bg-white shadow-sm">
+                    <button type="button" className="w-full h-12 flex items-center justify-center gap-3 border border-gray-200 rounded-full hover:bg-gray-50 transition-colors bg-white shadow-sm">
                         <svg className="w-5 h-5" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -153,7 +153,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                         </svg>
                         <span className="text-sm font-semibold text-gray-700">Continue with Google</span>
                     </button>
-                    <button type="button" className="w-full h-11 flex items-center justify-center gap-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors bg-white shadow-sm">
+                    <button type="button" className="w-full h-12 flex items-center justify-center gap-3 border border-gray-200 rounded-full hover:bg-gray-50 transition-colors bg-white shadow-sm">
                         <Apple className="w-5 h-5 text-gray-900 fill-current" />
                         <span className="text-sm font-semibold text-gray-700">Continue with Apple</span>
                     </button>
@@ -162,7 +162,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                 <button
                     type="button"
                     onClick={() => setLoginMethod(prev => prev === 'phone' ? 'email' : 'phone')}
-                    className="w-full h-11 flex items-center justify-center gap-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors bg-white shadow-sm text-sm font-semibold text-gray-700"
+                    className="w-full h-12 flex items-center justify-center gap-2 border border-gray-200 rounded-full hover:bg-gray-50 transition-colors bg-white shadow-sm text-sm font-semibold text-gray-700"
                 >
                     {loginMethod === 'phone' ? (
                         <><Mail size={18} className="text-gray-500"/> Use email instead</>

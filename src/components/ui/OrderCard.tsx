@@ -49,7 +49,7 @@ export default function OrderCard({
                     : undefined
             }
             className={cn(
-                'relative flex items-center gap-3 overflow-hidden rounded-[var(--r-lg)] border border-hairline bg-surface p-4 shadow-sm',
+                'relative flex items-center gap-3 overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-surface p-4 shadow-sm',
                 tappable &&
                     'cursor-pointer transition-[box-shadow,transform] duration-150 hover:shadow-md hover:-translate-y-px focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40',
                 pulse && 'pulse-once animate-scale-in',

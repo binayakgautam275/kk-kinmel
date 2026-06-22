@@ -4,7 +4,7 @@ import { SupportWidget } from '@/components/ui/SupportWidget'
 
 export default function OnboardingLayout({ children }: { children: ReactNode }) {
     return (
-        <div className="min-h-screen w-full relative bg-[radial-gradient(circle,#EAEAEA_1.6px,#fafafb_1.6px)] bg-[size:28px_28px]">
+        <div className="min-h-screen w-full relative bg-canvas bg-[radial-gradient(circle,#E7E0D6_1.4px,transparent_1.4px)] bg-[size:26px_26px]">
             {/* Header / Logo */}
             <header className="absolute top-0 left-0 right-0 p-8 flex justify-center z-10">
                 <Logo className="h-8" />

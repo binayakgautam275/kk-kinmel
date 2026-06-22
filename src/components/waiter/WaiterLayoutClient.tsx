@@ -40,8 +40,8 @@ export default function WaiterLayoutClient({ children, restaurantName, staffName
     }
 
     return (
-        <div className="min-h-screen bg-[#F7F6F3] flex flex-col">
-            <header className="bg-white border-b border-gray-100 sticky top-0 z-30 shadow-sm">
+        <div className="min-h-screen bg-canvas flex flex-col">
+            <header className="bg-surface border-b border-hairline sticky top-0 z-30 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-4">
                     {/* Left */}
                     <div className="flex items-center gap-3 min-w-0">

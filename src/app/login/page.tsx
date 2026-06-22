@@ -23,7 +23,7 @@ export default async function LoginPage(props: { searchParams: Promise<{ redirec
     }
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-[radial-gradient(circle,#EAEAEA_1.6px,#fafafb_1.6px)] bg-[size:28px_28px] overflow-auto p-4 sm:p-12">
+        <div className="min-h-screen w-full flex items-center justify-center bg-canvas bg-[radial-gradient(circle,#E7E0D6_1.4px,transparent_1.4px)] bg-[size:26px_26px] overflow-auto p-4 sm:p-12">
             <LoginForm redirectTo={redirectTo} />
         </div>
     )
