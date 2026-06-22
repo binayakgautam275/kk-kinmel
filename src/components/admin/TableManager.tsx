@@ -34,6 +34,7 @@ export default function TableManager({
     // QR Preview State
     const [previewTable, setPreviewTable] = useState<Table | null>(null)
     const [iframeLoaded, setIframeLoaded] = useState(false)
+    const [preloadedTokens, setPreloadedTokens] = useState<Set<string>>(new Set())
     const { confirm } = useConfirmStore()
 
     // Use the actual browser origin so QR codes encode the live URL, not localhost
@@ -401,14 +402,15 @@ export default function TableManager({
 
                                     <div className="flex gap-2 w-full">
                                         <button
+                                            onMouseEnter={() => setPreloadedTokens(prev => new Set(prev).add(table.qr_token))}
                                             onClick={() => openPreview(table)}
-                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-gray-600 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition"
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-gray-600 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 active:scale-95 transition cursor-pointer"
                                         >
                                             <Smartphone size={14} /> Preview
                                         </button>
                                         <button
                                             onClick={() => downloadQR(table)}
-                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-[var(--color-primary)] rounded-lg hover:opacity-90 active:scale-95 transition"
+                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-white bg-[var(--color-primary)] rounded-lg hover:opacity-90 active:scale-95 transition cursor-pointer"
                                         >
                                             <Download size={14} /> Download
                                         </button>
@@ -528,9 +530,9 @@ export default function TableManager({
                                 </div>
                             )}
 
-                            {/* Iframe — customer menu page (use full origin so it works on any deployment) */}
+                            {/* Iframe — customer menu page (use relative path for speed) */}
                             <iframe
-                                src={`${baseUrl}/t/${previewTable.qr_token}`}
+                                src={`/t/${previewTable.qr_token}`}
                                 className={`w-full flex-1 border-none bg-white ${iframeLoaded ? '' : 'sr-only'}`}
                                 title={`Customer menu preview for ${previewTable.label}`}
                                 onLoad={() => setIframeLoaded(true)}
@@ -562,6 +564,13 @@ export default function TableManager({
                     />
                 </div>
             )}
+
+            {/* Hidden iframes for preloading on hover to eliminate loading latency */}
+            <div className="hidden" aria-hidden="true">
+                {Array.from(preloadedTokens).map(token => (
+                    <iframe key={token} src={`/t/${token}`} loading="eager" />
+                ))}
+            </div>
         </div>
     )
 }
