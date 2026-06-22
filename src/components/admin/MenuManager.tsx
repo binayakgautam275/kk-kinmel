@@ -44,6 +44,8 @@ export default function MenuManager({
     const [itemFormData, setItemFormData] = useState<Partial<MenuItem>>({
         name: '', description: '', price: 0, is_available: true, category_id: '', image_url: ''
     })
+    const [hasVariations, setHasVariations] = useState(false)
+    const [itemVariations, setItemVariations] = useState<{ id?: string; name: string; price: number; is_available: boolean }[]>([])
 
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [imageUploading, setImageUploading] = useState(false)
@@ -152,39 +154,63 @@ export default function MenuManager({
         if (item) {
             setEditingItem(item)
             setItemFormData({ ...item })
+            setHasVariations(!!(item.variations && item.variations.length > 0))
+            setItemVariations(item.variations ? item.variations.map(v => ({ ...v, is_available: v.is_available ?? true })) : [])
         } else {
             setEditingItem(null)
             setItemFormData({
                 name: '', description: '', price: 0, is_available: true,
                 category_id: categories[0]?.id || '', image_url: ''
             })
+            setHasVariations(false)
+            setItemVariations([])
         }
         setIsItemModalOpen(true)
     }
 
     const saveItem = async () => {
-        if (!itemFormData.name || !itemFormData.price || !itemFormData.category_id) return
+        const basePrice = hasVariations ? 0 : Number(itemFormData.price || 0)
+        
+        if (!itemFormData.name || (!hasVariations && !itemFormData.price) || !itemFormData.category_id) return
+        
+        if (hasVariations) {
+            if (itemVariations.length === 0) {
+                toast.error('Please add at least one variation option')
+                return
+            }
+            if (itemVariations.some(v => !v.name.trim() || isNaN(v.price) || v.price < 0)) {
+                toast.error('All variations must have a name and a valid price')
+                return
+            }
+        }
+
         setIsSubmitting(true)
 
         const payload = {
             ...itemFormData,
             restaurant_id: restaurantId,
-            price: Number(itemFormData.price)
+            price: basePrice
         }
 
+        const variationsPayload = hasVariations ? itemVariations : []
+
         if (editingItem) {
-            const res = await updateItemAction(editingItem.id, payload)
+            const res = await updateItemAction(editingItem.id, payload, variationsPayload)
             if (res.success) {
-                setItems(items.map(i => i.id === editingItem.id ? { ...i, ...payload } as MenuItem : i))
+                setItems(items.map(i => i.id === editingItem.id ? { 
+                    ...i, 
+                    ...payload, 
+                    variations: variationsPayload as any[] 
+                } as MenuItem : i))
                 toast.success('Item updated')
             } else {
                 toast.error(res.error || 'Failed to update item')
             }
         } else {
-            const res = await addItemAction(payload)
+            const res = await addItemAction(payload, variationsPayload)
             if (res.data) {
-                setItems([...items, res.data])
                 toast.success('Item added')
+                setTimeout(() => window.location.reload(), 800)
             } else {
                 toast.error(res.error || 'Failed to add item')
             }
@@ -323,9 +349,26 @@ export default function MenuManager({
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex justify-between items-start">
                                                             <h5 className="font-semibold text-gray-900 truncate pr-2">{item.name}</h5>
-                                                            <span className="font-bold text-[var(--color-primary)] shrink-0">{formatCurrency(item.price)}</span>
+                                                            {item.variations && item.variations.length > 0 ? (
+                                                                <span className="font-bold text-xs text-gray-500 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded shrink-0">
+                                                                    {item.variations.length} Options
+                                                                </span>
+                                                            ) : (
+                                                                <span className="font-bold text-[var(--color-primary)] shrink-0">{formatCurrency(item.price)}</span>
+                                                            )}
                                                         </div>
                                                         <p className="text-sm text-gray-500 line-clamp-2 mt-1 leading-snug">{item.description}</p>
+                                                        
+                                                        {item.variations && item.variations.length > 0 && (
+                                                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                                                {item.variations.map(v => (
+                                                                    <span key={v.id || v.name} className="inline-flex items-center text-[10px] font-medium bg-gray-50 border border-gray-150 text-gray-600 px-2 py-0.5 rounded-md">
+                                                                        {v.name}: <strong className="ml-1 text-gray-900">{formatCurrency(v.price)}</strong>
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
+
                                                         <div className="mt-3 flex items-center gap-2">
                                                             <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${item.is_available ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                                                                 {item.is_available ? 'Available' : 'Sold Out'}
@@ -445,10 +488,11 @@ export default function MenuManager({
                                         <input
                                             type="text"
                                             inputMode="decimal"
-                                            value={itemFormData.price ?? ''}
+                                            disabled={hasVariations}
+                                            value={hasVariations ? 'Variations' : (itemFormData.price ?? '')}
                                             onChange={e => { const v = e.target.value; if (/^\d*\.?\d*$/.test(v)) setItemFormData({ ...itemFormData, price: v === '' ? undefined : Number(v) }) }}
-                                            placeholder="e.g. 12.99"
-                                            className="w-full pl-7 border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border"
+                                            placeholder={hasVariations ? 'Set in variations' : 'e.g. 12.99'}
+                                            className="w-full pl-7 border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border disabled:bg-gray-50 disabled:text-gray-400"
                                         />
                                     </div>
                                 </div>
@@ -532,8 +576,86 @@ export default function MenuManager({
                                             </div>
                                         )}
                                     </div>
+                                )}                            </div>
+                            
+                            {/* Variations Section */}
+                            <div className="border-t border-gray-100 pt-4 mt-2">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div>
+                                        <span className="text-sm font-medium text-gray-900 block">Item Variations</span>
+                                        <span className="text-xs text-gray-500">e.g., Small, Medium, Large sizes</span>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input 
+                                            type="checkbox" 
+                                            className="sr-only peer" 
+                                            checked={hasVariations} 
+                                            onChange={e => {
+                                                setHasVariations(e.target.checked)
+                                                if (e.target.checked && itemVariations.length === 0) {
+                                                    setItemVariations([{ name: '', price: 0, is_available: true }])
+                                                }
+                                            }} 
+                                        />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
+                                    </label>
+                                </div>
+
+                                {hasVariations && (
+                                    <div className="space-y-2 mt-3 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                                        {itemVariations.map((v, idx) => (
+                                            <div key={idx} className="flex gap-2 items-center">
+                                                <input
+                                                    type="text"
+                                                    value={v.name}
+                                                    onChange={e => {
+                                                        const newVars = [...itemVariations]
+                                                        newVars[idx].name = e.target.value
+                                                        setItemVariations(newVars)
+                                                    }}
+                                                    placeholder="Variation Name (e.g. Small)"
+                                                    className="flex-1 border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2 border bg-white"
+                                                />
+                                                <div className="relative w-28">
+                                                    <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                                                        <span className="text-gray-500 text-xs">$</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="decimal"
+                                                        value={v.price === 0 ? '' : v.price}
+                                                        onChange={e => {
+                                                            const val = e.target.value
+                                                            if (/^\d*\.?\d*$/.test(val)) {
+                                                                const newVars = [...itemVariations]
+                                                                newVars[idx].price = val === '' ? 0 : Number(val)
+                                                                setItemVariations(newVars)
+                                                            }
+                                                        }}
+                                                        placeholder="Price"
+                                                        className="w-full pl-6 border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2 border bg-white"
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setItemVariations(itemVariations.filter((_, i) => i !== idx))}
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg shrink-0"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            onClick={() => setItemVariations([...itemVariations, { name: '', price: 0, is_available: true }])}
+                                            className="w-full py-2 border border-dashed border-gray-200 text-gray-500 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors bg-white mt-1"
+                                        >
+                                            <Plus size={14} /> Add Option
+                                        </button>
+                                    </div>
                                 )}
                             </div>
+
                             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mt-2">
                                 <div>
                                     <span className="text-sm font-medium text-gray-900 block">Availability</span>
@@ -549,7 +671,7 @@ export default function MenuManager({
                             <button onClick={() => setIsItemModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
                                 Cancel
                             </button>
-                            <button disabled={!itemFormData.name || !itemFormData.price || !itemFormData.category_id || isSubmitting} onClick={saveItem} className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-lg shadow-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+                            <button disabled={!itemFormData.name || (!hasVariations && !itemFormData.price) || !itemFormData.category_id || isSubmitting} onClick={saveItem} className="px-4 py-2 text-sm font-medium text-white bg-[var(--color-primary)] rounded-lg shadow-sm hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
                                 {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />} Save Item
                             </button>
                         </div>

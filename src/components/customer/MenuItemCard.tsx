@@ -8,6 +8,7 @@ import { Plus, Minus, X, Check, Clock, Flame, Leaf, Sparkles } from 'lucide-reac
 import Image from 'next/image'
 import type { MenuItem, CartItemModifier } from '@/types/database'
 import { useTranslation } from '@/lib/contexts/TranslationContext'
+import ItemDetailView from './ItemDetailView'
 
 const TAG_STYLES: Record<string, { cls: string; icon?: string }> = {
     popular:      { cls: 'bg-amber-100 text-amber-800', icon: '★' },
@@ -57,14 +58,18 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
     }, [showModifiers])
 
     const hasModifiers = (item.modifier_groups?.length ?? 0) > 0
+    const hasVariations = (item.variations?.length ?? 0) > 0
     // The cart stores a separate line per (menuItemId + modifiers), so there can
     // be several lines for one menu item. The badge must show the combined count.
     const matchingItems = items.filter((i) => i.menuItemId === item.id)
     const quantity = matchingItems.reduce((sum, i) => sum + i.quantity, 0)
     // Inline +/- can only act on one concrete line, so they're reserved for items
-    // without modifiers (exactly one line). Modifier items always use the sheet.
-    const simpleCartItem = hasModifiers ? undefined : matchingItems[0]
+    // without modifiers or variations (exactly one line). Complex items always use the sheet.
+    const simpleCartItem = (hasModifiers || hasVariations) ? undefined : matchingItems[0]
     const cartKey = simpleCartItem ? getCartItemKey(simpleCartItem) : ''
+
+    // For items with variations, show the ItemDetailView instead of modifier sheet
+    const [showDetailView, setShowDetailView] = useState(false)
 
     function initModSelections() {
         const init: Record<string, string[]> = {}
@@ -75,6 +80,8 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
     const handleAdd = () => {
         if (!sessionId) return
         setSession(sessionId, restaurantSlug, restaurantId)
+        // Variation items always open the detail view for selection
+        if (hasVariations) { setShowDetailView(true); return }
         // Modifier items always go through the sheet so each tap can pick its own
         // options and create the correct line — never blindly bump one variant.
         if (hasModifiers) { initModSelections(); setShowModifiers(true); return }
@@ -175,17 +182,20 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
 
             {/* Body */}
             <div className="p-3 flex flex-col flex-1 min-w-0 gap-1">
-                <div className="flex justify-between items-start gap-1.5">
-                    <h3 className="font-semibold text-[13px] text-gray-900 leading-snug line-clamp-2 flex-1">
+                <div className="flex flex-col gap-0.5">
+                    <h3 className="font-semibold text-[13px] text-gray-900 leading-snug line-clamp-2">
                         {displayName}
                     </h3>
-                    <span className="font-bold text-[13px] text-[var(--color-primary)] shrink-0 tabular-nums">
-                        {formatCurrency(item.price)}
+                    <span className="font-bold text-[13px] text-[var(--color-primary)] tabular-nums block mt-0.5">
+                        {hasVariations && item.variations!.length > 0
+                            ? `${formatCurrency(Math.min(...item.variations!.map(v => v.price)))} – ${formatCurrency(Math.max(...item.variations!.map(v => v.price)))}`
+                            : formatCurrency(item.price)
+                        }
                     </span>
                 </div>
 
                 {displayDesc && (
-                    <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed">{displayDesc}</p>
+                    <p className="text-[11px] text-gray-400 line-clamp-2 leading-relaxed mt-0.5">{displayDesc}</p>
                 )}
 
                 {item.is_combo && (
@@ -228,17 +238,17 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
                 {/* Cart controls */}
                 <div className="mt-auto pt-2">
                     {!sessionId ? (
-                        <div className="h-8" />
-                    ) : (quantity === 0 || hasModifiers) ? (
+                        <div className="h-12" />
+                    ) : (quantity === 0 || hasModifiers || hasVariations) ? (
                         <button
                             onClick={handleAdd}
                             disabled={!item.is_available}
-                            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-all active:scale-95 bg-[var(--color-primary)] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
+                            className="w-full flex items-center justify-center gap-1.5 h-12 rounded-lg text-xs font-semibold transition-all active:scale-95 bg-[var(--color-primary)] text-white disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
                         >
                             <Plus size={13} strokeWidth={2.5} /> Add
                         </button>
                     ) : (
-                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-0.5 border border-gray-100">
+                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-0.5 border border-gray-100 h-12">
                             <button onClick={handleRemove}
                                     aria-label={`Remove one ${displayName}`}
                                     className="w-11 h-11 flex items-center justify-center rounded-md bg-white shadow-sm text-gray-600 active:scale-95 transition-all hover:bg-gray-50">
@@ -344,6 +354,17 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
                     </div>
                 </div>
             </div>
+        )}
+
+        {/* Variation item detail view */}
+        {showDetailView && (
+            <ItemDetailView
+                item={item}
+                sessionId={sessionId}
+                restaurantSlug={restaurantSlug}
+                restaurantId={restaurantId}
+                onClose={() => setShowDetailView(false)}
+            />
         )}
         </>
     )
