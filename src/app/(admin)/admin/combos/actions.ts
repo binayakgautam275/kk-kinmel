@@ -201,16 +201,69 @@ export async function deleteComboAction(comboId: string): Promise<ComboActionRes
     try {
         const supabase = await createAdminClient()
 
-        // Scope the delete to this restaurant's combos; combo_items cascade on FK.
-        const { error, count } = await supabase
-            .from('menu_items')
-            .delete({ count: 'exact' })
-            .eq('id', comboId)
-            .eq('restaurant_id', user.restaurantId)
-            .eq('is_combo', true)
+        // 1. Check if the combo has been ordered
+        const { count: orderCount, error: countErr } = await supabase
+            .from('order_items')
+            .select('id', { count: 'exact', head: true })
+            .eq('menu_item_id', comboId)
 
-        if (error) return { error: error.message }
-        if (!count) return { error: 'Combo not found.' }
+        if (countErr) return { error: countErr.message }
+
+        const isOrdered = (orderCount ?? 0) > 0
+
+        if (isOrdered) {
+            // Soft delete since it has historical orders
+            const { error: updateErr } = await supabase
+                .from('menu_items')
+                .update({ is_deleted: true, is_available: false, category_id: null })
+                .eq('id', comboId)
+                .eq('restaurant_id', user.restaurantId)
+
+            if (updateErr) {
+                if (updateErr.message.includes('is_deleted') || updateErr.code === 'PGRST205' || updateErr.code === '42703') {
+                    const { error: fallbackErr } = await supabase
+                        .from('menu_items')
+                        .update({ is_available: false, category_id: null })
+                        .eq('id', comboId)
+                        .eq('restaurant_id', user.restaurantId)
+                    if (fallbackErr) return { error: fallbackErr.message }
+                } else {
+                    return { error: updateErr.message }
+                }
+            }
+        } else {
+            // Try hard deleting
+            const { error, count } = await supabase
+                .from('menu_items')
+                .delete({ count: 'exact' })
+                .eq('id', comboId)
+                .eq('restaurant_id', user.restaurantId)
+                .eq('is_combo', true)
+
+            if (error) {
+                // If hard delete fails, fallback to soft delete
+                const { error: updateErr } = await supabase
+                    .from('menu_items')
+                    .update({ is_deleted: true, is_available: false, category_id: null })
+                    .eq('id', comboId)
+                    .eq('restaurant_id', user.restaurantId)
+
+                if (updateErr) {
+                    if (updateErr.message.includes('is_deleted') || updateErr.code === 'PGRST205' || updateErr.code === '42703') {
+                        const { error: fallbackErr } = await supabase
+                            .from('menu_items')
+                            .update({ is_available: false, category_id: null })
+                            .eq('id', comboId)
+                            .eq('restaurant_id', user.restaurantId)
+                        if (fallbackErr) return { error: fallbackErr.message }
+                    } else {
+                        return { error: updateErr.message }
+                    }
+                }
+            } else if (!count) {
+                return { error: 'Combo not found.' }
+            }
+        }
 
         revalidatePath('/admin/combos')
         revalidatePath('/admin/menu')

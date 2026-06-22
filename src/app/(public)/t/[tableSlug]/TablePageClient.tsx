@@ -6,7 +6,6 @@ import HomepageGate from '@/components/customer/HomepageGate'
 import type { MenuItem, MenuCategory } from '@/types/database'
 import MenuSection from '@/components/customer/MenuSection'
 import CartSummary from '@/components/customer/CartSummary'
-import ServiceRequestPanel from '@/components/customer/ServiceRequestPanel'
 import Logo from '@/components/shared/Logo'
 import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
@@ -121,90 +120,96 @@ export default function TablePageClient({
             {/* Sticky header — compact, restaurant-branded */}
             <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-                    {/* Restaurant identity */}
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    {/* Left side: Restaurant logo (in circle format) + optional back button */}
+                    <div className="flex items-center gap-2.5 shrink-0">
                         {onBackToHome && (
                             <button
                                 onClick={onBackToHome}
                                 aria-label="Back to homepage"
                                 title="Back to homepage"
-                                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shrink-0 transition active:scale-95"
+                                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shrink-0 transition active:scale-95"
                             >
-                                <Home size={16} className="text-[var(--color-secondary)]" />
+                                <Home size={14} className="text-[var(--color-secondary)]" />
                             </button>
                         )}
                         {logoUrl ? (
-                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 shrink-0">
+                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-100 shadow-sm">
                                 <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="32px" />
                             </div>
                         ) : (
-                            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
-                                <UtensilsCrossed size={15} className="text-[var(--color-primary)]" />
+                            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0 border border-gray-100 shadow-sm">
+                                <UtensilsCrossed size={14} className="text-[var(--color-primary)]" />
                             </div>
                         )}
-                        <div className="min-w-0">
-                            <p className="text-sm font-bold text-[var(--color-secondary)] leading-none truncate">{restaurantName}</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">
-                                Table {tableData.label}
-                                {!hasSession && <span className="ml-1 text-amber-500 font-medium">· View only</span>}
-                            </p>
-                        </div>
+                        <span className="text-sm font-bold text-gray-800 truncate max-w-[100px] md:max-w-[150px]">
+                            {restaurantName}
+                        </span>
                     </div>
 
-                    {/* Right side: language switcher + platform logo */}
-                    <div className="flex items-center gap-2 shrink-0">
-                        {multiLanguageEnabled && <LanguageSwitcher />}
-                        <Logo className="h-6 opacity-60" />
+                    {/* Middle: Centered Table Badge */}
+                    <div className="flex-1 text-center min-w-0">
+                        <span className="text-xs font-bold text-gray-800 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-full inline-block truncate max-w-full">
+                            Table {tableData.label}
+                        </span>
+                    </div>
+
+                    {/* Right side: platform logo */}
+                    <div className="flex items-center shrink-0 pr-2">
+                        <Logo className="h-5" />
                     </div>
                 </div>
             </header>
 
             <main className="max-w-2xl mx-auto px-4 pt-4">
-                {/* No-session notice — disappears automatically when waiter opens session */}
+                {/* Blurred fullscreen modal shown when there's no active session */}
                 {!hasSession && (
-                    <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-                        <div className="flex items-start gap-3">
-                            <span className="text-2xl mt-0.5">👋</span>
-                            <div className="flex-1">
-                                <p className="font-semibold text-amber-900 text-sm">Welcome to {restaurantName}!</p>
-                                <p className="text-amber-700 text-sm mt-0.5">
-                                    Your waiter will open a session for Table {tableData.label} so you can place orders.
-                                </p>
-                                {requestSent ? (
-                                    <p className="text-emerald-600 text-xs mt-3 flex items-center gap-1.5 font-medium">
-                                        <Check size={13} />
-                                        Waiter notified! They&apos;ll be right with you.
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1006]/40 backdrop-blur-md animate-fade-in">
+                        <div className="bg-white p-6 rounded-3xl max-w-sm w-full border border-[#EDD9C8] shadow-2xl text-center flex flex-col items-center animate-scale-in">
+                            {logoUrl ? (
+                                <div className="relative w-16 h-16 rounded-full overflow-hidden bg-white border border-[#EDD9C8] mb-4 shadow-sm">
+                                    <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="64px" />
+                                </div>
+                            ) : (
+                                <div className="w-16 h-16 rounded-full bg-[#FFF0E6] flex items-center justify-center mb-4 border border-[#EDD9C8] shadow-sm">
+                                    <UtensilsCrossed size={28} className="text-[#E85D04]" />
+                                </div>
+                            )}
+                            <h2 className="font-black text-[#1A1006] text-lg mb-2">Welcome to {restaurantName}!</h2>
+                            <p className="text-[#8C6A50] text-sm font-semibold mb-6 leading-relaxed">
+                                Your waiter will open a session for Table {tableData.label} so you can place orders.
+                            </p>
+                            {requestSent ? (
+                                <div className="w-full bg-[#EBFDF2] border border-[#BFF3D4] rounded-2xl py-3 px-4 flex flex-col items-center justify-center gap-1.5 animate-scale-in">
+                                    <span className="text-xl">🔔</span>
+                                    <p className="text-green-600 text-xs font-black flex items-center gap-1">
+                                        <Check size={14} className="stroke-[3px]" /> Waiter Notified!
                                     </p>
-                                ) : (
-                                    <div className="flex items-center justify-between mt-3">
-                                        <p className="text-amber-600 text-xs flex items-center gap-1">
-                                            <RefreshCw size={11} className="animate-spin" />
-                                            Waiting for session…
-                                        </p>
-                                        <button
-                                            onClick={async () => {
-                                                setRequestLoading(true)
-                                                const res = await requestSessionOpen(tableData.id, tableData.restaurant_id)
-                                                setRequestLoading(false)
-                                                if (res.success || res.error?.includes('already')) setRequestSent(true)
-                                            }}
-                                            disabled={requestLoading}
-                                            className="flex items-center gap-1.5 text-xs font-semibold bg-amber-600 text-white px-3 py-1.5 rounded-lg active:scale-95 transition disabled:opacity-60"
-                                        >
-                                            {requestLoading ? <Loader2 size={12} className="animate-spin" /> : <Bell size={12} />}
-                                            Ring for Service
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                                    <p className="text-green-600/70 text-[10px] font-bold">They'll be right with you.</p>
+                                </div>
+                            ) : (
+                                <div className="w-full space-y-4">
+                                    <button
+                                        onClick={async () => {
+                                            setRequestLoading(true)
+                                            const res = await requestSessionOpen(tableData.id, tableData.restaurant_id)
+                                            setRequestLoading(false)
+                                            if (res.success || res.error?.includes('already')) setRequestSent(true)
+                                        }}
+                                        disabled={requestLoading}
+                                        className="w-full flex items-center justify-center gap-2 text-sm font-black bg-[#E85D04] text-white py-3.5 rounded-2xl active:scale-95 transition disabled:opacity-60 shadow-md shadow-[#E85D04]/15"
+                                    >
+                                        {requestLoading ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} />}
+                                        Ring for Service
+                                    </button>
+                                    <p className="text-[#C4A882] text-[11px] font-bold flex items-center justify-center gap-1">
+                                        <RefreshCw size={10} className="animate-spin text-[#E85D04]" />
+                                        Waiting for session to open...
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
-
-                <PhysicalMenuGallery 
-                    images={tableData.restaurants?.physical_menu_urls || []} 
-                    restaurantName={restaurantName} 
-                />
 
                 <MenuSection
                     categories={categories}
@@ -215,15 +220,14 @@ export default function TablePageClient({
                     restaurantId={tableData.restaurant_id}
                     layout={menuLayout}
                 />
+
+                <PhysicalMenuGallery 
+                    images={tableData.restaurants?.physical_menu_urls || []} 
+                    restaurantName={restaurantName} 
+                />
             </main>
 
-            {/* Service request FAB — only when session active */}
-            {hasSession && liveSessionUUID && serviceRequestsEnabled && (
-                <ServiceRequestPanel
-                    sessionId={liveSessionUUID}
-                    restaurantId={tableData.restaurant_id}
-                />
-            )}
+
 
             {/* Sticky cart bar */}
             <CartSummary sessionId={liveSessionToken} tableSlug={tableData.qr_token} />

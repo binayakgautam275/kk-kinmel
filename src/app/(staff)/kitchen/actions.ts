@@ -11,9 +11,14 @@ import type { OrderStatus } from '@/types/database'
 export async function updateOrderStatus(orderId: string, nextStatus: OrderStatus) {
     const adminSupabase = await createAdminClient()
 
+    const updateData: { status: OrderStatus; ready_at?: string } = { status: nextStatus }
+    if (nextStatus === 'ready') {
+        updateData.ready_at = new Date().toISOString()
+    }
+
     const { error } = await adminSupabase
         .from('orders')
-        .update({ status: nextStatus })
+        .update(updateData)
         .eq('id', orderId)
 
     if (error) {

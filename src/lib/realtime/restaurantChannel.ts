@@ -26,6 +26,7 @@ interface RestaurantEntry {
     channel: RealtimeChannel | null
     tables: Map<string, Set<RealtimeCallback>>
     refCount: number
+    rebuildTimeout: NodeJS.Timeout | null
 }
 
 const registry = new Map<string, RestaurantEntry>()
@@ -64,7 +65,7 @@ export function subscribeRestaurantTable(
 ): () => void {
     let entry = registry.get(restaurantId)
     if (!entry) {
-        entry = { channel: null, tables: new Map(), refCount: 0 }
+        entry = { channel: null, tables: new Map(), refCount: 0, rebuildTimeout: null }
         registry.set(restaurantId, entry)
     }
 
@@ -73,12 +74,30 @@ export function subscribeRestaurantTable(
     entry.tables.get(table)!.add(callback)
     entry.refCount++
 
-    // postgres_changes bindings are fixed at subscribe time, so a newly-seen table
-    // (or the very first subscriber) requires a channel rebuild. After a page's
-    // component tree mounts, the table set is stable and no further rebuilds occur.
     if (isNewTable || !entry.channel) {
-        if (entry.channel) supabase.removeChannel(entry.channel)
-        entry.channel = buildChannel(restaurantId, entry)
+        if (entry.rebuildTimeout) clearTimeout(entry.rebuildTimeout)
+        entry.rebuildTimeout = setTimeout(() => {
+            const e = registry.get(restaurantId)
+            if (!e) return
+            e.rebuildTimeout = null
+
+            const setupChannel = () => {
+                e.channel = buildChannel(restaurantId, e)
+            }
+
+            if (e.channel) {
+                const oldChannel = e.channel
+                e.channel = null
+                Promise.resolve(supabase.removeChannel(oldChannel))
+                    .then(setupChannel)
+                    .catch((err) => {
+                        console.error('[restaurantChannel] Failed to remove channel:', err)
+                        setupChannel()
+                    })
+            } else {
+                setupChannel()
+            }
+        }, 50)
     }
 
     return () => {
@@ -87,11 +106,48 @@ export function subscribeRestaurantTable(
         const set = e.tables.get(table)
         if (set) {
             set.delete(callback)
-            if (set.size === 0) e.tables.delete(table)
+            if (set.size === 0) {
+                e.tables.delete(table)
+                // If a table is removed, we also need to rebuild the channel to remove the listener
+                if (e.rebuildTimeout) clearTimeout(e.rebuildTimeout)
+                e.rebuildTimeout = setTimeout(() => {
+                    const currentEntry = registry.get(restaurantId)
+                    if (!currentEntry) return
+                    currentEntry.rebuildTimeout = null
+                    
+                    const setupChannel = () => {
+                        if (currentEntry.tables.size > 0) {
+                            currentEntry.channel = buildChannel(restaurantId, currentEntry)
+                        } else {
+                            currentEntry.channel = null
+                        }
+                    }
+
+                    if (currentEntry.channel) {
+                        const oldChannel = currentEntry.channel
+                        currentEntry.channel = null
+                        Promise.resolve(supabase.removeChannel(oldChannel))
+                            .then(setupChannel)
+                            .catch((err) => {
+                                console.error('[restaurantChannel] Failed to remove channel on unsubscribe:', err)
+                                setupChannel()
+                            })
+                    } else {
+                        setupChannel()
+                    }
+                }, 50)
+            }
         }
         e.refCount = Math.max(0, e.refCount - 1)
         if (e.refCount === 0) {
-            if (e.channel) supabase.removeChannel(e.channel)
+            if (e.rebuildTimeout) {
+                clearTimeout(e.rebuildTimeout)
+                e.rebuildTimeout = null
+            }
+            if (e.channel) {
+                supabase.removeChannel(e.channel)
+                e.channel = null
+            }
             registry.delete(restaurantId)
         }
     }

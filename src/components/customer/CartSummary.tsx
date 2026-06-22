@@ -2,51 +2,74 @@
 
 import { useCartStore } from '@/lib/stores/cart'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
-import { formatCurrency } from '@/lib/utils'
-import { ShoppingBag, ArrowRight } from 'lucide-react'
+import { ChevronRight, X } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function CartSummary({ sessionId, tableSlug }: { sessionId?: string; tableSlug?: string }) {
     const items = useHydratedStore(useCartStore, (s) => s.items)
     const storeSlug = useHydratedStore(useCartStore, (s) => s.restaurantSlug)
+    const clearCart = useCartStore((s) => s.clearCart)
 
     const count = items?.reduce((acc, item) => acc + item.quantity, 0) || 0
-    const amount = items?.reduce((total, item) => {
-        const modifierTotal = (item.modifiers || []).reduce((sum, mod) => sum + mod.priceAdjustment, 0)
-        return total + (item.price + modifierTotal) * item.quantity
-    }, 0) || 0
     const slug = tableSlug || storeSlug || 'menu'
 
     if (count === 0 || !sessionId) return null
 
+    // Get the thumbnail of the last added item
+    const lastItem = items && items.length > 0 ? items[items.length - 1] : null
+    const lastImageUrl = lastItem?.imageUrl || null
+
     return (
-        <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none"
-             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-            <div className="bg-gradient-to-t from-white/95 via-white/80 to-transparent pt-8 pb-5 px-4">
-                <div className="max-w-md mx-auto pointer-events-auto">
-                    <Link
-                        href={`/t/${slug}/checkout`}
-                        className="group flex items-center justify-between w-full px-5 py-4 rounded-2xl text-white active:scale-[0.97] transition-all duration-150"
-                        style={{
-                            background: 'var(--color-primary)',
-                            boxShadow: '0 8px 32px -4px color-mix(in srgb, var(--color-primary) 40%, transparent), 0 2px 8px rgba(0,0,0,0.1)',
-                        }}
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="relative">
-                                <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
-                                    <ShoppingBag size={18} strokeWidth={2} />
+        <div className="fixed bottom-0 left-0 right-0 z-40 pointer-events-none pb-4 animate-fade-in"
+             style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
+            <div className="max-w-md mx-auto px-4 pointer-events-auto">
+                <div 
+                    className="flex items-center justify-between w-full px-4 py-3 rounded-2xl text-white shadow-lg shadow-orange-950/20"
+                    style={{
+                        background: '#E85D04',
+                    }}
+                >
+                    {/* Left: Close + Thumbnail + Count */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                clearCart()
+                            }}
+                            title="Clear Cart"
+                            className="p-1 hover:bg-white/10 rounded-full text-white/80 hover:text-white transition active:scale-90"
+                        >
+                            <X size={14} className="stroke-[3px]" />
+                        </button>
+                        <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-white/20 shrink-0">
+                            {lastImageUrl ? (
+                                <Image
+                                    src={lastImageUrl}
+                                    alt="Last item"
+                                    fill
+                                    className="object-cover"
+                                    sizes="32px"
+                                />
+                            ) : (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="text-sm">🍽️</span>
                                 </div>
-                                <span className="absolute -top-1.5 -right-1.5 bg-white text-[var(--color-primary)] text-[9px] font-bold h-4 min-w-4 px-0.5 rounded-full flex items-center justify-center shadow-sm tabular-nums">
-                                    {count}
-                                </span>
-                            </div>
-                            <span className="font-semibold text-sm">View Cart</span>
+                            )}
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-base tabular-nums">{formatCurrency(amount)}</span>
-                            <ArrowRight size={16} className="opacity-70 group-hover:translate-x-0.5 transition-transform" />
-                        </div>
+                        <span className="text-xs font-bold text-white leading-none">
+                            {count} Item{count !== 1 ? 's' : ''} added
+                        </span>
+                    </div>
+
+                    {/* Right: Link to Cart */}
+                    <Link
+                        href={`/t/${slug}/cart`}
+                        className="flex items-center gap-0.5 text-xs font-bold text-white hover:opacity-90 active:scale-95 transition-transform"
+                    >
+                        View Cart
+                        <ChevronRight size={14} className="stroke-[3px]" />
                     </Link>
                 </div>
             </div>
