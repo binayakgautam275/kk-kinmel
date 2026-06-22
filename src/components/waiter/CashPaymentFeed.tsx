@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { markCashPaid } from '@/app/(staff)/waiter/order-actions'
-import { Banknote, CheckCircle, Loader2 } from 'lucide-react'
+import { Banknote, CheckCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { formatCurrency, timeAgo } from '@/lib/utils'
+import { FeedSection, OrderCard, Button } from '@/components/ui'
 
 export interface UnpaidOrder {
     id: string
@@ -55,42 +56,27 @@ export default function CashPaymentFeed({
     if (orders.length === 0) return null
 
     return (
-        <div className="space-y-3">
-            <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
-                <Banknote size={18} className="text-amber-600" />
-                Pending Cash Payments
-                <span className="ml-1 bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                    {orders.length}
-                </span>
-            </h2>
-
+        <FeedSection icon={Banknote} title="Pending Cash Payments" count={orders.length} tone="warning">
             {orders.map((order) => {
                 const tableLabel = order.sessions?.tables?.label
                 const isProcessing = processingId === order.id
                 return (
-                    <div key={order.id} className="bg-white rounded-xl border-2 border-amber-300 p-4 flex items-center justify-between gap-3">
-                        <div>
-                            <p className="font-semibold text-gray-900">
-                                {tableLabel ? `Table ${tableLabel}` : 'Takeout'}
-                            </p>
-                            <p className="text-sm text-amber-700 font-bold">{formatCurrency(order.total_amount)}</p>
-                            {order.delivered_at && (
-                                <p className="text-xs text-gray-400 mt-0.5">Delivered {timeAgo(order.delivered_at)}</p>
-                            )}
-                        </div>
-                        <button
-                            onClick={() => handleCashPaid(order.id)}
-                            disabled={isProcessing}
-                            className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl px-4 py-2.5 flex items-center gap-1.5 disabled:opacity-60 active:scale-95 transition"
-                        >
-                            {isProcessing
-                                ? <Loader2 size={15} className="animate-spin" />
-                                : <CheckCircle size={15} />}
-                            Cash Received
-                        </button>
-                    </div>
+                    <OrderCard
+                        key={order.id}
+                        tableLabel={tableLabel || 'TO'}
+                        title={tableLabel ? `Table ${tableLabel}` : 'Takeout'}
+                        meta={order.delivered_at ? <span>Delivered {timeAgo(order.delivered_at)}</span> : undefined}
+                        trailing={
+                            <div className="flex flex-col items-end gap-2">
+                                <span className="text-h3 text-ink tabular">{formatCurrency(order.total_amount)}</span>
+                                <Button size="sm" icon={CheckCircle} loading={isProcessing} onClick={() => handleCashPaid(order.id)}>
+                                    Cash Received
+                                </Button>
+                            </div>
+                        }
+                    />
                 )
             })}
-        </div>
+        </FeedSection>
     )
 }

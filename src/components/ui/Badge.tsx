@@ -66,6 +66,7 @@ const STATUS: Record<string, { tone: Tone; label: string }> = {
     verified: { tone: 'success', label: 'Verified' },
     refunded: { tone: 'neutral', label: 'Refunded' },
     failed: { tone: 'danger', label: 'Failed' },
+    rejected: { tone: 'danger', label: 'Rejected' },
     // Takeout
     placed: { tone: 'warning', label: 'Placed' },
     ready_for_pickup: { tone: 'success', label: 'Ready' },

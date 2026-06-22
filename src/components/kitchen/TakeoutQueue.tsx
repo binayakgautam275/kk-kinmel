@@ -5,28 +5,20 @@ import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { updateTakeoutStatus } from '@/app/api/takeout/actions'
 import { formatCurrency } from '@/lib/utils'
 import type { TakeoutOrder } from '@/types/database'
-import { Phone, User, CheckCircle2, XCircle, Timer } from 'lucide-react'
+import { Phone, User, CheckCircle2, XCircle, Timer, Package } from 'lucide-react'
 import { playKitchenPing } from '@/lib/audio'
+import { Button, StatusBadge } from '@/components/ui'
 
 interface TakeoutQueueProps {
     restaurantId: string
     initialOrders: TakeoutOrder[]
 }
 
-const STATUS_FLOW: Record<string, { next: string; label: string; color: string }> = {
-    placed: { next: 'confirmed', label: 'Confirm', color: 'bg-blue-600' },
-    confirmed: { next: 'preparing', label: 'Start Prep', color: 'bg-yellow-600' },
-    preparing: { next: 'ready_for_pickup', label: 'Mark Ready', color: 'bg-green-600' },
-    ready_for_pickup: { next: 'picked_up', label: 'Picked Up', color: 'bg-gray-700' },
-}
-
-const STATUS_BADGE: Record<string, string> = {
-    placed: 'bg-orange-100 text-orange-800',
-    confirmed: 'bg-blue-100 text-blue-800',
-    preparing: 'bg-yellow-100 text-yellow-800',
-    ready_for_pickup: 'bg-green-100 text-green-800',
-    picked_up: 'bg-gray-100 text-gray-600',
-    cancelled: 'bg-red-100 text-red-800',
+const STATUS_FLOW: Record<string, { next: string; label: string }> = {
+    placed: { next: 'confirmed', label: 'Confirm' },
+    confirmed: { next: 'preparing', label: 'Start Prep' },
+    preparing: { next: 'ready_for_pickup', label: 'Mark Ready' },
+    ready_for_pickup: { next: 'picked_up', label: 'Picked Up' },
 }
 
 /** Returns a live "Due in Xm" / "Overdue Xm" string for a pickup_time */
@@ -54,7 +46,7 @@ function useCountdown(pickupTime: string) {
 function CountdownBadge({ pickupTime }: { pickupTime: string }) {
     const { label, overdue } = useCountdown(pickupTime)
     return (
-        <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full ${overdue ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-amber-100 text-amber-800'}`}>
+        <span className={`inline-flex items-center gap-1 text-caption font-semibold px-2 py-1 rounded-full ${overdue ? 'bg-danger-bg text-danger-fg animate-pulse' : 'bg-warning-bg text-warning-fg'}`}>
             <Timer size={12} />
             {label}
         </span>
@@ -87,84 +79,85 @@ export default function TakeoutQueue({ restaurantId, initialOrders }: TakeoutQue
     const completedOrders = orders.filter((o) => ['picked_up', 'cancelled'].includes(o.status))
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                🥡 Takeout Orders ({activeOrders.length})
-            </h2>
+        <div className="space-y-4">
+            <div className="flex items-center gap-2">
+                <Package size={16} className="text-dark-muted" />
+                <h2 className="text-h3 text-dark-ink">Takeout Orders</h2>
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-caption font-semibold text-dark-ink tabular">{activeOrders.length}</span>
+            </div>
 
             {activeOrders.length === 0 && (
-                <p className="text-gray-500 text-center py-8">No active takeout orders.</p>
+                <p className="text-dark-muted text-center py-8 text-small">No active takeout orders.</p>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {activeOrders.map((order) => {
                     const flow = STATUS_FLOW[order.status]
                     const items = (order.items as Array<{ name: string; quantity: number }>) || []
 
                     return (
-                        <div key={order.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div key={order.id} className="bg-dark-surface rounded-card border border-dark-border overflow-hidden">
                             <div className="p-4 space-y-3">
                                 {/* Header */}
                                 <div className="flex items-center justify-between">
-                                    <span className="font-mono text-sm font-bold text-gray-900">
+                                    <span className="font-mono text-small font-bold text-dark-ink">
                                         #{order.id.slice(0, 8).toUpperCase()}
                                     </span>
-                                    <span className={`text-xs font-medium px-2 py-1 rounded-full capitalize ${STATUS_BADGE[order.status] || ''}`}>
-                                        {order.status.replace('_', ' ')}
-                                    </span>
+                                    <StatusBadge status={order.status} />
                                 </div>
 
                                 {/* Countdown Timer */}
                                 <div className="flex items-center justify-between">
                                     <CountdownBadge pickupTime={order.pickup_time} />
-                                    <span className="text-xs text-gray-400">
+                                    <span className="text-caption text-dark-muted tabular">
                                         Pickup: {new Date(order.pickup_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
 
                                 {/* Customer */}
-                                <div className="space-y-1 text-sm">
-                                    <div className="flex items-center gap-1.5 text-gray-700">
-                                        <User size={14} />
+                                <div className="space-y-1 text-small">
+                                    <div className="flex items-center gap-1.5 text-dark-ink">
+                                        <User size={14} className="text-dark-muted" />
                                         <span>{order.customer_name}</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-gray-500">
+                                    <div className="flex items-center gap-1.5 text-dark-muted">
                                         <Phone size={14} />
                                         <span>{order.customer_phone}</span>
                                     </div>
                                 </div>
 
                                 {/* Items */}
-                                <ul className="text-sm text-gray-600 space-y-0.5 border-t border-gray-100 pt-2">
+                                <ul className="text-small text-dark-muted space-y-0.5 border-t border-dark-border pt-2">
                                     {items.map((item, idx) => (
-                                        <li key={idx}>{item.quantity}× {item.name}</li>
+                                        <li key={idx}><span className="tabular text-dark-ink">{item.quantity}×</span> {item.name}</li>
                                     ))}
                                 </ul>
 
-                                <div className="text-right font-semibold text-gray-900">
+                                <div className="text-right text-h3 text-dark-ink tabular">
                                     {formatCurrency(order.total_amount)}
                                 </div>
                             </div>
 
                             {/* Actions */}
                             {flow && (
-                                <div className="flex border-t border-gray-100">
+                                <div className="flex border-t border-dark-border">
                                     <button
                                         onClick={() => handleStatusChange(order.id, 'cancelled')}
                                         disabled={loading === order.id}
-                                        className="flex-1 py-3 text-sm font-medium text-red-600 hover:bg-red-50 flex items-center justify-center gap-1 border-r border-gray-100"
+                                        className="flex-1 py-3 text-small font-medium text-danger hover:bg-danger/10 flex items-center justify-center gap-1 border-r border-dark-border transition-colors disabled:opacity-50"
                                     >
                                         <XCircle size={16} /> Cancel
                                     </button>
-                                    <button
+                                    <Button
+                                        variant="primary"
+                                        size="md"
+                                        icon={CheckCircle2}
+                                        loading={loading === order.id}
                                         onClick={() => handleStatusChange(order.id, flow.next)}
-                                        disabled={loading === order.id}
-                                        className={`flex-1 py-3 text-sm font-medium text-white flex items-center justify-center gap-1 ${flow.color}`}
+                                        className="flex-1 rounded-none"
                                     >
-                                        {loading === order.id ? '...' : (
-                                            <><CheckCircle2 size={16} /> {flow.label}</>
-                                        )}
-                                    </button>
+                                        {flow.label}
+                                    </Button>
                                 </div>
                             )}
                         </div>
@@ -174,18 +167,16 @@ export default function TakeoutQueue({ restaurantId, initialOrders }: TakeoutQue
 
             {/* Completed */}
             {completedOrders.length > 0 && (
-                <details className="mt-8">
-                    <summary className="text-sm font-medium text-gray-500 cursor-pointer">
+                <details className="mt-6">
+                    <summary className="text-small font-medium text-dark-muted cursor-pointer hover:text-dark-ink">
                         Completed / Cancelled ({completedOrders.length})
                     </summary>
                     <div className="mt-3 space-y-2">
                         {completedOrders.slice(0, 20).map((order) => (
-                            <div key={order.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-2 text-sm">
-                                <span className="font-mono text-gray-500">#{order.id.slice(0, 8)}</span>
-                                <span>{order.customer_name}</span>
-                                <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${STATUS_BADGE[order.status] || ''}`}>
-                                    {order.status.replace('_', ' ')}
-                                </span>
+                            <div key={order.id} className="flex items-center justify-between gap-3 bg-white/5 rounded-[var(--r-md)] px-4 py-2 text-small">
+                                <span className="font-mono text-dark-muted">#{order.id.slice(0, 8)}</span>
+                                <span className="text-dark-ink truncate flex-1">{order.customer_name}</span>
+                                <StatusBadge status={order.status} dot={false} />
                             </div>
                         ))}
                     </div>

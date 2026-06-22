@@ -5,8 +5,9 @@ import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { completeTakeoutOrder } from '@/app/api/takeout/actions'
 import { formatCurrency } from '@/lib/utils'
 import type { TakeoutOrder } from '@/types/database'
-import { Phone, User, Clock, CreditCard } from 'lucide-react'
+import { Phone, User, Clock, CreditCard, Package } from 'lucide-react'
 import { playOrderReady } from '@/lib/audio'
+import { FeedSection, Card, Button, StatusBadge } from '@/components/ui'
 
 interface Props {
     initialOrders: TakeoutOrder[]
@@ -57,66 +58,57 @@ export default function WaiterTakeoutFeed({ initialOrders, restaurantId }: Props
     }
 
     return (
-        <div className="space-y-3">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                🥡 Takeout Pickups ({orders.length})
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
+        <FeedSection icon={Package} title="Takeout Pickups" count={orders.length} tone="success">
+            <div className="grid gap-2.5 sm:grid-cols-2">
                 {orders.map((order) => {
                     const items = (order.items as Array<{ name: string; quantity: number }>) || []
                     return (
-                        <div key={order.id} className="bg-white rounded-xl border border-green-200 shadow-sm p-4">
+                        <Card key={order.id} padding={false} className="p-4">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="font-mono text-sm font-bold text-gray-900">
+                                <span className="font-mono text-small font-bold text-ink">
                                     #{order.id.slice(0, 8).toUpperCase()}
                                 </span>
-                                <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-800">
-                                    Ready for Pickup
-                                </span>
+                                <StatusBadge status="ready_for_pickup" />
                             </div>
 
-                            <div className="space-y-1 text-sm mb-3">
-                                <div className="flex items-center gap-1.5 text-gray-700">
-                                    <User size={14} />
+                            <div className="space-y-1 text-small mb-3">
+                                <div className="flex items-center gap-1.5 text-ink">
+                                    <User size={14} className="text-ink-subtle" />
                                     <span className="font-medium">{order.customer_name}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5 text-gray-500">
-                                    <Phone size={14} />
+                                <div className="flex items-center gap-1.5 text-ink-muted">
+                                    <Phone size={14} className="text-ink-subtle" />
                                     <span>{order.customer_phone}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5 text-gray-500">
-                                    <Clock size={14} />
+                                <div className="flex items-center gap-1.5 text-ink-muted">
+                                    <Clock size={14} className="text-ink-subtle" />
                                     <span>Pickup: {new Date(order.pickup_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
                             </div>
 
-                            <ul className="text-sm text-gray-600 space-y-0.5 mb-3 border-t border-gray-100 pt-2">
+                            <ul className="text-small text-ink-muted space-y-0.5 mb-3 border-t border-hairline pt-2">
                                 {items.map((item, idx) => (
-                                    <li key={idx}>{item.quantity}× {item.name}</li>
+                                    <li key={idx}><span className="tabular">{item.quantity}×</span> {item.name}</li>
                                 ))}
                             </ul>
 
-                            <div className="flex items-center justify-between">
-                                <span className="font-semibold text-gray-900">
+                            <div className="flex items-center justify-between gap-3">
+                                <span className="text-h3 text-ink tabular">
                                     {formatCurrency(order.total_amount)}
                                 </span>
-                                <button
+                                <Button
+                                    size="sm"
+                                    icon={CreditCard}
+                                    loading={loading === order.id}
                                     onClick={() => handleComplete(order.id)}
-                                    disabled={loading === order.id}
-                                    className="flex items-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-70"
                                 >
-                                    {loading === order.id ? '...' : (
-                                        <>
-                                            <CreditCard size={14} />
-                                            <span>Paid &amp; Collected</span>
-                                        </>
-                                    )}
-                                </button>
+                                    Paid &amp; Collected
+                                </Button>
                             </div>
-                        </div>
+                        </Card>
                     )
                 })}
             </div>
-        </div>
+        </FeedSection>
     )
 }

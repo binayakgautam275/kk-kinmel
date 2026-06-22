@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
-import { CheckCircle, XCircle, Clock, Smartphone, Loader2, DoorClosed } from 'lucide-react'
+import { CheckCircle, XCircle, Smartphone, DoorClosed } from 'lucide-react'
 import { verifyPayment, verifyPaymentAndCloseTable } from './payment-verification-actions'
 import { timeAgo, formatCurrency } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
+import { FeedSection, Card, Button, StatusBadge } from '@/components/ui'
 
 export interface PaymentClaim {
     id: string
@@ -81,105 +82,92 @@ export default function PaymentVerificationFeed({
     if (claims.length === 0) return null
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
-                <Smartphone size={15} className="text-emerald-500" />
-                <h2 className="font-semibold text-gray-900 text-sm">Payment Verifications</h2>
-                {pendingClaims.length > 0 && (
-                    <span className="ml-auto text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full animate-pulse">
-                        {pendingClaims.length} pending
-                    </span>
-                )}
-            </div>
+        <FeedSection
+            icon={Smartphone}
+            title="Payment Verifications"
+            count={pendingClaims.length || undefined}
+            tone="warning"
+        >
+            {pendingClaims.map((claim) => (
+                <Card key={claim.id} padding={false} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                        <StatusBadge status="pending" />
+                        <span className="text-caption text-ink-subtle">{timeAgo(claim.created_at)}</span>
+                    </div>
 
-            <div className="divide-y divide-gray-50">
-                {pendingClaims.map((claim) => (
-                    <div key={claim.id} className="p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Clock size={13} className="text-amber-500" />
-                                <span className="text-xs font-semibold text-amber-700">Pending</span>
-                            </div>
-                            <span className="text-[10px] text-gray-400">{timeAgo(claim.created_at)}</span>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-small">
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-caption text-ink-subtle">Amount</span>
+                            <span className="font-bold text-ink tabular">{formatCurrency(claim.amount)}</span>
                         </div>
-
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                            <div className="flex items-baseline gap-1.5">
-                                <span className="text-xs text-gray-400">Amount</span>
-                                <span className="font-bold text-gray-900 tabular-nums">Rs. {claim.amount.toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-baseline gap-1.5">
-                                <span className="text-xs text-gray-400">Via</span>
-                                <span className="font-medium text-gray-700 capitalize">{claim.payment_method}</span>
-                            </div>
-                            {claim.reference_code && (
-                                <div className="flex items-baseline gap-1.5 col-span-2">
-                                    <span className="text-xs text-gray-400">Ref</span>
-                                    <span className="font-mono text-xs font-medium text-gray-700">{claim.reference_code}</span>
-                                </div>
-                            )}
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-caption text-ink-subtle">Via</span>
+                            <span className="font-medium text-ink capitalize">{claim.payment_method}</span>
                         </div>
-
-                        <div className="flex flex-col gap-2">
-                            {claim.order_id && (
-                                <button
-                                    onClick={() => handleVerifyAndClose(claim.id)}
-                                    disabled={loading === claim.id}
-                                    className="w-full flex items-center justify-center gap-1.5 bg-[var(--color-secondary)] text-white font-semibold text-sm py-2.5 rounded-xl active:scale-[0.98] disabled:opacity-50 transition"
-                                >
-                                    {loading === claim.id ? <Loader2 size={15} className="animate-spin" /> : <DoorClosed size={15} />}
-                                    Verify & Close Table
-                                </button>
-                            )}
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    onClick={() => handleVerify(claim.id, 'verified')}
-                                    disabled={loading === claim.id}
-                                    className="flex items-center justify-center gap-1.5 bg-emerald-600 text-white font-semibold text-sm py-2.5 rounded-xl active:scale-[0.98] disabled:opacity-50 transition"
-                                >
-                                    {loading === claim.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-                                    Approve
-                                </button>
-                                <button
-                                    onClick={() => handleVerify(claim.id, 'rejected')}
-                                    disabled={loading === claim.id}
-                                    className="flex items-center justify-center gap-1.5 bg-red-50 text-red-600 border border-red-200 font-semibold text-sm py-2.5 rounded-xl active:scale-[0.98] disabled:opacity-50 transition"
-                                >
-                                    <XCircle size={14} />
-                                    Reject
-                                </button>
+                        {claim.reference_code && (
+                            <div className="flex items-baseline gap-1.5 col-span-2">
+                                <span className="text-caption text-ink-subtle">Ref</span>
+                                <span className="font-mono text-caption font-medium text-ink">{claim.reference_code}</span>
                             </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        {claim.order_id && (
+                            <Button
+                                block
+                                icon={DoorClosed}
+                                loading={loading === claim.id}
+                                onClick={() => handleVerifyAndClose(claim.id)}
+                            >
+                                Verify &amp; Close Table
+                            </Button>
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                variant="success"
+                                icon={CheckCircle}
+                                loading={loading === claim.id}
+                                onClick={() => handleVerify(claim.id, 'verified')}
+                            >
+                                Approve
+                            </Button>
+                            <Button
+                                variant="secondary"
+                                icon={XCircle}
+                                disabled={loading === claim.id}
+                                onClick={() => handleVerify(claim.id, 'rejected')}
+                                className="text-danger-fg border-danger/30 hover:bg-danger-bg"
+                            >
+                                Reject
+                            </Button>
                         </div>
                     </div>
-                ))}
+                </Card>
+            ))}
 
-                {resolvedClaims.length > 0 && (
-                    <details className="group">
-                        <summary className="px-5 py-3 text-xs font-medium text-gray-400 cursor-pointer hover:text-gray-600 list-none flex items-center justify-between">
-                            {resolvedClaims.length} resolved claim{resolvedClaims.length > 1 ? 's' : ''}
-                            <span className="group-open:rotate-180 transition-transform">▾</span>
-                        </summary>
-                        <div className="px-4 pb-3 space-y-2">
-                            {resolvedClaims.map((claim) => {
-                                const status = claimStatus(claim)
-                                return (
-                                    <div key={claim.id} className={`rounded-xl border px-3 py-2.5 flex items-center justify-between text-sm ${
-                                        status === 'verified' ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'
-                                    }`}>
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-gray-800 tabular-nums">Rs. {claim.amount.toFixed(2)}</span>
-                                            {claim.reference_code && <span className="text-xs text-gray-400">· {claim.reference_code}</span>}
-                                        </div>
-                                        <span className={`text-xs font-bold uppercase tracking-wide ${status === 'verified' ? 'text-emerald-700' : 'text-red-700'}`}>
-                                            {status}
-                                        </span>
+            {resolvedClaims.length > 0 && (
+                <details className="group">
+                    <summary className="py-2 text-caption font-medium text-ink-subtle cursor-pointer hover:text-ink list-none flex items-center justify-between">
+                        {resolvedClaims.length} resolved claim{resolvedClaims.length > 1 ? 's' : ''}
+                        <span className="group-open:rotate-180 transition-transform">▾</span>
+                    </summary>
+                    <div className="pt-2 space-y-2">
+                        {resolvedClaims.map((claim) => {
+                            const status = claimStatus(claim)
+                            return (
+                                <div key={claim.id} className="rounded-[var(--r-md)] border border-hairline bg-surface-muted/50 px-3 py-2.5 flex items-center justify-between text-small">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-ink tabular">{formatCurrency(claim.amount)}</span>
+                                        {claim.reference_code && <span className="text-caption text-ink-subtle">· {claim.reference_code}</span>}
                                     </div>
-                                )
-                            })}
-                        </div>
-                    </details>
-                )}
-            </div>
-        </div>
+                                    <StatusBadge status={status} dot={false} />
+                                </div>
+                            )
+                        })}
+                    </div>
+                </details>
+            )}
+        </FeedSection>
     )
 }

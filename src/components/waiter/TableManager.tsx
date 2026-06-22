@@ -8,14 +8,16 @@ import type { Table, Session } from '@/types/database'
 import { QRCodeSVG } from 'qrcode.react'
 import { toast } from 'react-hot-toast'
 import { useConfirmStore } from '@/lib/stores/confirm'
+import { Card, Button, EmptyState } from '@/components/ui'
 
 export type TableWithSession = Table & { activeSession?: Session | null }
 
+// Status → semantic tokens (active=success, dirty=warning, reserved=info).
 const STATUS_CONFIG = {
-    active:    { dot: 'bg-emerald-400 animate-pulse', card: 'border-emerald-300 bg-emerald-50/60', label: 'Active', labelCls: 'text-emerald-700' },
-    dirty:     { dot: 'bg-amber-400',  card: 'border-amber-200 bg-amber-50/60',   label: 'Dirty',    labelCls: 'text-amber-700' },
-    reserved:  { dot: 'bg-blue-400',   card: 'border-blue-200 bg-blue-50/60',     label: 'Reserved', labelCls: 'text-blue-700' },
-    available: { dot: 'bg-gray-300',   card: 'border-gray-200 bg-white',           label: '',         labelCls: '' },
+    active:    { dot: 'bg-success animate-pulse', card: 'border-success/30 bg-success-bg/50', label: 'Active',   labelCls: 'text-success-fg' },
+    dirty:     { dot: 'bg-warning',               card: 'border-warning/25 bg-warning-bg/50', label: 'Dirty',    labelCls: 'text-warning-fg' },
+    reserved:  { dot: 'bg-info',                  card: 'border-info/25 bg-info-bg/50',       label: 'Reserved', labelCls: 'text-info-fg' },
+    available: { dot: 'bg-[var(--text-subtle)]',  card: 'border-hairline bg-surface',         label: '',         labelCls: '' },
 }
 
 function getEffectiveStatus(table: TableWithSession): string {
@@ -128,13 +130,13 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
             {/* Table Grid */}
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <Card padding={false} className="lg:col-span-2 overflow-hidden">
+                <div className="px-5 py-4 border-b border-hairline flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <UtensilsCrossed size={15} className="text-gray-400" />
-                        <h2 className="font-semibold text-gray-900 text-sm">Floor Plan</h2>
+                        <UtensilsCrossed size={15} className="text-ink-subtle" />
+                        <h2 className="text-h3 text-ink">Floor Plan</h2>
                     </div>
-                    <div className="flex items-center gap-3 text-[10px] text-gray-400 font-medium">
+                    <div className="flex items-center gap-3 text-caption text-ink-subtle">
                         {Object.entries(STATUS_CONFIG).filter(([k]) => k !== 'available').map(([key, cfg]) => (
                             <span key={key} className="flex items-center gap-1">
                                 <span className={`w-2 h-2 rounded-full ${cfg.dot.replace(' animate-pulse', '')}`} />
@@ -142,7 +144,7 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
                             </span>
                         ))}
                         <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-gray-300" />Available
+                            <span className="w-2 h-2 rounded-full bg-[var(--text-subtle)]" />Available
                         </span>
                     </div>
                 </div>
@@ -165,9 +167,9 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
                                 : sessionOrders.length > 0 ? 'pending' : null
 
                         const trafficLight = {
-                            ready:    { dot: 'bg-emerald-500 animate-pulse', label: '● Ready', cls: 'text-emerald-600' },
-                            preparing:{ dot: 'bg-orange-400 animate-pulse',  label: '● Cooking', cls: 'text-orange-600' },
-                            pending:  { dot: 'bg-amber-300',                 label: '● Waiting', cls: 'text-amber-600' },
+                            ready:    { dot: 'bg-success animate-pulse', label: '● Ready',   cls: 'text-success-fg' },
+                            preparing:{ dot: 'bg-info animate-pulse',    label: '● Cooking', cls: 'text-info-fg' },
+                            pending:  { dot: 'bg-warning',               label: '● Waiting', cls: 'text-warning-fg' },
                         }
                         const tl = orderLight ? trafficLight[orderLight] : null
 
@@ -179,9 +181,9 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
                                     isSelected ? 'ring-2 ring-offset-1 ring-[var(--color-primary)] scale-105 z-10 shadow-md' : 'hover:scale-[1.03] hover:shadow-sm active:scale-95'
                                 }`}
                             >
-                                <span className="text-xl font-bold text-gray-800">{table.label}</span>
+                                <span className="text-xl font-bold text-ink">{table.label}</span>
                                 {table.capacity && (
-                                    <span className="flex items-center gap-0.5 text-[10px] text-gray-400 mt-0.5">
+                                    <span className="flex items-center gap-0.5 text-caption text-ink-subtle mt-0.5">
                                         <Users size={9} />{table.capacity}
                                     </span>
                                 )}
@@ -198,17 +200,17 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
                         )
                     })}
                 </div>
-            </div>
+            </Card>
 
             {/* Action Panel */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden sticky top-20 h-fit">
+            <Card padding={false} className="overflow-hidden sticky top-20 h-fit">
                 {selectedTable ? (
                     <div>
-                        <div className="px-5 py-4 border-b border-gray-100">
+                        <div className="px-5 py-4 border-b border-hairline">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h3 className="font-bold text-gray-900">Table {selectedTable.label}</h3>
-                                    <p className="text-xs text-gray-400 mt-0.5">
+                                    <h3 className="text-h3 text-ink">Table {selectedTable.label}</h3>
+                                    <p className="text-caption text-ink-subtle mt-0.5">
                                         {selectedTable.activeSession
                                             ? 'Session active'
                                             : selectedTable.table_status === 'dirty'
@@ -225,50 +227,54 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
                         <div className="p-5">
                             {selectedTable.activeSession ? (
                                 <div className="space-y-4">
-                                    <div className="flex justify-center p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                    <div className="flex justify-center p-4 bg-surface-muted rounded-[var(--r-md)] border border-hairline">
                                         <QRCodeSVG
                                             value={`${baseUrl}/t/${selectedTable.qr_token}?s=${selectedTable.activeSession.session_token}`}
                                             size={180}
                                             level="Q"
-                                            includeMargin
+                                            marginSize={4}
                                         />
                                     </div>
-                                    <p className="text-xs text-center text-gray-400">Scan to order · Session valid for 4 hours</p>
-                                    <button
+                                    <p className="text-caption text-center text-ink-subtle">Scan to order · Session valid for 4 hours</p>
+                                    <Button
+                                        variant="secondary"
+                                        block
+                                        icon={PowerOff}
+                                        loading={isProcessing}
                                         onClick={() => handleCloseSession(selectedTable.activeSession!.id)}
-                                        disabled={isProcessing}
-                                        className="w-full flex items-center justify-center gap-2 py-3 bg-red-50 text-red-600 border border-red-200 font-semibold text-sm rounded-xl hover:bg-red-100 active:scale-[0.98] disabled:opacity-50 transition"
+                                        className="text-danger-fg border-danger/30 hover:bg-danger-bg"
                                     >
-                                        <PowerOff size={15} /> Close Session & Checkout
-                                    </button>
+                                        Close Session &amp; Checkout
+                                    </Button>
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <div className="flex flex-col items-center py-4 text-gray-200">
+                                    <div className="flex flex-col items-center py-4 text-ink-subtle/40">
                                         <QrCode size={64} strokeWidth={1} />
-                                        <p className="text-center text-xs text-gray-400 mt-3">Seat customers and open a session to generate an ordering QR code.</p>
+                                        <p className="text-center text-caption text-ink-subtle mt-3">Seat customers and open a session to generate an ordering QR code.</p>
                                     </div>
-                                    <button
+                                    <Button
+                                        block
+                                        icon={Power}
+                                        loading={isProcessing}
                                         onClick={() => handleOpenSession(selectedTable.id)}
-                                        disabled={isProcessing}
-                                        className="w-full flex items-center justify-center gap-2 py-3 bg-[var(--color-secondary)] text-white font-semibold text-sm rounded-xl hover:opacity-90 active:scale-[0.98] disabled:opacity-50 transition shadow-sm"
                                     >
-                                        <Power size={15} /> Open Session
-                                    </button>
+                                        Open Session
+                                    </Button>
 
-                                    <div className="pt-3 border-t border-gray-100">
-                                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Table Status</p>
+                                    <div className="pt-3 border-t border-hairline">
+                                        <p className="text-label text-ink-subtle mb-2">Table Status</p>
                                         <div className="grid grid-cols-3 gap-2">
                                             {[
-                                                { status: 'available' as const, icon: <span className="w-2.5 h-2.5 rounded-full bg-gray-300 block" />, label: 'Clear', cls: 'border-gray-200 text-gray-600 hover:bg-gray-50' },
-                                                { status: 'dirty' as const,     icon: <Sparkles size={12} />, label: 'Dirty',   cls: 'border-amber-200 text-amber-600 hover:bg-amber-50' },
-                                                { status: 'reserved' as const,  icon: <CalendarClock size={12} />, label: 'Reserve', cls: 'border-blue-200 text-blue-600 hover:bg-blue-50' },
+                                                { status: 'available' as const, icon: <span className="w-2.5 h-2.5 rounded-full bg-[var(--text-subtle)] block" />, label: 'Clear',   cls: 'border-hairline text-ink-muted hover:bg-surface-muted' },
+                                                { status: 'dirty' as const,     icon: <Sparkles size={12} />,      label: 'Dirty',   cls: 'border-warning/25 text-warning-fg hover:bg-warning-bg' },
+                                                { status: 'reserved' as const,  icon: <CalendarClock size={12} />, label: 'Reserve', cls: 'border-info/25 text-info-fg hover:bg-info-bg' },
                                             ].map(({ status, icon, label, cls }) => (
                                                 <button
                                                     key={status}
                                                     onClick={() => handleSetStatus(selectedTable.id, status)}
                                                     disabled={isProcessing || (!selectedTable.table_status || selectedTable.table_status === status) && status === 'available'}
-                                                    className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border text-xs font-semibold disabled:opacity-40 transition active:scale-95 ${cls}`}
+                                                    className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-[var(--r-md)] border text-caption font-semibold disabled:opacity-40 transition-colors ${cls}`}
                                                 >
                                                     {icon}{label}
                                                 </button>
@@ -280,13 +286,14 @@ export default function TableManager({ initialTables, restaurantId, appUrl, init
                         </div>
                     </div>
                 ) : (
-                    <div className="h-64 flex flex-col items-center justify-center text-gray-300 p-6">
-                        <UtensilsCrossed size={40} strokeWidth={1.5} className="mb-3" />
-                        <p className="text-sm text-gray-400 font-medium">Select a table</p>
-                        <p className="text-xs text-gray-300 mt-1">Tap any table to manage it</p>
-                    </div>
+                    <EmptyState
+                        icon={UtensilsCrossed}
+                        title="Select a table"
+                        description="Tap any table to manage it"
+                        className="h-64"
+                    />
                 )}
-            </div>
+            </Card>
         </div>
     )
 }
