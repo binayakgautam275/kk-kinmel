@@ -288,14 +288,7 @@ export default function OrderTracker({
                     </div>
                 )}
 
-                {/* Chef note */}
-                <div className="bg-[#FFF0E6] rounded-2xl px-4 py-4 flex items-center gap-3 mb-6 border border-[#EDD9C8]">
-                    <div className="text-2xl">👨‍🍳</div>
-                    <div>
-                        <p className="text-xs text-[#8C6A50] font-semibold">Chef's note</p>
-                        <p className="text-sm font-black text-[#1A1006]">"Made with love, just for you!"</p>
-                    </div>
-                </div>
+
 
                 {/* Order Details list */}
                 <div className="bg-white rounded-2xl border border-[#EDD9C8] shadow-sm overflow-hidden mb-6" style={{ boxShadow: "0 2px 12px rgba(232,93,4,0.04)" }}>
@@ -332,7 +325,10 @@ export default function OrderTracker({
 
             {/* Persistent Bottom Payment Control Button */}
             {!isCancelled && order.payment_status !== 'paid' && (
-                <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#EDD9C8] px-4 py-4 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}>
+                <div 
+                    className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.06)] px-4 pt-4 z-40 border-t border-[#F5EDE6]" 
+                    style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 12px)' }}
+                >
                     <div className="max-w-md mx-auto">
                         {!isDelivered ? (
                             <button

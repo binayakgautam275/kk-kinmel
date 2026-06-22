@@ -34,17 +34,26 @@ export default function AgingTimer({
     showIcon = true,
     className,
 }: AgingTimerProps) {
-    const [seconds, setSeconds] = useState(() =>
-        Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 1000)),
-    )
+    const [mounted, setMounted] = useState(false)
+    const [seconds, setSeconds] = useState(0)
 
     useEffect(() => {
+        setMounted(true)
         const tick = () =>
             setSeconds(Math.max(0, Math.floor((Date.now() - new Date(since).getTime()) / 1000)))
         tick()
         const id = setInterval(tick, 1000)
         return () => clearInterval(id)
     }, [since])
+
+    if (!mounted) {
+        return (
+            <span className={cn('inline-flex items-center gap-1 text-small font-semibold tabular', dark ? 'text-dark-muted' : 'text-ink-muted', className)}>
+                {showIcon && <Clock size={13} strokeWidth={2.5} />}
+                --:--
+            </span>
+        )
+    }
 
     const minutes = seconds / 60
     const tone =

@@ -328,8 +328,8 @@ export default function CartPage(props: { params: Promise<{ tableSlug: string }>
 
             {/* Sticky Orange Footer PLACE ORDER Bar */}
             <div
-                className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-150 px-4 py-4"
-                style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
+                className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.06)] px-4 pt-4 border-t border-gray-100"
+                style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 12px)' }}
             >
                 <div className="max-w-2xl mx-auto flex flex-col">
                     <div>
