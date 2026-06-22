@@ -193,16 +193,16 @@ export default function TablePageClient({
 
             {/* Sticky banner when dismissed */}
             {!hasSession && isDismissed && (
-                <div className="fixed top-14 inset-x-0 z-30 bg-amber-50 border-b border-amber-100 py-2.5 px-4 flex items-center justify-between gap-3 max-w-2xl mx-auto shadow-sm animate-in slide-in-from-top duration-300">
+                <div className="fixed top-14 inset-x-0 z-30 bg-[#FFF0E6] border-b border-[#EDD9C8] py-2.5 px-4 flex items-center justify-between gap-3 max-w-2xl mx-auto shadow-sm animate-in slide-in-from-top duration-300">
                     <div className="flex items-center gap-2">
-                        <RefreshCw size={12} className="animate-spin text-amber-500 shrink-0" />
-                        <span className="text-xs font-semibold text-amber-800">
+                        <RefreshCw size={12} className="animate-spin text-[#E85D04] shrink-0" />
+                        <span className="text-xs font-semibold text-[#8C6A50]">
                             Waiting for session on Table {tableData.label}…
                         </span>
                     </div>
                     <button
                         onClick={() => setIsDismissed(false)}
-                        className="text-xs bg-amber-600 text-white font-bold px-3 py-1.5 rounded-lg active:scale-95 transition shrink-0"
+                        className="text-xs bg-[#E85D04] hover:bg-[#d05303] text-white font-black px-3 py-1.5 rounded-lg active:scale-95 transition shrink-0 shadow-sm"
                     >
                         View Status
                     </button>
@@ -211,33 +211,34 @@ export default function TablePageClient({
 
             {/* The Popup Modal */}
             {!hasSession && !isDismissed && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-sm w-full border border-gray-100 text-center animate-in zoom-in-95 duration-300 flex flex-col items-center">
-                        <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mb-4 animate-bounce">
-                            <Bell size={28} className={requestLoading ? "animate-spin" : ""} />
-                        </div>
-                        
-                        <h3 className="text-xl font-bold text-[var(--color-secondary)]">
-                            Welcome to {restaurantName}!
-                        </h3>
-                        <p className="text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full mt-1.5">
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1006]/40 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-white p-6 rounded-3xl max-w-sm w-full border border-[#EDD9C8] shadow-2xl text-center flex flex-col items-center animate-in zoom-in-95 duration-300">
+                        {logoUrl ? (
+                            <div className="relative w-16 h-16 rounded-full overflow-hidden bg-white border border-[#EDD9C8] mb-4 shadow-sm">
+                                <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="64px" />
+                            </div>
+                        ) : (
+                            <div className="w-16 h-16 rounded-full bg-[#FFF0E6] flex items-center justify-center mb-4 border border-[#EDD9C8] shadow-sm">
+                                <UtensilsCrossed size={28} className="text-[#E85D04]" />
+                            </div>
+                        )}
+                        <h2 className="font-black text-[#1A1006] text-lg mb-2">Welcome to {restaurantName}!</h2>
+                        <p className="text-xs font-semibold text-[#E85D04] bg-[#FFF0E6] px-2.5 py-1 rounded-full mt-0.5 mb-3">
                             Table {tableData.label}
                         </p>
-                        
-                        <p className="text-gray-500 text-sm mt-3.5 leading-relaxed">
-                            Please wait while your waiter opens a session for your table to start ordering.
+                        <p className="text-[#8C6A50] text-sm font-semibold mb-6 leading-relaxed">
+                            Your waiter will open a session for Table {tableData.label} so you can place orders.
                         </p>
-
-                        <div className="w-full mt-6 space-y-3">
-                            {requestSent ? (
-                                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex flex-col items-center justify-center gap-1">
-                                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                                        <Check size={16} />
-                                    </div>
-                                    <p className="text-emerald-800 text-xs font-bold mt-1">Waiter Notified!</p>
-                                    <p className="text-emerald-600 text-[11px]">They will be right with you.</p>
-                                </div>
-                            ) : (
+                        {requestSent ? (
+                            <div className="w-full bg-[#EBFDF2] border border-[#BFF3D4] rounded-2xl py-3 px-4 flex flex-col items-center justify-center gap-1.5 animate-scale-in">
+                                <span className="text-xl">🔔</span>
+                                <p className="text-green-600 text-xs font-black flex items-center gap-1">
+                                    <Check size={14} className="stroke-[3px]" /> Waiter Notified!
+                                </p>
+                                <p className="text-green-600/70 text-[10px] font-bold">They'll be right with you.</p>
+                            </div>
+                        ) : (
+                            <div className="w-full space-y-4">
                                 <button
                                     onClick={async () => {
                                         setRequestLoading(true)
@@ -246,26 +247,24 @@ export default function TablePageClient({
                                         if (res.success || res.error?.includes('already')) setRequestSent(true)
                                     }}
                                     disabled={requestLoading}
-                                    className="w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] text-white font-bold py-3.5 px-4 rounded-xl active:scale-[0.98] transition shadow-lg shadow-[var(--color-primary)]/25 disabled:opacity-60"
+                                    className="w-full flex items-center justify-center gap-2 text-sm font-black bg-[#E85D04] text-white py-3.5 rounded-2xl active:scale-95 transition disabled:opacity-60 shadow-md shadow-[#E85D04]/15"
                                 >
                                     {requestLoading ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} />}
-                                    Ring Waiter for Service
+                                    Ring for Service
                                 </button>
-                            )}
-
-                            <div className="flex items-center justify-center gap-2 text-xs text-gray-400 mt-2">
-                                <RefreshCw size={11} className="animate-spin text-amber-500" />
-                                <span>Waiting for session to activate…</span>
+                                <p className="text-[#C4A882] text-[11px] font-bold flex items-center justify-center gap-1">
+                                    <RefreshCw size={10} className="animate-spin text-[#E85D04]" />
+                                    Waiting for session to open...
+                                </p>
                             </div>
-
-                            <div className="pt-2">
-                                <button
-                                    onClick={() => setIsDismissed(true)}
-                                    className="text-xs text-gray-500 hover:text-gray-700 font-semibold underline decoration-dotted"
-                                >
-                                    Browse Menu (View Only)
-                                </button>
-                            </div>
+                        )}
+                        <div className="pt-4 border-t border-gray-100 w-full mt-4">
+                            <button
+                                onClick={() => setIsDismissed(true)}
+                                className="text-xs text-[#8C6A50] hover:text-[#1A1006] font-bold underline decoration-dotted"
+                            >
+                                Browse Menu (View Only)
+                            </button>
                         </div>
                     </div>
                 </div>
