@@ -7,18 +7,18 @@ import {
 } from 'lucide-react'
 
 const FEATURE_LINKS = [
-    { title: 'Order & KOT Management', desc: 'Take orders perfectly and reduce errors.', icon: FileText, href: '/features/order-kot-management' },
+    { title: 'Order Management with KOT', desc: 'Take orders perfectly and reduce errors.', icon: FileText, href: '/features/order-management' },
     { title: 'Inventory & Waste Control', desc: 'Track real-time stock to lower food costs.', icon: LayoutGrid, href: '/features/inventory' },
     { title: 'Accounting & Expense', desc: 'Track every expense, bill, and payment.', icon: PiggyBank, href: '/features/accounting' },
     { title: 'Digital QR Menu', desc: 'Let guests scan and order without waiting.', icon: QrCode, href: '/features/qr-menu' },
-    { title: 'Table & Space Management', desc: 'Optimize seating and turn tables faster.', icon: LayoutGrid, href: '/features/table-management' },
+    { title: 'Menu & Table Management', desc: 'Optimize seating and turn tables faster.', icon: LayoutGrid, href: '/features/table-management' },
     { title: 'Loyalty & Rewards', desc: 'Keep customers coming back for more.', icon: Gift, href: '/features/loyalty' },
 ]
 
 const FEATURE_SIDE = [
     { title: 'Real-Time Sales Report', desc: 'Monitor live sales and profit analytics.', icon: Clock, href: '/features/analytics' },
     { title: 'Mobile & Web App', desc: 'Works on iOS, Android, or Web.', icon: Globe, href: '/features/apps' },
-    { title: 'Refer & Earn', desc: 'Refer others, earn free Premium', icon: Gift, href: '/legal/referrals' },
+    { title: 'Refer & Earn', desc: 'Refer others, earn free Premium', icon: Gift, href: '/features/refer-earn' },
 ]
 
 const RESOURCE_LINKS = [
@@ -91,7 +91,7 @@ export default function MarketingNav() {
                     </div>
 
                     <Link href="/pricing" className="transition-colors hover:text-[var(--color-primary)]">Pricing</Link>
-                    <Link href="/legal/career" className="transition-colors hover:text-[var(--color-primary)]">Career</Link>
+                    <Link href="/career" className="transition-colors hover:text-[var(--color-primary)]">Career</Link>
                     <Link href="/contact" className="transition-colors hover:text-[var(--color-primary)]">Contact</Link>
                 </div>
 

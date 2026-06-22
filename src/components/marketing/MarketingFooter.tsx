@@ -14,8 +14,14 @@ const SOCIALS = [
 ]
 
 const FEATURE_LINKS = [
-    'Order Management with KOT', 'Inventory & Waste Control', 'Accounting & Expense Manager',
-    'Digital QR Menu', 'Menu & Table Management', 'Real Time Sales Report', 'Loyalty & Rewards', 'Refer & Earn',
+    { label: 'Order Management with KOT', href: '/features/order-management' },
+    { label: 'Inventory & Waste Control', href: '/features/inventory' },
+    { label: 'Accounting & Expense Manager', href: '/features/accounting' },
+    { label: 'Digital QR Menu', href: '/features/qr-menu' },
+    { label: 'Menu & Table Management', href: '/features/table-management' },
+    { label: 'Real Time Sales Report', href: '/features/analytics' },
+    { label: 'Loyalty & Rewards', href: '/features/loyalty' },
+    { label: 'Refer & Earn', href: '/features/refer-earn' },
 ]
 
 const RESOURCE_LINKS: { label: string; href: string }[] = [
@@ -49,9 +55,9 @@ export default function MarketingFooter() {
                     <div>
                         <h4 className="mb-6 text-lg font-bold text-gray-900">Features</h4>
                         <ul className="space-y-4">
-                            {FEATURE_LINKS.map(l => (
-                                <li key={l}>
-                                    <Link href={`/features/${l.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="text-sm font-medium text-gray-600 transition-colors hover:text-[var(--color-primary)]">{l}</Link>
+                            {FEATURE_LINKS.map(({ label, href }) => (
+                                <li key={href}>
+                                    <Link href={href} className="text-sm font-medium text-gray-600 transition-colors hover:text-[var(--color-primary)]">{label}</Link>
                                 </li>
                             ))}
                         </ul>
