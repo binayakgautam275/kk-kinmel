@@ -142,6 +142,9 @@ export default function TablePageClient({
                                 <UtensilsCrossed size={14} className="text-[var(--color-primary)]" />
                             </div>
                         )}
+                        <span className="text-sm font-bold text-gray-800 truncate max-w-[100px] md:max-w-[150px]">
+                            {restaurantName}
+                        </span>
                     </div>
 
                     {/* Middle: Centered Table Badge */}
