@@ -191,7 +191,7 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
     ]
 
     return (
-        <div className="h-full flex flex-col bg-dark-bg">
+        <div className="h-full flex flex-col bg-dark-bg print:bg-white print:text-black">
             {/* Mobile tab bar */}
             <div className="flex md:hidden gap-2 px-3 pt-3 pb-2 shrink-0 print:hidden">
                 {COLS.map(col => {
