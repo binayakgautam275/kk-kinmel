@@ -6,7 +6,6 @@ import HomepageGate from '@/components/customer/HomepageGate'
 import type { MenuItem, MenuCategory } from '@/types/database'
 import MenuSection from '@/components/customer/MenuSection'
 import CartSummary from '@/components/customer/CartSummary'
-import ServiceRequestPanel from '@/components/customer/ServiceRequestPanel'
 import Logo from '@/components/shared/Logo'
 import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
@@ -228,13 +227,7 @@ export default function TablePageClient({
                 />
             </main>
 
-            {/* Service request FAB — only when session active */}
-            {hasSession && liveSessionUUID && serviceRequestsEnabled && (
-                <ServiceRequestPanel
-                    sessionId={liveSessionUUID}
-                    restaurantId={tableData.restaurant_id}
-                />
-            )}
+
 
             {/* Sticky cart bar */}
             <CartSummary sessionId={liveSessionToken} tableSlug={tableData.qr_token} />
