@@ -49,6 +49,11 @@ export default function ItemDetailView({
     const [localQty, setLocalQty] = useState(1)
     const [cookingRequest, setCookingRequest] = useState('')
 
+    // Variation quantities: { [variationId]: quantity }
+    const hasVariations = (item.variations?.length ?? 0) > 0
+    const [variationQtys, setVariationQtys] = useState<Record<string, number>>({})
+    const [activeVariationId, setActiveVariationId] = useState<string | null>(null)
+
     // Initialize modifiers, quantity, and cooking request
     useEffect(() => {
         if (initialModifiers && initialModifiers.length > 0) {
@@ -108,10 +113,25 @@ export default function ItemDetailView({
 
     const targetCartKey = getCartItemKey({ menuItemId: item.id, modifiers: currentModifiers })
 
-    // Calculate unit price including modifiers
+    // Calculate unit price including modifiers (for non-variation items)
     const modTotal = currentModifiers.reduce((sum, mod) => sum + mod.priceAdjustment, 0)
     const unitPrice = item.price + modTotal
     const totalPrice = unitPrice * localQty
+
+    // Calculate total for variation items
+    const variationTotal = hasVariations
+        ? Object.entries(variationQtys).reduce((sum, [varId, qty]) => {
+            const variation = item.variations!.find(v => v.id === varId)
+            return sum + (variation ? variation.price * qty : 0)
+        }, 0)
+        : 0
+    const variationItemCount = Object.values(variationQtys).reduce((sum, q) => sum + q, 0)
+
+    // Display price: variation total or standard total
+    const displayTotal = hasVariations ? variationTotal : totalPrice
+    const displayPriceRange = hasVariations && item.variations!.length > 0
+        ? `${formatCurrency(Math.min(...item.variations!.map(v => v.price)))} – ${formatCurrency(Math.max(...item.variations!.map(v => v.price)))}`
+        : formatCurrency(unitPrice)
 
     const toggleModifier = (groupId: string, modId: string, maxSelections: number) => {
         setSelectedMods((prev) => {
@@ -126,6 +146,36 @@ export default function ItemDetailView({
                 return { ...prev, [groupId]: [...current.slice(0, -1), modId] }
             }
             return { ...prev, [groupId]: [...current, modId] }
+        })
+    }
+
+    // Handle variation quantity changes
+    const setVariationQty = (varId: string, qty: number) => {
+        const nextQty = Math.max(0, Math.min(qty, 20))
+        setVariationQtys(prev => {
+            const next = { ...prev }
+            if (nextQty === 0) {
+                delete next[varId]
+            } else {
+                next[varId] = nextQty
+            }
+            
+            // Safe deferred state update to sync activeVariationId without concurrent render warnings
+            setTimeout(() => {
+                if (nextQty === 0) {
+                    setActiveVariationId(currentActive => {
+                        if (currentActive === varId) {
+                            const remaining = Object.keys(next)
+                            return remaining.length > 0 ? remaining[0] : null
+                        }
+                        return currentActive
+                    })
+                } else {
+                    setActiveVariationId(varId)
+                }
+            }, 0)
+            
+            return next
         })
     }
 
@@ -144,33 +194,77 @@ export default function ItemDetailView({
 
         if (onSaveEdit) {
             onSaveEdit(currentModifiers, localQty, cookingRequest)
-        } else {
-            // Add Mode: add the selected quantity to the cart
-            const existing = items.find((i) => getCartItemKey(i) === targetCartKey)
-            if (existing) {
-                // If it already exists with these modifiers, add the quantity
-                updateQuantity(targetCartKey, existing.quantity + localQty)
-                if (cookingRequest.trim()) {
-                    useCartStore.getState().updateSpecialRequest(targetCartKey, cookingRequest)
-                }
-            } else {
-                addItem({
+            return
+        }
+
+        // Variation mode: add each selected variation as a separate cart line
+        if (hasVariations) {
+            if (variationItemCount === 0) {
+                alert('Please select at least one variation')
+                return
+            }
+
+            for (const [varId, qty] of Object.entries(variationQtys)) {
+                if (qty <= 0) continue
+                const variation = item.variations!.find(v => v.id === varId)
+                if (!variation) continue
+
+                const cartItem = {
                     menuItemId: item.id,
                     name: item.name,
-                    price: item.price,
+                    price: variation.price,
                     imageUrl: item.image_url || undefined,
                     modifiers: currentModifiers,
-                })
-                updateQuantity(targetCartKey, localQty)
+                    variationId: variation.id,
+                    variationName: variation.name,
+                }
+                const varCartKey = getCartItemKey(cartItem)
+                const existing = items.find((i) => getCartItemKey(i) === varCartKey)
+
+                if (existing) {
+                    updateQuantity(varCartKey, existing.quantity + qty)
+                } else {
+                    addItem(cartItem)
+                    updateQuantity(varCartKey, qty)
+                }
+
                 if (cookingRequest.trim()) {
-                    useCartStore.getState().updateSpecialRequest(targetCartKey, cookingRequest)
+                    useCartStore.getState().updateSpecialRequest(varCartKey, cookingRequest)
                 }
             }
             onClose()
+            return
         }
+
+        // Standard mode (no variations)
+        const existing = items.find((i) => getCartItemKey(i) === targetCartKey)
+        if (existing) {
+            updateQuantity(targetCartKey, existing.quantity + localQty)
+            if (cookingRequest.trim()) {
+                useCartStore.getState().updateSpecialRequest(targetCartKey, cookingRequest)
+            }
+        } else {
+            addItem({
+                menuItemId: item.id,
+                name: item.name,
+                price: item.price,
+                imageUrl: item.image_url || undefined,
+                modifiers: currentModifiers,
+            })
+            updateQuantity(targetCartKey, localQty)
+            if (cookingRequest.trim()) {
+                useCartStore.getState().updateSpecialRequest(targetCartKey, cookingRequest)
+            }
+        }
+        onClose()
     }
 
     const isVeg = item.tags?.some(tag => ['veg', 'vegetarian', 'vegan'].includes(tag.toLowerCase()))
+
+    // Determine if the add button should be disabled
+    const isAddDisabled = hasVariations
+        ? (!item.is_available || !sessionId || variationItemCount === 0)
+        : (!item.is_available || !sessionId)
 
     return (
         <div 
@@ -205,9 +299,9 @@ export default function ItemDetailView({
                 </div>
 
                 {/* Content Area */}
-                <div className="px-4 pt-3 pb-24 overflow-y-auto flex-1 text-[#1A1006] font-sans">
+                <div className="relative z-10 -mt-6 bg-white rounded-t-[32px] px-4 pt-6 pb-24 overflow-y-auto flex-1 text-[#1A1006] font-sans">
                     {/* Overlapping thumbnail and details */}
-                    <div className="flex gap-4 items-end -mt-8 relative z-10 mb-5">
+                    <div className="flex gap-4 items-end relative z-20 mb-5">
                         <div className="relative w-18 h-18 rounded-2xl border-4 border-white bg-white shadow-md overflow-hidden shrink-0">
                             {item.image_url ? (
                                 <Image
@@ -232,7 +326,7 @@ export default function ItemDetailView({
                             </div>
                             <div className="flex items-center justify-between gap-2 mt-1">
                                 <p className="text-xs text-gray-400 font-semibold">{item.menu_categories?.name || 'Lunch'}</p>
-                                <span className="text-sm font-black text-[var(--color-primary)]">{formatCurrency(unitPrice)}</span>
+                                <span className="text-sm font-black text-[var(--color-primary)]">{displayPriceRange}</span>
                             </div>
                         </div>
                     </div>
@@ -242,6 +336,72 @@ export default function ItemDetailView({
                         <p className="text-xs text-gray-500 font-semibold leading-relaxed mb-6">
                             {displayDesc}
                         </p>
+                    )}
+
+                    {/* Variations Section */}
+                    {hasVariations && item.variations && item.variations.length > 0 && (
+                        <div className="space-y-2 mb-6">
+                            <div className="mb-2">
+                                <h3 className="text-sm font-bold text-gray-900">Select Variants</h3>
+                                <p className="text-[11px] text-gray-400 font-medium">
+                                    Tap to add • Multiple selections allowed
+                                </p>
+                            </div>
+
+                            <div className="border border-gray-100 rounded-2xl overflow-hidden divide-y divide-gray-100 bg-white shadow-sm">
+                                {item.variations.filter(v => v.is_available).map((variation) => {
+                                    const qty = variationQtys[variation.id] || 0
+                                    const isSelected = qty > 0
+                                    const isActive = activeVariationId === variation.id
+                                    return (
+                                        <div
+                                            key={variation.id}
+                                            onClick={() => {
+                                                if (qty === 0) {
+                                                    setVariationQty(variation.id, 1)
+                                                } else if (isActive) {
+                                                    setVariationQty(variation.id, 0)
+                                                } else {
+                                                    setActiveVariationId(variation.id)
+                                                }
+                                            }}
+                                            className={`flex items-center justify-between px-4 py-3.5 select-none transition-all cursor-pointer ${
+                                                isActive
+                                                    ? 'bg-[var(--color-primary)]/5 border-l-4 border-l-[var(--color-primary)]'
+                                                    : isSelected
+                                                        ? 'bg-[var(--color-primary)]/5/20 hover:bg-gray-50/50'
+                                                        : 'hover:bg-gray-50/50'
+                                            }`}
+                                        >
+                                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                                                <span className={`text-xs font-semibold ${isSelected ? 'text-gray-900 font-bold' : 'text-gray-700'}`}>
+                                                    {variation.name}
+                                                </span>
+                                                {qty > 0 && (
+                                                    <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--color-primary)] text-white scale-90">
+                                                        ×{qty}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center gap-3">
+                                                <span className={`text-xs font-bold tabular-nums ${isSelected ? 'text-[var(--color-primary)]' : 'text-gray-950'}`}>
+                                                    {formatCurrency(variation.price)}
+                                                </span>
+                                                
+                                                <div className={`w-4.5 h-4.5 rounded border-2 flex items-center justify-center transition-all ${
+                                                    isSelected ? "border-[var(--color-primary)] bg-[var(--color-primary)]" : "border-gray-300"
+                                                }`}>
+                                                    {isSelected && (
+                                                        <Check size={10} className="text-white" strokeWidth={3} />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
                     )}
 
                     {/* Modifiers List */}
@@ -321,44 +481,80 @@ export default function ItemDetailView({
 
                 {/* Sticky Bottom Panel */}
                 <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 flex items-center justify-between gap-2 z-30">
-                    {/* Quantity selectors */}
-                    <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-2.5 py-2 bg-white text-gray-600">
-                        <button
-                            onClick={() => setLocalQty(q => Math.max(1, q - 1))}
-                            disabled={localQty <= 1}
-                            className="hover:scale-105 active:scale-90 transition disabled:opacity-40"
-                        >
-                            <Minus size={14} strokeWidth={2.5} />
-                        </button>
-                        <span className="text-xs font-black min-w-[14px] text-center tabular-nums text-gray-800">
-                            {localQty}
-                        </span>
-                        <button
-                            onClick={() => setLocalQty(q => Math.min(20, q + 1))}
-                            disabled={localQty >= 20}
-                            className="hover:scale-105 active:scale-90 transition"
-                        >
-                            <Plus size={14} strokeWidth={2.5} />
-                        </button>
-                    </div>
+                    {/* Quantity selector or Cancel button */}
+                    {hasVariations ? (
+                        activeVariationId ? (
+                            <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-2.5 py-2 bg-white text-gray-600">
+                                <button
+                                    onClick={() => setVariationQty(activeVariationId, (variationQtys[activeVariationId] || 0) - 1)}
+                                    className="hover:scale-105 active:scale-90 transition"
+                                >
+                                    <Minus size={14} strokeWidth={2.5} />
+                                </button>
+                                <span className="text-xs font-black min-w-[14px] text-center tabular-nums text-gray-800">
+                                    {variationQtys[activeVariationId] || 0}
+                                </span>
+                                <button
+                                    onClick={() => setVariationQty(activeVariationId, (variationQtys[activeVariationId] || 0) + 1)}
+                                    disabled={(variationQtys[activeVariationId] || 0) >= 20}
+                                    className="hover:scale-105 active:scale-90 transition"
+                                >
+                                    <Plus size={14} strokeWidth={2.5} />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={onClose}
+                                className="border border-gray-200 text-gray-500 font-bold px-4 py-2.5 rounded-xl text-xs active:scale-95 transition-all shrink-0"
+                            >
+                                Cancel
+                            </button>
+                        )
+                    ) : (
+                        <>
+                            {/* Quantity selectors — only for non-variation items */}
+                            <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-2.5 py-2 bg-white text-gray-600">
+                                <button
+                                    onClick={() => setLocalQty(q => Math.max(1, q - 1))}
+                                    disabled={localQty <= 1}
+                                    className="hover:scale-105 active:scale-90 transition disabled:opacity-40"
+                                >
+                                    <Minus size={14} strokeWidth={2.5} />
+                                </button>
+                                <span className="text-xs font-black min-w-[14px] text-center tabular-nums text-gray-800">
+                                    {localQty}
+                                </span>
+                                <button
+                                    onClick={() => setLocalQty(q => Math.min(20, q + 1))}
+                                    disabled={localQty >= 20}
+                                    className="hover:scale-105 active:scale-90 transition"
+                                >
+                                    <Plus size={14} strokeWidth={2.5} />
+                                </button>
+                            </div>
 
-                    {/* Cancel Button */}
-                    <button
-                        onClick={onClose}
-                        className="border border-gray-200 text-gray-500 font-bold px-3 py-2.5 rounded-xl text-xs active:scale-95 transition-all"
-                    >
-                        Cancel
-                    </button>
+                            <button
+                                onClick={onClose}
+                                className="border border-gray-200 text-gray-500 font-bold px-4 py-2.5 rounded-xl text-xs active:scale-95 transition-all shrink-0"
+                            >
+                                Cancel
+                            </button>
+                        </>
+                    )}
 
                     {/* Action Button (Add / Save) */}
                     <button
                         onClick={handleAction}
-                        disabled={!item.is_available || !sessionId}
+                        disabled={isAddDisabled}
                         className="flex-1 bg-[var(--color-primary)] text-white font-bold rounded-xl py-2.5 px-3 text-center text-xs active:scale-95 transition-all shadow-md shadow-orange-600/10 disabled:opacity-40 disabled:pointer-events-none"
                     >
                         {onSaveEdit 
-                            ? `Save Changes ${formatCurrency(totalPrice)}` 
-                            : `Add to Cart ${formatCurrency(totalPrice)}`
+                            ? `Save Changes ${formatCurrency(displayTotal)}` 
+                            : hasVariations
+                                ? variationItemCount > 0
+                                    ? `Add ${variationItemCount} item${variationItemCount > 1 ? 's' : ''} ${formatCurrency(variationTotal)}`
+                                    : 'Select a variant'
+                                : `Add to Cart ${formatCurrency(totalPrice)}`
                         }
                     </button>
                 </div>

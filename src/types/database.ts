@@ -98,6 +98,15 @@ export interface MenuCategory {
     emoji?: string | null
 }
 
+export interface MenuItemVariation {
+    id: string
+    menu_item_id: string
+    name: string
+    price: number
+    is_available: boolean
+    created_at: string
+}
+
 export interface MenuItem {
     id: string
     restaurant_id: string
@@ -118,6 +127,7 @@ export interface MenuItem {
     menu_categories?: MenuCategory
     modifier_groups?: ModifierGroup[]  // alias used client-side
     menu_item_modifier_groups?: ModifierGroup[]  // actual DB relation name
+    variations?: MenuItemVariation[]
 }
 
 export interface ModifierGroup {
@@ -577,6 +587,8 @@ export interface CartItem {
     specialRequest?: string
     imageUrl?: string
     modifiers?: CartItemModifier[]
+    variationId?: string
+    variationName?: string
 }
 
 // ============================================================

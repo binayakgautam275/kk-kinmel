@@ -45,7 +45,7 @@ export async function deleteCategoryAction(id: string) {
     return { success: true }
 }
 
-export async function addItemAction(item: Record<string, unknown>) {
+export async function addItemAction(item: Record<string, unknown>, variations?: { name: string; price: number; is_available?: boolean }[]) {
     const supabase = await createAdminClient()
 
     // Enforce plan menu item limit
@@ -67,25 +67,101 @@ export async function addItemAction(item: Record<string, unknown>) {
         return { error: `Menu item limit reached. Your plan allows ${maxItems} items. Upgrade to add more.` }
     }
 
+    // Exclude variations from item object if present
+    const { variations: _, ...itemData } = item
+
     const { data, error } = await supabase
         .from('menu_items')
-        .insert(item)
+        .insert(itemData)
         .select()
         .single()
 
     if (error) return { error: error.message }
+
+    // If variations are provided, insert them
+    if (variations && variations.length > 0) {
+        const variationsToInsert = variations.map(v => ({
+            menu_item_id: data.id,
+            name: v.name,
+            price: Number(v.price),
+            is_available: v.is_available ?? true
+        }))
+        const { error: varError } = await supabase
+            .from('menu_item_variations')
+            .insert(variationsToInsert)
+
+        if (varError) {
+            console.error('Failed to save variations:', varError)
+            return { error: `Item saved, but variations failed: ${varError.message}` }
+        }
+    }
+
     revalidatePath('/admin/menu')
     return { data }
 }
 
-export async function updateItemAction(id: string, updates: Record<string, unknown>) {
+export async function updateItemAction(id: string, updates: Record<string, unknown>, variations?: { id?: string; name: string; price: number; is_available?: boolean }[]) {
     const supabase = await createAdminClient()
+    
+    // Exclude variations from updates object if present
+    const { variations: _, ...itemUpdates } = updates
+
     const { error } = await supabase
         .from('menu_items')
-        .update(updates)
+        .update(itemUpdates)
         .eq('id', id)
 
     if (error) return { error: error.message }
+
+    // If variations are provided, sync them
+    if (variations) {
+        // 1. Get existing variations from DB to determine what to insert, update, or delete
+        const { data: existingVars } = await supabase
+            .from('menu_item_variations')
+            .select('id')
+            .eq('menu_item_id', id)
+
+        const existingIds = (existingVars || []).map(v => v.id)
+        const incomingIds = variations.filter(v => v.id).map(v => v.id!)
+
+        // Deletions: existing but not incoming
+        const toDelete = existingIds.filter(eid => !incomingIds.includes(eid))
+        if (toDelete.length > 0) {
+            await supabase
+                .from('menu_item_variations')
+                .delete()
+                .in('id', toDelete)
+        }
+
+        // Inserts: no id
+        const toInsert = variations
+            .filter(v => !v.id)
+            .map(v => ({
+                menu_item_id: id,
+                name: v.name,
+                price: Number(v.price),
+                is_available: v.is_available ?? true
+            }))
+        if (toInsert.length > 0) {
+            await supabase
+                .from('menu_item_variations')
+                .insert(toInsert)
+        }
+
+        // Updates: has id and exists in existingIds
+        const toUpdate = variations.filter(v => v.id && existingIds.includes(v.id))
+        for (const v of toUpdate) {
+            await supabase
+                .from('menu_item_variations')
+                .update({
+                    name: v.name,
+                    price: Number(v.price),
+                    is_available: v.is_available ?? true
+                })
+                .eq('id', v.id)
+        }
+    }
+
     revalidatePath('/admin/menu')
     return { success: true }
 }

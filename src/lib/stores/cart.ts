@@ -10,12 +10,13 @@ const MAX_QUANTITY_PER_ITEM = 20
 
 // Generate a unique key for a cart item based on its ID + selected modifiers
 // This ensures "Latte + Oat Milk" and "Latte + Almond Milk" are separate line items
-export function getCartItemKey(item: { menuItemId: string; modifiers?: CartItemModifier[] }): string {
+export function getCartItemKey(item: { menuItemId: string; modifiers?: CartItemModifier[]; variationId?: string }): string {
     const modKey = (item.modifiers || [])
         .map((m) => m.modifierId)
         .sort()
         .join(',')
-    return `${item.menuItemId}::${modKey}`
+    const varKey = item.variationId || ''
+    return `${item.menuItemId}::${modKey}::${varKey}`
 }
 
 interface CartState {

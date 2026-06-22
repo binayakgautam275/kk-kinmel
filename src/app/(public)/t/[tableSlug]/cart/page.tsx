@@ -227,11 +227,11 @@ export default function CartPage(props: { params: Promise<{ tableSlug: string }>
                             const unitPrice = item.price + modifierTotal
                             const lineTotal = unitPrice * item.quantity
 
-                            // Build options descriptive label (e.g. "4 Small Chicken Pizza")
+                            // Build options descriptive label (e.g. "2 Small Chicken Pizza")
                             const modifierNames = (item.modifiers || []).map(m => m.name).join(', ')
-                            const optionsLabel = modifierNames 
-                                ? `${item.quantity} ${modifierNames} ${item.name}`
-                                : `${item.quantity} ${item.name}`
+                            const varLabel = item.variationName || ''
+                            const parts = [item.quantity.toString(), varLabel, modifierNames, item.name].filter(Boolean)
+                            const optionsLabel = parts.join(' ')
 
                             return (
                                 <div
@@ -258,7 +258,7 @@ export default function CartPage(props: { params: Promise<{ tableSlug: string }>
                                     {/* Info Panel */}
                                     <div className="flex-1 min-w-0">
                                         <h3 className="text-sm font-bold text-gray-950 leading-tight">
-                                            {item.name}
+                                            {item.name}{item.variationName ? ` – ${item.variationName}` : ''}
                                         </h3>
                                         <p className="text-[11px] text-gray-400 font-semibold mt-0.5 leading-snug">
                                             {optionsLabel}

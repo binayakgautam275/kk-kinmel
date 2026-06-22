@@ -22,7 +22,7 @@ export const getCachedMenuData = unstable_cache(
 
             supabase
                 .from('menu_items')
-                .select('*, menu_item_modifier_groups(*, menu_item_modifiers(*))')
+                .select('*, menu_item_modifier_groups(*, menu_item_modifiers(*)), variations:menu_item_variations(*)')
                 .eq('restaurant_id', restaurantId)
                 .eq('is_available', true),
 

@@ -16,6 +16,7 @@ type PlaceOrderItemPayload = {
     quantity: number
     special_request: string | null
     modifiers: { modifier_id: string }[]
+    variation_id?: string | null
 }
 
 // Serverless-safe rate limiting via Upstash Redis
@@ -73,6 +74,7 @@ export async function placeOrder(
         modifiers: (i.modifiers || []).map((m) => ({
             modifier_id: m.modifierId,
         })),
+        variation_id: i.variationId || null,
     }))
 
     const validation = validateInput(PlaceOrderInputSchema, {
@@ -345,7 +347,18 @@ async function placeOrderFallback(
 
         if (!menuItem?.id || menuItem.is_available === false) continue
 
-        const unitPrice = Number(menuItem.price ?? 0)
+        // Use variation price if a variation_id is provided, otherwise fall back to base price
+        let unitPrice = Number(menuItem.price ?? 0)
+        if (item.variation_id) {
+            const { data: variation } = await supabase
+                .from('menu_item_variations')
+                .select('price')
+                .eq('id', item.variation_id)
+                .single()
+            if (variation) {
+                unitPrice = Number(variation.price)
+            }
+        }
 
         const { data: orderItemRow, error: orderItemInsertError } = await supabase
             .from('order_items')
