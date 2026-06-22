@@ -45,14 +45,14 @@ export default function OnboardingGetStarted({
             </button>
 
             <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Get Started</h1>
-            <p className="text-gray-500 font-medium mb-8">Tell us your name and how you'll be using KKKhane</p>
+            <p className="text-gray-500 font-medium mb-8">Tell us your name and how you'll be using kkkhane</p>
 
             {/* Profile Block */}
             <div className="mb-8">
                 <h3 className="text-sm font-bold text-gray-900 mb-3">Your Profile</h3>
                 <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 flex items-center justify-between relative">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 font-black flex items-center justify-center text-lg uppercase tracking-wider">
+                        <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-700 font-black flex items-center justify-center text-lg uppercase tracking-wider">
                             {initials}
                         </div>
                         <div>
@@ -73,7 +73,7 @@ export default function OnboardingGetStarted({
                         <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-20 animate-in fade-in zoom-in-95 duration-200">
                             <div className="p-3 border-b border-gray-100 mb-2">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-blue-100 text-blue-700 font-black flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-lg bg-brand-50 text-brand-700 font-black flex items-center justify-center">
                                         {initials}
                                     </div>
                                     <div>
@@ -128,7 +128,7 @@ export default function OnboardingGetStarted({
                         onClick={() => setSelectedOption('create')}
                         className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-colors ${
                             selectedOption === 'create' 
-                            ? 'border-[var(--color-primary)] bg-red-50/50' 
+                            ? 'border-[var(--color-primary)] bg-brand-50' 
                             : 'border-gray-100 bg-white hover:border-gray-200'
                         }`}
                     >
@@ -150,7 +150,7 @@ export default function OnboardingGetStarted({
                         onClick={() => setSelectedOption('join')}
                         className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-colors ${
                             selectedOption === 'join' 
-                            ? 'border-[var(--color-primary)] bg-red-50/50' 
+                            ? 'border-[var(--color-primary)] bg-brand-50' 
                             : 'border-gray-100 bg-white hover:border-gray-200'
                         }`}
                     >
@@ -171,7 +171,7 @@ export default function OnboardingGetStarted({
 
             <button 
                 onClick={handleContinue}
-                className="w-full bg-[var(--color-primary)] text-white font-bold py-4 rounded-xl hover:scale-[1.02] transition-transform shadow-lg shadow-[var(--color-primary)]/20"
+                className="w-full bg-[var(--color-primary)] text-white font-bold py-4 rounded-full hover:scale-[1.02] transition-transform shadow-lg shadow-[var(--color-primary)]/20"
             >
                 Continue
             </button>

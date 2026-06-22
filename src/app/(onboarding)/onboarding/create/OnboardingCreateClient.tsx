@@ -93,7 +93,7 @@ export default function OnboardingCreateClient() {
                     >
                         <ChevronLeft size={20} />
                     </button>
-                    <h2 className="text-2xl font-bold text-gray-900">Create New Restaurant</h2>
+                    <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">Create New Restaurant</h2>
                 </div>
 
                 {error && (
@@ -181,14 +181,14 @@ export default function OnboardingCreateClient() {
                                 setPosition(null)
                                 setSelectedType('Restaurant')
                             }}
-                            className="flex-1 bg-white border border-gray-200 text-gray-600 font-semibold py-4 rounded-xl hover:bg-gray-50 transition-colors"
+                            className="flex-1 bg-white border border-gray-200 text-gray-600 font-semibold py-4 rounded-full hover:bg-gray-50 transition-colors"
                         >
                             Reset
                         </button>
-                        <button 
+                        <button
                             type="submit"
                             disabled={isLoading}
-                            className="flex-1 bg-[#E77C7C] hover:bg-[#d66a6a] text-white font-semibold py-4 rounded-xl disabled:opacity-50 transition-colors"
+                            className="flex-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white font-bold py-4 rounded-full shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-50 transition-all hover:scale-[1.02]"
                         >
                             {isLoading ? 'Saving...' : 'Save Restaurant'}
                         </button>
@@ -283,11 +283,11 @@ export default function OnboardingCreateClient() {
                                 Your restaurant has been successfully created. Take a quick tour to see how easy it is to manage your menu, tables, and team.
                             </p>
 
-                            <button 
+                            <button
                                 onClick={() => router.push('/admin/dashboard')}
-                                className="bg-[#10B981] hover:bg-[#059669] text-white font-bold py-3.5 px-8 rounded-xl shadow-lg shadow-[#10B981]/20 transition-all hover:scale-105"
+                                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white font-bold py-3.5 px-8 rounded-full shadow-lg shadow-[var(--color-primary)]/20 transition-all hover:scale-105"
                             >
-                                Let's Continue
+                                Let&apos;s Continue
                             </button>
                         </div>
                     </div>
