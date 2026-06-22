@@ -121,8 +121,8 @@ export default function TablePageClient({
             {/* Sticky header — compact, restaurant-branded */}
             <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
-                    {/* Restaurant identity */}
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    {/* Left side: Restaurant logo (in circle format) + optional back button */}
+                    <div className="flex items-center gap-2.5 shrink-0">
                         {onBackToHome && (
                             <button
                                 onClick={onBackToHome}
@@ -134,27 +134,23 @@ export default function TablePageClient({
                             </button>
                         )}
                         {logoUrl ? (
-                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 shrink-0">
-                                <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="32px" />
+                            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-100 shadow-sm">
+                                <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="40px" />
                             </div>
                         ) : (
-                            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0">
-                                <UtensilsCrossed size={15} className="text-[var(--color-primary)]" />
+                            <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0 border border-gray-100 shadow-sm">
+                                <UtensilsCrossed size={18} className="text-[var(--color-primary)]" />
                             </div>
                         )}
-                        <div className="min-w-0">
-                            <p className="text-sm font-bold text-[var(--color-secondary)] leading-none truncate">{restaurantName}</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">
-                                Table {tableData.label}
-                                {!hasSession && <span className="ml-1 text-amber-500 font-medium">· View only</span>}
-                            </p>
-                        </div>
                     </div>
+
+                    {/* Middle: Empty space (restaurant and table name removed) */}
+                    <div className="flex-1" />
 
                     {/* Right side: language switcher + platform logo */}
                     <div className="flex items-center gap-2 shrink-0">
                         {multiLanguageEnabled && <LanguageSwitcher />}
-                        <Logo className="h-6 opacity-60" />
+                        <Logo className="h-6" />
                     </div>
                 </div>
             </header>
@@ -210,11 +206,6 @@ export default function TablePageClient({
                     </div>
                 )}
 
-                <PhysicalMenuGallery 
-                    images={tableData.restaurants?.physical_menu_urls || []} 
-                    restaurantName={restaurantName} 
-                />
-
                 <MenuSection
                     categories={categories}
                     items={menuItems}
@@ -223,6 +214,11 @@ export default function TablePageClient({
                     restaurantSlug={tableData.qr_token}
                     restaurantId={tableData.restaurant_id}
                     layout={menuLayout}
+                />
+
+                <PhysicalMenuGallery 
+                    images={tableData.restaurants?.physical_menu_urls || []} 
+                    restaurantName={restaurantName} 
                 />
             </main>
 
