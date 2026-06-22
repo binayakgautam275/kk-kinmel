@@ -14,7 +14,7 @@ export interface CurrentUser {
     id: string
     email: string
     restaurantId: string
-    role: RoleName
+    role: RoleName | 'onboarding'
 }
 
 // Cache the restaurant suspension status across requests (30s TTL).
@@ -83,7 +83,7 @@ async function _getCurrentUser(): Promise<CurrentUser> {
         .single()
 
     if (!userData?.restaurant_id) {
-        redirect('/unauthorized')
+        redirect('/onboarding')
     }
 
     const restaurant = userData.restaurants as unknown as {
@@ -132,7 +132,9 @@ export const getCurrentUser = cache(_getCurrentUser)
 export async function requireRole(...allowedRoles: RoleName[]): Promise<CurrentUser> {
     const currentUser = await getCurrentUser()
 
-    if (!allowedRoles.includes(currentUser.role)) {
+    // currentUser.role may be 'onboarding' (not a RoleName); such users are never
+    // in an allowedRoles list, so the cast is safe and preserves the redirect.
+    if (!allowedRoles.includes(currentUser.role as RoleName)) {
         redirect('/unauthorized')
     }
 
@@ -168,7 +170,14 @@ export async function getOptionalUser(): Promise<CurrentUser | null> {
         .eq('id', user.id)
         .single()
 
-    if (!userData?.restaurant_id) return null
+    if (!userData?.restaurant_id) {
+        return {
+            id: user.id,
+            email: user.email || '',
+            restaurantId: '',
+            role: 'onboarding'
+        }
+    }
 
     const roleName = (userData.roles as unknown as { name: string } | null)?.name || 'waiter'
 

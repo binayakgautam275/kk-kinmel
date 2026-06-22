@@ -8,6 +8,7 @@ const ROLE_LANDING: Record<string, string> = {
     manager: '/admin/dashboard',
     kitchen: '/kitchen',
     waiter: '/waiter',
+    onboarding: '/onboarding',
 }
 
 export default async function LoginPage(props: { searchParams: Promise<{ redirect?: string }> }) {

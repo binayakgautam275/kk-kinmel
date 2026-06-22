@@ -232,21 +232,7 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
             <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                 {/* Columns Container */}
                 <div className={`flex-1 overflow-hidden flex flex-col md:flex-row p-3 md:p-5 gap-3 md:gap-5 print:hidden ${activeTab === 'toc' ? 'hidden md:flex' : 'flex'}`}>
-                    {/* Desktop TOC Toggle */}
-                    <div className="hidden md:block absolute top-4 right-6 z-10 print:hidden">
-                        <button
-                            onClick={() => setShowTOCDesktop(!showTOCDesktop)}
-                            className="flex items-center gap-2 px-3 py-2 rounded-[var(--r-md)] text-xs font-bold border transition-colors"
-                            style={{ 
-                                background: showTOCDesktop ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
-                                borderColor: showTOCDesktop ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)',
-                                color: showTOCDesktop ? '#60a5fa' : 'rgba(255,255,255,0.6)'
-                            }}
-                        >
-                            <LayoutPanelLeft size={14} />
-                            {showTOCDesktop ? 'Hide TOC' : 'Show TOC'}
-                        </button>
-                    </div>
+
                 {COLS.map(col => {
                     const Icon = col.icon
                     const isVisible = activeTab === col.key
@@ -266,8 +252,24 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
                                         {col.orders.length}
                                     </span>
                                 </div>
-                                {col.key === 'pass' && col.orders.length > 0 && (
-                                    <span className="text-[10px] text-dark-muted">Awaiting waiter</span>
+                                {col.key === 'pass' && (
+                                    <div className="flex items-center gap-3">
+                                        {col.orders.length > 0 && (
+                                            <span className="text-[10px] text-dark-muted">Awaiting waiter</span>
+                                        )}
+                                        <button
+                                            onClick={() => setShowTOCDesktop(!showTOCDesktop)}
+                                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--r-md)] text-xs font-bold border transition-colors"
+                                            style={{ 
+                                                background: showTOCDesktop ? 'rgba(59,130,246,0.15)' : 'rgba(255,255,255,0.05)',
+                                                borderColor: showTOCDesktop ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.1)',
+                                                color: showTOCDesktop ? '#60a5fa' : 'rgba(255,255,255,0.6)'
+                                            }}
+                                        >
+                                            <LayoutPanelLeft size={13} />
+                                            {showTOCDesktop ? 'Hide TOC' : 'Show TOC'}
+                                        </button>
+                                    </div>
                                 )}
                             </div>
 

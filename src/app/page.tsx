@@ -20,6 +20,7 @@ const ROLE_LANDING: Record<string, string> = {
     manager: '/admin/dashboard',
     kitchen: '/kitchen',
     waiter: '/waiter',
+    onboarding: '/onboarding',
 }
 
 const faqs = [
@@ -60,14 +61,14 @@ export default async function Home() {
                             <div className="absolute top-[80px] left-1/2 -translate-x-1/2 w-[800px] bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 p-6 flex gap-6">
                                 <div className="flex-1 grid grid-cols-2 gap-4">
                                     {[
-                                        { title: 'Order & KOT Management', desc: 'Take orders perfectly and reduce errors.', icon: <FileText className="text-gray-500" /> },
-                                        { title: 'Inventory & Waste Control', desc: 'Track real-time stock to lower food costs.', icon: <LayoutGrid className="text-gray-500" /> },
-                                        { title: 'Accounting & Expense', desc: 'Track every expense, bill, and payment.', icon: <PiggyBank className="text-gray-500" /> },
-                                        { title: 'Digital QR Menu', desc: 'Let guests scan and order without waiting.', icon: <QrCode className="text-gray-500" /> },
-                                        { title: 'Table & Space Management', desc: 'Optimize seating and turn tables faster.', icon: <LayoutGrid className="text-gray-500" /> },
-                                        { title: 'Loyalty & Rewards', desc: 'Keep customers coming back for more.', icon: <Gift className="text-gray-500" /> },
+                                        { title: 'Order & KOT Management', desc: 'Take orders perfectly and reduce errors.', icon: <FileText className="text-gray-500" />, href: '/features/order-kot-management' },
+                                        { title: 'Inventory & Waste Control', desc: 'Track real-time stock to lower food costs.', icon: <LayoutGrid className="text-gray-500" />, href: '/features/inventory' },
+                                        { title: 'Accounting & Expense', desc: 'Track every expense, bill, and payment.', icon: <PiggyBank className="text-gray-500" />, href: '/features/accounting' },
+                                        { title: 'Digital QR Menu', desc: 'Let guests scan and order without waiting.', icon: <QrCode className="text-gray-500" />, href: '/features/qr-menu' },
+                                        { title: 'Table & Space Management', desc: 'Optimize seating and turn tables faster.', icon: <LayoutGrid className="text-gray-500" />, href: '/features/table-management' },
+                                        { title: 'Loyalty & Rewards', desc: 'Keep customers coming back for more.', icon: <Gift className="text-gray-500" />, href: '/features/loyalty' },
                                     ].map(f => (
-                                        <Link href="/404" key={f.title} className="flex gap-3 hover:bg-gray-50 p-3 rounded-xl cursor-pointer transition-colors block">
+                                        <Link href={f.href} key={f.title} className="flex gap-3 hover:bg-gray-50 p-3 rounded-xl cursor-pointer transition-colors block">
                                             <div className="mt-1">{f.icon}</div>
                                             <div>
                                                 <h4 className="font-bold text-gray-900 text-sm mb-0.5">{f.title}</h4>
@@ -78,11 +79,11 @@ export default async function Home() {
                                 </div>
                                 <div className="w-[280px] flex flex-col gap-4 border-l border-gray-100 pl-6">
                                     {[
-                                        { title: 'Real-Time Sales Report', desc: 'Monitor live sales and profit analytics.', icon: <Clock size={18} /> },
-                                        { title: 'Mobile & Web App', desc: 'Works on iOS, Android, or Web.', icon: <Globe size={18} /> },
-                                        { title: 'Refer & Earn', desc: 'Refer others, earn free Premium', icon: <Gift size={18} /> },
+                                        { title: 'Real-Time Sales Report', desc: 'Monitor live sales and profit analytics.', icon: <Clock size={18} />, href: '/features/analytics' },
+                                        { title: 'Mobile & Web App', desc: 'Works on iOS, Android, or Web.', icon: <Globe size={18} />, href: '/features/apps' },
+                                        { title: 'Refer & Earn', desc: 'Refer others, earn free Premium', icon: <Gift size={18} />, href: '/legal/referrals' },
                                     ].map(l => (
-                                        <Link href="/404" key={l.title} className="flex gap-3 hover:text-[var(--color-primary)] cursor-pointer transition-colors block">
+                                        <Link href={l.href} key={l.title} className="flex gap-3 hover:text-[var(--color-primary)] cursor-pointer transition-colors block">
                                             <div className="mt-0.5 text-gray-400">{l.icon}</div>
                                             <div>
                                                 <h4 className="font-bold text-sm mb-0.5">{l.title}</h4>
@@ -105,11 +106,11 @@ export default async function Home() {
                             </button>
                             <div className="absolute top-[80px] left-0 w-[300px] bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 p-3">
                                 {[
-                                    { title: 'Blog', desc: 'Blogs help you to optimize your restaurant', icon: <FileText size={18} /> },
-                                    { title: 'Reviews', desc: 'Read reviews from our customers', icon: <MessageCircle size={18} /> },
-                                    { title: 'Customer Stories', desc: 'See how we are helping restaurants', icon: <Users2 size={18} /> },
+                                    { title: 'Blog', desc: 'Blogs help you to optimize your restaurant', icon: <FileText size={18} />, href: '/blog' },
+                                    { title: 'Reviews', desc: 'Read reviews from our customers', icon: <MessageCircle size={18} />, href: '/about#reviews' },
+                                    { title: 'Customer Stories', desc: 'See how we are helping restaurants', icon: <Users2 size={18} />, href: '/about#stories' },
                                 ].map(r => (
-                                    <Link href="/404" key={r.title} className="flex gap-3 hover:bg-gray-50 p-3 rounded-xl cursor-pointer transition-colors block">
+                                    <Link href={r.href} key={r.title} className="flex gap-3 hover:bg-gray-50 p-3 rounded-xl cursor-pointer transition-colors block">
                                         <div className="mt-0.5 text-[var(--color-primary)]">{r.icon}</div>
                                         <div>
                                             <h4 className="font-bold text-gray-900 text-sm mb-0.5">{r.title}</h4>
@@ -120,9 +121,9 @@ export default async function Home() {
                             </div>
                         </div>
 
-                        <Link href="/404" className="hover:text-[var(--color-primary)] transition-colors">Pricing</Link>
-                        <Link href="/404" className="hover:text-[var(--color-primary)] transition-colors">Career</Link>
-                        <Link href="/404" className="hover:text-[var(--color-primary)] transition-colors">Contact</Link>
+                        <Link href="/pricing" className="hover:text-[var(--color-primary)] transition-colors">Pricing</Link>
+                        <Link href="/legal/career" className="hover:text-[var(--color-primary)] transition-colors">Career</Link>
+                        <Link href="/contact" className="hover:text-[var(--color-primary)] transition-colors">Contact</Link>
                     </div>
 
                     <div className="flex items-center gap-6">
@@ -691,7 +692,7 @@ export default async function Home() {
                             <h4 className="font-bold text-gray-900 mb-6 text-lg">Features</h4>
                             <ul className="space-y-4">
                                 {['Order Management with KOT', 'Inventory & Waste Control', 'Accounting & Expense Manager', 'Digital QR Menu', 'Menu & Table Management', 'Real Time Sales Report', 'Loyalty & Rewards', 'Refer & Earn'].map(l => (
-                                    <li key={l}><Link href="/404" className="text-sm text-gray-600 font-medium hover:text-[var(--color-primary)] transition-colors">{l}</Link></li>
+                                    <li key={l}><Link href={`/features/${l.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="text-sm text-gray-600 font-medium hover:text-[var(--color-primary)] transition-colors">{l}</Link></li>
                                 ))}
                             </ul>
                         </div>
@@ -701,7 +702,7 @@ export default async function Home() {
                             <h4 className="font-bold text-gray-900 mb-6 text-lg">Resources</h4>
                             <ul className="space-y-4">
                                 {['Blogs', 'Contact Us', 'Reviews', 'Customer Stories'].map(l => (
-                                    <li key={l}><Link href="/404" className="text-sm text-gray-600 font-medium hover:text-[var(--color-primary)] transition-colors">{l}</Link></li>
+                                    <li key={l}><Link href={l === 'Blogs' ? '/blog' : l === 'Contact Us' ? '/contact' : '/about'} className="text-sm text-gray-600 font-medium hover:text-[var(--color-primary)] transition-colors">{l}</Link></li>
                                 ))}
                             </ul>
                         </div>
@@ -713,14 +714,14 @@ export default async function Home() {
                                 <QrCode size={80} className="text-gray-800" />
                             </div>
                             <div className="flex flex-col gap-3">
-                                <Link href="/404" className="bg-black text-white px-4 py-2.5 rounded-xl flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-md">
+                                <Link href="#" className="bg-black text-white px-4 py-2.5 rounded-xl flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-md">
                                     <Play size={24} className="fill-current" />
                                     <div className="text-left">
                                         <div className="text-[10px] uppercase font-bold text-gray-400">Get it on</div>
                                         <div className="text-sm font-bold leading-tight">Google Play</div>
                                     </div>
                                 </Link>
-                                <Link href="/404" className="bg-black text-white px-4 py-2.5 rounded-xl flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-md">
+                                <Link href="#" className="bg-black text-white px-4 py-2.5 rounded-xl flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-md">
                                     <Apple size={24} className="fill-current" />
                                     <div className="text-left">
                                         <div className="text-[10px] uppercase font-bold text-gray-400">Download on the</div>
@@ -759,9 +760,9 @@ export default async function Home() {
 
                     <div className="border-t border-gray-200 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 font-medium">
                         <div className="flex gap-6">
-                            <Link href="/404" className="hover:text-gray-900 transition-colors">Refund</Link>
-                            <Link href="/404" className="hover:text-gray-900 transition-colors">Privacy Policy</Link>
-                            <Link href="/404" className="hover:text-gray-900 transition-colors">Terms & Conditions</Link>
+                            <Link href="/legal/refund" className="hover:text-gray-900 transition-colors">Refund</Link>
+                            <Link href="/legal/privacy" className="hover:text-gray-900 transition-colors">Privacy Policy</Link>
+                            <Link href="/legal/terms" className="hover:text-gray-900 transition-colors">Terms & Conditions</Link>
                         </div>
                         <p>&copy; <CopyrightYear /> kkkhane. All Rights Reserved.</p>
                     </div>

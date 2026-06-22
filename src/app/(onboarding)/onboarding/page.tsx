@@ -1,0 +1,35 @@
+import { redirect } from 'next/navigation'
+import { getOptionalUser } from '@/lib/auth'
+import OnboardingGetStarted from './OnboardingGetStarted'
+import { createAdminClient } from '@/lib/supabase/server'
+
+export default async function OnboardingPage() {
+    const currentUser = await getOptionalUser()
+
+    if (!currentUser) {
+        redirect('/login?redirect=/onboarding')
+    }
+
+    // If they already have a restaurant, they shouldn't be here
+    if (currentUser.restaurantId) {
+        redirect('/admin/dashboard')
+    }
+
+    // Fetch full name from users table
+    const adminSupabase = await createAdminClient()
+    const { data: userData } = await adminSupabase
+        .from('users')
+        .select('full_name')
+        .eq('id', currentUser.id)
+        .single()
+
+    const userName = userData?.full_name || currentUser.email.split('@')[0] || 'User'
+
+    return (
+        <OnboardingGetStarted 
+            userId={currentUser.id}
+            userEmail={currentUser.email}
+            userName={userName}
+        />
+    )
+}

@@ -10,6 +10,28 @@ import {
     FileText, Camera, Navigation, X, AlertTriangle,
 } from 'lucide-react'
 import Image from 'next/image'
+import dynamic from 'next/dynamic'
+import 'leaflet/dist/leaflet.css'
+
+// Dynamically import Map to prevent SSR issues
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false })
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false })
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false })
+// useMapEvents is a hook — it can't be dynamic()-wrapped. The component that
+// uses it is dynamically imported (ssr: false) from its own client module.
+const MapClickHandler = dynamic(() => import('@/components/shared/MapClickHandler'), { ssr: false })
+
+// Fix for default marker icons in leaflet
+const iconFix = () => {
+    import('leaflet').then(L => {
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+        })
+    })
+}
 
 type Step = 1 | 2 | 3 | 4
 
@@ -21,7 +43,7 @@ const PLANS = [
         period: '/month',
         icon: <Zap size={20} className="text-gray-500" />,
         color: 'border-gray-200',
-        selectedColor: 'border-gray-900 bg-gray-50',
+        selectedColor: 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 ring-1 ring-[var(--color-primary)]',
         limits: '3 staff · 20 menu items',
         features: ['Menu management', 'QR ordering', 'Cash & QR payments', 'Service requests', 'Split billing'],
     },
@@ -32,7 +54,7 @@ const PLANS = [
         period: '/month',
         icon: <Star size={20} className="text-blue-500" />,
         color: 'border-blue-100',
-        selectedColor: 'border-blue-500 bg-blue-50',
+        selectedColor: 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 ring-1 ring-[var(--color-primary)]',
         limits: '10 staff · 100 menu items',
         features: ['Everything in Free', 'Takeout orders', 'Promo codes', 'Advanced analytics'],
     },
@@ -41,9 +63,9 @@ const PLANS = [
         name: 'Pro',
         price: 'रू 4,999',
         period: '/month',
-        icon: <Crown size={20} className="text-[#E85D04]" />,
+        icon: <Crown size={20} className="text-[var(--color-primary)]" />,
         color: 'border-orange-100',
-        selectedColor: 'border-[#E85D04] bg-orange-50',
+        selectedColor: 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 ring-1 ring-[var(--color-primary)]',
         limits: '50 staff · 500 menu items',
         features: ['Everything in Basic', 'Loyalty program', 'Dynamic pricing', 'Ingredient tracking', 'Staff shifts'],
         recommended: true,
@@ -55,7 +77,7 @@ const PLANS = [
         period: '',
         icon: <Sparkles size={20} className="text-purple-500" />,
         color: 'border-purple-100',
-        selectedColor: 'border-purple-500 bg-purple-50',
+        selectedColor: 'border-[var(--color-primary)] bg-[var(--color-primary)]/5 ring-1 ring-[var(--color-primary)]',
         limits: 'Unlimited staff & menu',
         features: ['Everything in Pro', 'Multi-language', 'Dedicated support', 'Custom integrations'],
     },
@@ -65,7 +87,7 @@ function slugify(value: string) {
     return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
-const INPUT = 'w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#E85D04]/20 focus:border-[#E85D04] transition'
+const INPUT = 'h-11 w-full px-4 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-all bg-white placeholder:text-gray-400'
 
 export default function SignupForm() {
     const router = useRouter()
@@ -106,9 +128,20 @@ export default function SignupForm() {
     const [ownerEmail, setOwnerEmail] = useState('')
     const [ownerPassword, setOwnerPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
+    const [isMapModalOpen, setIsMapModalOpen] = useState(false)
 
-    useEffect(() => { setMounted(true) }, [])
+    useEffect(() => { setMounted(true); iconFix() }, [])
     useEffect(() => () => { if (logoPreviewRef.current) URL.revokeObjectURL(logoPreviewRef.current) }, [])
+
+    // Force map to recalculate bounds when modal opens
+    useEffect(() => {
+        if (isMapModalOpen) {
+            const timer = setTimeout(() => {
+                window.dispatchEvent(new Event('resize'))
+            }, 150)
+            return () => clearTimeout(timer)
+        }
+    }, [isMapModalOpen])
 
     const selectedPlan = PLANS.find(p => p.id === plan)!
 
@@ -171,6 +204,7 @@ export default function SignupForm() {
             if (panNumber && !/^\d{9}$/.test(panNumber.trim())) errors.panNumber = 'PAN number must be exactly 9 digits'
             if (vatRegistered && vatNumber && !/^\d{9}$/.test(vatNumber.trim())) errors.vatNumber = 'VAT number must be exactly 9 digits'
             if (restaurantEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(restaurantEmail)) errors.restaurantEmail = 'Invalid email address'
+            if (phone && !/^\+?[\d\s\-()]{7,}$/.test(phone.trim())) errors.phone = 'Invalid phone format (must be at least 7 digits)'
         }
 
         if (step === 3) {
@@ -251,44 +285,53 @@ export default function SignupForm() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-gray-50 flex items-center justify-center p-4">
-            <div className="w-full max-w-2xl">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">Create Your Restaurant</h1>
-                    <p className="text-gray-500 mt-2">Get started in minutes. No credit card required.</p>
+        <div className="min-h-screen bg-slate-50 relative flex items-center justify-center p-4">
+            {/* Ambient Dot Grid Background */}
+            <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-60 pointer-events-none"></div>
+            
+            <div className="w-full max-w-2xl relative z-10 my-8">
+                <div className="text-center mb-10">
+                    <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Create Your Restaurant</h1>
+                    <p className="text-gray-500 font-medium mt-3">Get started in minutes. No credit card required.</p>
                 </div>
 
                 {mounted && (
-                    <div className="flex items-center justify-center gap-2 mb-8">
-                        {(['Plan', 'Restaurant', 'Account', 'Review'] as const).map((label, i) => {
-                            const num = i + 1
-                            const done = num < step
-                            const active = num === step
-                            return (
-                                <div key={label} className="flex items-center gap-2">
-                                    <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold transition-colors ${done ? 'bg-green-500 text-white' : active ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-500'}`}>
-                                        {done ? <Check size={14} /> : num}
+                    <div className="flex items-center justify-center mb-14 mt-4 w-full max-w-lg mx-auto relative px-4">
+                        {/* Background Track */}
+                        <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -translate-y-1/2 z-0 rounded-full"></div>
+                        {/* Active Track */}
+                        <div className="absolute top-1/2 left-0 h-1 bg-[var(--color-primary)] -translate-y-1/2 z-0 rounded-full transition-all duration-500 ease-in-out" style={{ width: `${((step - 1) / 3) * 100}%` }}></div>
+                        
+                        <div className="relative z-10 flex justify-between w-full">
+                            {(['Plan', 'Restaurant', 'Account', 'Review'] as const).map((label, i) => {
+                                const num = i + 1
+                                const done = num < step
+                                const active = num === step
+                                return (
+                                    <div key={label} className="flex flex-col items-center relative">
+                                        <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold transition-all duration-500 shadow-sm ${done ? 'bg-[var(--color-primary)] text-white scale-100 ring-4 ring-slate-50' : active ? 'bg-gray-900 text-white scale-110 ring-4 ring-slate-50 shadow-gray-900/30' : 'bg-white border-2 border-gray-200 text-gray-400'}`}>
+                                            {done ? <Check size={18} strokeWidth={3} /> : num}
+                                        </div>
+                                        <span className={`text-xs font-bold absolute -bottom-7 whitespace-nowrap transition-colors duration-300 ${active ? 'text-gray-900' : 'text-gray-400'}`}>{label}</span>
                                     </div>
-                                    <span className={`text-sm hidden sm:inline ${active ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>{label}</span>
-                                    {i < 3 && <ChevronRight size={14} className="text-gray-300" />}
-                                </div>
-                            )
-                        })}
+                                )
+                            })}
+                        </div>
                     </div>
                 )}
 
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 overflow-hidden">
                     {/* ── Step 1: Plan ── */}
                     {step === 1 && (
                         <div className="p-6 space-y-4">
                             <h2 className="text-xl font-semibold text-gray-900">Choose your plan</h2>
                             <p className="text-sm text-gray-500">No payment required now. Upgrade anytime.</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {PLANS.map((p) => (
                                     <button key={p.id} onClick={() => setPlan(p.id)}
-                                            className={`relative text-left p-4 rounded-xl border-2 transition-colors ${plan === p.id ? p.selectedColor : `${p.color} hover:border-gray-300`}`}>
+                                            className={`relative text-left p-5 rounded-2xl border transition-all hover:shadow-lg ${plan === p.id ? p.selectedColor : `${p.color} bg-white hover:border-gray-300`}`}>
                                         {p.recommended && (
-                                            <span className="absolute -top-2.5 left-3 bg-[#E85D04] text-white text-xs font-bold px-2 py-0.5 rounded-full">Recommended</span>
+                                            <span className="absolute -top-3 left-4 bg-[var(--color-primary)] text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">Recommended</span>
                                         )}
                                         <div className="flex items-center gap-2 mb-2">
                                             {p.icon}
@@ -312,9 +355,9 @@ export default function SignupForm() {
 
                     {/* ── Step 2: Restaurant Details ── */}
                     {step === 2 && (
-                        <div className="p-6 space-y-4">
-                            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                                <Building2 size={20} className="text-[#E85D04]" /> Restaurant Details
+                        <div className="p-8 space-y-6">
+                            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                <Building2 size={22} className="text-[var(--color-primary)]" /> Restaurant Details
                             </h2>
 
                             {/* Logo upload */}
@@ -363,12 +406,12 @@ export default function SignupForm() {
 
                             {/* Slug */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">URL Slug *</label>
-                                <div className="flex rounded-xl border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-[#E85D04]/20 focus-within:border-[#E85D04]">
-                                    <span className="bg-gray-50 px-3 py-2.5 text-sm text-gray-400 border-r border-gray-300 shrink-0">kkkhane.com/t/</span>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1">URL Slug *</label>
+                                <div className="flex h-11 rounded-xl border border-gray-200 overflow-hidden bg-white focus-within:ring-1 focus-within:ring-[var(--color-primary)] focus-within:border-[var(--color-primary)] transition-all">
+                                    <span className="bg-gray-50 px-4 flex items-center text-sm text-gray-400 border-r border-gray-200 shrink-0 font-medium">kkkhane.com/t/</span>
                                     <input type="text" value={restaurantSlug} onChange={(e) => setRestaurantSlug(slugify(e.target.value))}
                                            placeholder="himalayan-kitchen"
-                                           className={`flex-1 px-3 py-2.5 text-sm focus:outline-none ${fieldErrors.restaurantSlug ? 'border-red-400' : ''}`} />
+                                           className={`flex-1 px-3 text-sm focus:outline-none ${fieldErrors.restaurantSlug ? 'border-red-400' : ''}`} />
                                 </div>
                                 {fieldErrors.restaurantSlug
                                     ? <p className="text-red-500 text-xs mt-1">{fieldErrors.restaurantSlug}</p>
@@ -380,21 +423,14 @@ export default function SignupForm() {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     <MapPin size={13} className="inline mr-1 text-gray-400" />Address
                                 </label>
-                                <div className="flex gap-2">
+                                <div className="flex gap-3">
                                     <input type="text" value={address} onChange={(e) => { setAddress(e.target.value); if (geoStatus === 'done') setGeoStatus('idle') }}
-                                           placeholder="Thamel, Kathmandu, Nepal"
-                                           className={`${INPUT} border-gray-300 flex-1`} />
-                                    <button type="button" onClick={geoStatus === 'done' ? clearGeo : handleGeolocate}
-                                            disabled={geoStatus === 'loading'}
-                                            title={geoStatus === 'done' ? 'Clear location' : 'Use my current location'}
-                                            className={`shrink-0 px-3 py-2.5 rounded-xl border text-sm font-medium transition flex items-center gap-1.5 ${
-                                                geoStatus === 'done'
-                                                    ? 'bg-green-50 border-green-300 text-green-700 hover:bg-red-50 hover:border-red-300 hover:text-red-700'
-                                                    : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                                            }`}>
-                                        {geoStatus === 'loading' ? <Loader2 size={14} className="animate-spin" /> :
-                                         geoStatus === 'done' ? <><Check size={14} /> Located</> :
-                                         <><Navigation size={14} /> Locate</>}
+                                           placeholder="Search Location"
+                                           className={`${INPUT} border-gray-200 flex-1`} />
+                                    <button type="button" onClick={() => setIsMapModalOpen(true)}
+                                            title="Open Map"
+                                            className="w-[52px] h-[52px] shrink-0 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition flex items-center justify-center shadow-sm">
+                                        <MapPin size={20} />
                                     </button>
                                 </div>
                                 {geoStatus === 'error' && (
@@ -415,9 +451,10 @@ export default function SignupForm() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         <Phone size={13} className="inline mr-1 text-gray-400" />Mobile Number
                                     </label>
-                                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                                    <input type="tel" value={phone} onChange={(e) => { setPhone(e.target.value); setFieldErrors(p => ({ ...p, phone: '' })) }}
                                            placeholder="+977 98XXXXXXXX"
-                                           className={`${INPUT} border-gray-300`} />
+                                           className={`${INPUT} ${fieldErrors.phone ? 'border-red-400 ring-1 ring-red-400' : 'border-gray-200'}`} />
+                                    {fieldErrors.phone && <p className="text-red-500 text-xs mt-1">{fieldErrors.phone}</p>}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -481,9 +518,9 @@ export default function SignupForm() {
 
                     {/* ── Step 3: Owner Account ── */}
                     {step === 3 && (
-                        <div className="p-6 space-y-4">
-                            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                                <User size={20} className="text-[#E85D04]" /> Owner Account
+                        <div className="p-8 space-y-6">
+                            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                <User size={22} className="text-[var(--color-primary)]" /> Owner Account
                             </h2>
                             <p className="text-sm text-gray-500">This is your personal login — keep it secure.</p>
 
@@ -505,9 +542,9 @@ export default function SignupForm() {
 
                     {/* ── Step 4: Review ── */}
                     {step === 4 && (
-                        <div className="p-6 space-y-4">
-                            <h2 className="text-xl font-semibold text-gray-900">Review & Create</h2>
-                            <div className="bg-gray-50 rounded-xl divide-y divide-gray-200 text-sm">
+                        <div className="p-8 space-y-6">
+                            <h2 className="text-xl font-bold text-gray-900">Review & Create</h2>
+                            <div className="bg-gray-50 rounded-2xl border border-gray-100 divide-y divide-gray-100 text-sm overflow-hidden shadow-sm">
                                 {[
                                     { label: 'Plan', value: `${selectedPlan.name} — ${selectedPlan.price}${selectedPlan.period}` },
                                     { label: 'Restaurant', value: restaurantName },
@@ -543,21 +580,21 @@ export default function SignupForm() {
                     )}
 
                     {/* Navigation */}
-                    <div className={`px-6 py-4 bg-gray-50 border-t border-gray-100 flex ${step > 1 ? 'justify-between' : 'justify-end'}`}>
+                    <div className={`px-8 py-5 bg-gray-50 border-t border-gray-100 flex ${step > 1 ? 'justify-between' : 'justify-end'}`}>
                         {step > 1 && (
                             <button onClick={handleBack} disabled={isSubmitting}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:opacity-50">
+                                    className="flex items-center gap-2 px-5 py-2.5 h-11 text-sm font-bold text-gray-600 hover:text-gray-900 border border-gray-200 bg-white rounded-xl hover:bg-gray-100 transition disabled:opacity-50">
                                 <ChevronLeft size={16} /> Back
                             </button>
                         )}
                         {step < 4 ? (
                             <button onClick={handleNext}
-                                    className="flex items-center gap-1.5 px-6 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 active:scale-[0.98] transition">
+                                    className="flex items-center gap-2 px-8 h-11 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-800 shadow-md shadow-gray-900/20 transition">
                                 Continue <ChevronRight size={16} />
                             </button>
                         ) : (
                             <button onClick={handleSubmit} disabled={isSubmitting}
-                                    className="flex items-center gap-2 px-6 py-2.5 bg-[#E85D04] text-white text-sm font-semibold rounded-xl hover:bg-[#E85D04]/90 active:scale-[0.98] transition disabled:opacity-60">
+                                    className="flex items-center gap-2 px-8 h-11 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white text-sm font-bold rounded-xl shadow-lg shadow-[var(--color-primary)]/20 transition disabled:opacity-60">
                                 {isSubmitting
                                     ? <><Loader2 size={16} className="animate-spin" /> Creating...</>
                                     : <><Check size={16} /> Create My Restaurant</>}
@@ -566,11 +603,83 @@ export default function SignupForm() {
                     </div>
                 </div>
 
-                <p className="text-center text-sm text-gray-500 mt-4">
+                <p className="text-center text-sm text-gray-500 mt-6 font-medium">
                     Already have an account?{' '}
-                    <a href="/login" className="font-medium text-[#E85D04] hover:underline">Sign in</a>
+                    <a href="/login" className="font-bold text-[var(--color-primary)] hover:underline">Sign in</a>
                 </p>
             </div>
+
+            {/* Map Modal */}
+            {isMapModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8 bg-black/40 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-white w-full max-w-5xl h-[80vh] rounded-3xl overflow-hidden shadow-2xl relative flex flex-col">
+                        
+                        {/* Map Header Overlay */}
+                        <div className="absolute top-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-[1000] flex gap-3">
+                            <div className="flex-1 bg-white rounded-xl shadow-lg flex items-center px-4 border border-gray-100">
+                                <span className="text-gray-400 mr-2 text-sm">🔍</span>
+                                <input 
+                                    type="text" 
+                                    placeholder="Search for a place..."
+                                    className="w-full py-3.5 outline-none text-sm text-gray-700"
+                                    value={address}
+                                    onChange={(e) => setAddress(e.target.value)}
+                                />
+                            </div>
+                            <button 
+                                onClick={() => setIsMapModalOpen(false)}
+                                className="w-12 h-[52px] bg-white rounded-xl shadow-lg border border-gray-100 flex items-center justify-center text-red-500 hover:bg-gray-50 transition-colors shrink-0"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Current Location Overlay Button */}
+                        <div className="absolute bottom-24 right-10 z-[1000]">
+                            <button 
+                                onClick={handleGeolocate}
+                                className="bg-white text-red-500 font-bold text-sm px-6 py-3 rounded-xl shadow-lg border border-gray-100 flex items-center gap-2 hover:bg-gray-50 transition-colors"
+                            >
+                                {geoStatus === 'loading' ? <Loader2 size={16} className="animate-spin" /> : <MapPin size={16} />} 
+                                Use current location
+                            </button>
+                        </div>
+
+                        {/* Map Footer Overlay Buttons */}
+                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-md px-4 z-[1000] flex gap-4">
+                            <button 
+                                onClick={() => setIsMapModalOpen(false)}
+                                className="flex-1 bg-white text-gray-700 font-bold py-3.5 rounded-xl shadow-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={() => setIsMapModalOpen(false)}
+                                className="flex-1 bg-[#8FBFA0] text-white font-bold py-3.5 rounded-xl shadow-lg hover:bg-[#7eac8f] transition-colors flex items-center justify-center gap-2"
+                            >
+                                ✓ Save location
+                            </button>
+                        </div>
+
+                        <div className="flex-1 w-full bg-gray-100">
+                            {typeof window !== 'undefined' && (
+                                <MapContainer 
+                                    center={(latitude && longitude) ? [latitude, longitude] : [28.2096, 83.9856]} 
+                                    zoom={13} 
+                                    style={{ height: '100%', width: '100%' }}
+                                    zoomControl={false}
+                                >
+                                    <TileLayer
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    />
+                                    {(latitude && longitude) && <Marker position={[latitude, longitude]} />}
+                                    <MapClickHandler onLocationSelect={(lat, lng) => { setLatitude(lat); setLongitude(lng); }} />
+                                </MapContainer>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

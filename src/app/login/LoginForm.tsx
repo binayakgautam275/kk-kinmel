@@ -13,6 +13,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
     const [state, formAction, isPending] = useActionState(loginAction, initialState)
     const [showPassword, setShowPassword] = useState(false)
     const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone')
+    const [isSignUp, setIsSignUp] = useState(false)
 
     return (
         <div className="flex flex-col items-center justify-center w-full max-w-[440px]">
@@ -26,12 +27,12 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                 
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Welcome 👋</h1>
-                    <p className="text-sm text-gray-500 font-medium">Login or Sign up to manage your restaurant and cafe digitally.</p>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">{isSignUp ? 'Create Account' : 'Welcome 👋'}</h1>
+                    <p className="text-sm text-gray-500 font-medium">{isSignUp ? 'Sign up to get started' : 'Login to manage your restaurant'}</p>
                 </div>
 
                 <form action={formAction} className="w-full flex flex-col gap-5">
-                    <input type="hidden" name="redirect" value={redirectTo} />
+                    <input type="hidden" name="actionType" value={isSignUp ? 'signup' : 'login'} />
 
                     {state?.error && (
                         <div className="bg-red-50 text-red-700 px-4 py-3 rounded-xl text-sm border border-red-100 font-medium text-center">
@@ -41,6 +42,16 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
 
                     {/* Dynamic Input based on method */}
                     <div className="flex flex-col gap-5">
+                        {isSignUp && (
+                            <input
+                                id="fullName"
+                                name="fullName"
+                                type="text"
+                                required
+                                className="h-11 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm outline-none text-gray-900 placeholder:text-gray-400 focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all duration-300"
+                                placeholder="Enter full name"
+                            />
+                        )}
                         {loginMethod === 'phone' ? (
                             <div className="flex h-11 w-full rounded-xl border border-gray-200 overflow-hidden bg-white focus-within:border-[var(--color-primary)] focus-within:ring-1 focus-within:ring-[var(--color-primary)] transition-all">
                                 <button type="button" className="flex items-center gap-2 px-3 bg-gray-50 border-r border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-colors">
@@ -110,10 +121,21 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                         {isPending ? (
                             <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : (
-                            "Continue"
+                            isSignUp ? 'Sign Up' : 'Continue'
                         )}
                     </button>
                 </form>
+
+                <p className="text-center text-sm text-gray-500 mt-6">
+                    {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+                    <button
+                        type="button"
+                        onClick={() => setIsSignUp(!isSignUp)}
+                        className="font-medium text-[var(--color-primary)] hover:underline"
+                    >
+                        {isSignUp ? 'Sign in' : 'Sign up'}
+                    </button>
+                </p>
 
                 <div className="w-full flex items-center gap-3 my-6">
                     <div className="h-px bg-gray-200 flex-1"></div>
@@ -157,6 +179,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                 </summary>
                 <div className="p-4 pt-0 grid grid-cols-2 gap-2 border-t border-gray-100">
                     {[
+                        { label: 'New User', email: 'newuser@srms.app', color: 'bg-pink-100 text-pink-700 hover:bg-pink-200' },
                         { label: 'Super Admin', email: 'demo@srms.app', color: 'bg-orange-100 text-orange-700 hover:bg-orange-200' },
                         { label: 'Manager',    email: 'manager@srms.app', color: 'bg-blue-100 text-blue-700 hover:bg-blue-200' },
                         { label: 'Kitchen',    email: 'kitchen@srms.app', color: 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' },
@@ -167,10 +190,13 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
                             type="button"
                             className={`text-[11px] font-bold py-2 px-3 rounded-lg transition shadow-sm ${color}`}
                             onClick={() => {
-                                const f = document.getElementById(loginMethod === 'phone' ? 'phone' : 'email') as HTMLInputElement | null
-                                const p = document.getElementById('password') as HTMLInputElement | null
-                                if (f) f.value = email
-                                if (p) p.value = 'Password123!'
+                                setLoginMethod('email')
+                                setTimeout(() => {
+                                    const f = document.getElementById('email') as HTMLInputElement | null
+                                    const p = document.getElementById('password') as HTMLInputElement | null
+                                    if (f) f.value = email
+                                    if (p) p.value = 'Password123!'
+                                }, 10)
                             }}
                         >
                             {label}
