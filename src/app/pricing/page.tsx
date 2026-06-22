@@ -114,33 +114,33 @@ export default function PricingPage() {
             <section className="py-16 px-4 max-w-[1200px] mx-auto relative z-20 -mt-8">
                 {/* Billing Toggle */}
                 <div className="flex justify-center mb-16">
-                    <div className="bg-gray-100 p-1.5 rounded-full inline-flex items-center relative border border-gray-200">
+                    <div className="bg-gray-100 p-1.5 rounded-full inline-flex relative border border-gray-200">
+                        {/* Toggle Pill Background */}
+                        <div
+                            className={`absolute top-1.5 bottom-1.5 w-32 rounded-full transition-transform duration-300 ease-in-out ${billingCycle === 'yearly' ? 'bg-[var(--color-primary)] translate-x-32' : 'bg-white shadow-sm translate-x-0'}`}
+                        />
                         <button
                             onClick={() => setBillingCycle('monthly')}
-                            className={`relative z-10 px-6 py-2.5 rounded-full font-bold text-sm transition-colors ${billingCycle === 'monthly' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
+                            className={`relative z-10 w-32 py-2.5 rounded-full font-bold text-sm transition-colors ${billingCycle === 'monthly' ? 'text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
                         >
                             Monthly
                         </button>
                         <button
                             onClick={() => setBillingCycle('yearly')}
-                            className={`relative z-10 px-6 py-2.5 rounded-full font-bold text-sm transition-colors flex items-center gap-2 ${billingCycle === 'yearly' ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                            className={`relative z-10 w-32 py-2.5 rounded-full font-bold text-sm transition-colors ${billingCycle === 'yearly' ? 'text-white' : 'text-gray-500 hover:text-gray-900'}`}
                         >
                             Yearly
-                            <span className={`text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full ${billingCycle === 'yearly' ? 'bg-white/20' : 'bg-green-100 text-green-700'}`}>Save 20%</span>
+                            <span className={`absolute -top-3 -right-2 z-20 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-sm border border-white transition-colors ${billingCycle === 'yearly' ? 'bg-green-500 text-white' : 'bg-green-100 text-green-700'}`}>Save 20%</span>
                         </button>
-                        {/* Toggle Pill Background */}
-                        <div
-                            className={`absolute top-1.5 bottom-1.5 w-[48%] rounded-full transition-transform duration-300 ease-in-out ${billingCycle === 'yearly' ? 'bg-[var(--color-primary)] translate-x-[98%]' : 'bg-white shadow-sm translate-x-1'}`}
-                        />
                     </div>
                 </div>
 
                 {/* Pricing Cards */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch pt-8 pb-8">
                     {PRICING_PLANS.map((plan) => (
                         <div
                             key={plan.name}
-                            className={`relative bg-white rounded-3xl p-8 flex flex-col border transition-all duration-300 ${plan.popular ? 'border-[var(--color-primary)] shadow-xl scale-[1.02] lg:-translate-y-4' : 'border-gray-100 shadow-sm hover:shadow-md'}`}
+                            className={`relative bg-white rounded-3xl p-8 flex flex-col border transition-all duration-300 ${plan.popular ? 'border-[var(--color-primary)] shadow-2xl z-10 lg:scale-105' : 'border-gray-100 shadow-sm hover:shadow-md'}`}
                         >
                             {plan.popular && (
                                 <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">

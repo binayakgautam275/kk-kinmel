@@ -1,3 +1,6 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Logo from '@/components/shared/Logo'
 import MobileNav from '@/app/MobileNav'
@@ -29,8 +32,19 @@ const RESOURCE_LINKS = [
 
 /** Shared marketing top nav (full desktop dropdowns + mobile). */
 export default function MarketingNav() {
+    const [scrolled, setScrolled] = useState(false)
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setScrolled(window.scrollY > 20)
+        }
+        window.addEventListener('scroll', handleScroll, { passive: true })
+        handleScroll()
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [])
+
     return (
-        <nav className="fixed inset-x-0 top-0 z-50 border-b border-gray-100 bg-white/75 backdrop-blur-md">
+        <nav className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 bg-white/75 backdrop-blur-md ${scrolled ? 'shadow-md border-b border-gray-200' : 'border-b border-transparent'}`}>
             <div className="mx-auto flex h-20 max-w-[1400px] items-center justify-between px-4 sm:px-6 lg:px-8">
                 <Link href="/" className="flex shrink-0 items-center gap-2">
                     <Logo className="h-8" />
