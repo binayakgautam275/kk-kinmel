@@ -211,7 +211,7 @@ export default async function AdminDashboardPage() {
                             <Link
                                 key={href}
                                 href={href}
-                                className="group relative flex flex-col items-center justify-center gap-2 rounded-[var(--r-lg)] border border-hairline bg-surface px-3 py-4 text-center transition-colors duration-150 hover:border-brand-200 hover:bg-brand-50"
+                                className="group relative flex flex-col items-center justify-center gap-2 rounded-2xl border border-hairline bg-surface px-3 py-4 text-center transition-colors duration-150 hover:border-brand-200 hover:bg-brand-50"
                             >
                                 <Icon size={20} className="text-ink-muted group-hover:text-brand-600 transition-colors" />
                                 <span className="text-caption font-semibold text-ink">{label}</span>

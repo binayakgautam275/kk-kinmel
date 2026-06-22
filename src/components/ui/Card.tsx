@@ -26,7 +26,7 @@ export default function Card({
     return (
         <Tag
             className={cn(
-                'bg-surface border border-hairline rounded-[var(--r-lg)] shadow-sm',
+                'bg-surface border border-hairline rounded-[var(--radius-card)] shadow-sm',
                 padding !== false && PAD[String(padding)],
                 interactive &&
                     'transition-[box-shadow,transform] duration-150 hover:shadow-md hover:-translate-y-px',
