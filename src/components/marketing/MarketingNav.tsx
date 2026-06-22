@@ -23,8 +23,8 @@ const FEATURE_SIDE = [
 
 const RESOURCE_LINKS = [
     { title: 'Blog', desc: 'Blogs help you to optimize your restaurant', icon: FileText, href: '/blog' },
-    { title: 'Reviews', desc: 'Read reviews from our customers', icon: MessageCircle, href: '/about#reviews' },
-    { title: 'Customer Stories', desc: 'See how we are helping restaurants', icon: Users2, href: '/about#stories' },
+    { title: 'Reviews', desc: 'Read reviews from our customers', icon: MessageCircle, href: '/reviews' },
+    { title: 'Customer Stories', desc: 'See how we are helping restaurants', icon: Users2, href: '/customer-stories' },
 ]
 
 /** Shared marketing top nav (full desktop dropdowns + mobile). */

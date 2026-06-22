@@ -21,8 +21,8 @@ const FEATURE_LINKS = [
 const RESOURCE_LINKS: { label: string; href: string }[] = [
     { label: 'Blogs', href: '/blog' },
     { label: 'Contact Us', href: '/contact' },
-    { label: 'Reviews', href: '/about' },
-    { label: 'Customer Stories', href: '/about' },
+    { label: 'Reviews', href: '/reviews' },
+    { label: 'Customer Stories', href: '/customer-stories' },
 ]
 
 /** Shared marketing footer (links, contact band, app badges). */
