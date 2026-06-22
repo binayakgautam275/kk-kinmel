@@ -128,29 +128,32 @@ export default function TablePageClient({
                                 onClick={onBackToHome}
                                 aria-label="Back to homepage"
                                 title="Back to homepage"
-                                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shrink-0 transition active:scale-95"
+                                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center shrink-0 transition active:scale-95"
                             >
-                                <Home size={16} className="text-[var(--color-secondary)]" />
+                                <Home size={14} className="text-[var(--color-secondary)]" />
                             </button>
                         )}
                         {logoUrl ? (
-                            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-100 shadow-sm">
-                                <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="40px" />
+                            <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-100 shrink-0 border border-gray-100 shadow-sm">
+                                <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="32px" />
                             </div>
                         ) : (
-                            <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0 border border-gray-100 shadow-sm">
-                                <UtensilsCrossed size={18} className="text-[var(--color-primary)]" />
+                            <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center shrink-0 border border-gray-100 shadow-sm">
+                                <UtensilsCrossed size={14} className="text-[var(--color-primary)]" />
                             </div>
                         )}
                     </div>
 
-                    {/* Middle: Empty space (restaurant and table name removed) */}
-                    <div className="flex-1" />
+                    {/* Middle: Centered Table Badge */}
+                    <div className="flex-1 text-center min-w-0">
+                        <span className="text-xs font-bold text-gray-800 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-full inline-block truncate max-w-full">
+                            Table {tableData.label}
+                        </span>
+                    </div>
 
-                    {/* Right side: language switcher + platform logo */}
-                    <div className="flex items-center gap-2 shrink-0">
-                        {multiLanguageEnabled && <LanguageSwitcher />}
-                        <Logo className="h-6" />
+                    {/* Right side: platform logo */}
+                    <div className="flex items-center shrink-0 pr-2">
+                        <Logo className="h-5" />
                     </div>
                 </div>
             </header>
