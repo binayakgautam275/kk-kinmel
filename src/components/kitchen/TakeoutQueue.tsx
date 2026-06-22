@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
-import { updateTakeoutStatus } from '@/app/api/takeout/actions'
+import { updateTakeoutStatus, getTakeoutOrders } from '@/app/api/takeout/actions'
 import { formatCurrency } from '@/lib/utils'
 import type { TakeoutOrder } from '@/types/database'
 import { Phone, User, CheckCircle2, XCircle, Timer, Package } from 'lucide-react'
@@ -57,16 +57,12 @@ export default function TakeoutQueue({ restaurantId, initialOrders }: TakeoutQue
     const [orders, setOrders] = useState<TakeoutOrder[]>(initialOrders)
     const [loading, setLoading] = useState<string | null>(null)
 
-    // Real-time subscription via the shared per-restaurant channel.
-    useRestaurantTable(restaurantId, 'takeout_orders', (payload) => {
-        if (payload.eventType === 'INSERT') {
-            setOrders((prev) => [payload.new as TakeoutOrder, ...prev])
-            playKitchenPing() // Audio alert for new takeout order
-        } else if (payload.eventType === 'UPDATE') {
-            setOrders((prev) =>
-                prev.map((o) => (o.id === payload.new.id ? (payload.new as TakeoutOrder) : o))
-            )
-        }
+    // Takeout now lives in the unified `orders` table. On any takeout-order
+    // change, refetch the mapped list (keeps the TakeoutOrder shape intact).
+    useRestaurantTable(restaurantId, 'orders', (payload) => {
+        if ((payload.new as { order_type?: string } | null)?.order_type !== 'takeout') return
+        if (payload.eventType === 'INSERT') playKitchenPing()
+        getTakeoutOrders(restaurantId).then(setOrders).catch(() => {})
     })
 
     async function handleStatusChange(orderId: string, newStatus: string) {

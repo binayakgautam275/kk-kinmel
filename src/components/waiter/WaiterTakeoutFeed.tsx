@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
-import { completeTakeoutOrder } from '@/app/api/takeout/actions'
+import { completeTakeoutOrder, getTakeoutOrders } from '@/app/api/takeout/actions'
 import { formatCurrency } from '@/lib/utils'
 import type { TakeoutOrder } from '@/types/database'
 import { Phone, User, Clock, CreditCard, Package } from 'lucide-react'
@@ -18,30 +18,20 @@ export default function WaiterTakeoutFeed({ initialOrders, restaurantId }: Props
     const [orders, setOrders] = useState<TakeoutOrder[]>(initialOrders)
     const [loading, setLoading] = useState<string | null>(null)
 
-    // Real-time subscription for takeout orders that are ready for pickup
-    useRestaurantTable(restaurantId, 'takeout_orders', (payload) => {
-        if (payload.eventType === 'INSERT') {
-            const newOrder = payload.new as TakeoutOrder
-            if (newOrder.status === 'ready_for_pickup') {
-                setOrders((prev) => [newOrder, ...prev])
-                playOrderReady().catch(() => {})
-            }
-        } else if (payload.eventType === 'UPDATE') {
-            const updated = payload.new as TakeoutOrder
-            if (updated.status === 'ready_for_pickup') {
+    // Takeout lives in the unified `orders` table. Refetch the ready-for-pickup
+    // list on any takeout change; ping when a new one becomes ready.
+    useRestaurantTable(restaurantId, 'orders', (payload) => {
+        const row = payload.new as { order_type?: string; status?: string } | null
+        if (row?.order_type !== 'takeout') return
+        const becameReady = row.status === 'ready'
+        getTakeoutOrders(restaurantId, 'ready_for_pickup')
+            .then((ready) => {
                 setOrders((prev) => {
-                    const exists = prev.find((o) => o.id === updated.id)
-                    if (exists) {
-                        return prev.map((o) => (o.id === updated.id ? updated : o))
-                    }
-                    playOrderReady().catch(() => {})
-                    return [updated, ...prev]
+                    if (becameReady && ready.length > prev.length) playOrderReady().catch(() => {})
+                    return ready
                 })
-            } else {
-                // Order moved past ready — remove from feed
-                setOrders((prev) => prev.filter((o) => o.id !== updated.id))
-            }
-        }
+            })
+            .catch(() => {})
     })
 
     async function handleComplete(orderId: string) {

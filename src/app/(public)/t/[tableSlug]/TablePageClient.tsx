@@ -29,6 +29,7 @@ interface TablePageClientProps {
     sessionUUID: string | undefined
     isValidSession: boolean
     serviceRequestsEnabled: boolean
+    selfOrderRequestEnabled?: boolean
     multiLanguageEnabled: boolean
     menuLayout?: 'grid' | 'list'
     translations: { language_code: string; entity_type: string; entity_id: string; translated_text: string }[]
@@ -44,6 +45,7 @@ export default function TablePageClient({
     sessionUUID,
     isValidSession,
     serviceRequestsEnabled,
+    selfOrderRequestEnabled = true,
     multiLanguageEnabled,
     menuLayout = 'grid',
     translations,
@@ -178,7 +180,12 @@ export default function TablePageClient({
                             <p className="text-[#8C6A50] text-sm font-semibold mb-6 leading-relaxed">
                                 Your waiter will open a session for Table {tableData.label} so you can place orders.
                             </p>
-                            {requestSent ? (
+                            {!selfOrderRequestEnabled ? (
+                                <p className="text-[#C4A882] text-[11px] font-bold flex items-center justify-center gap-1">
+                                    <RefreshCw size={10} className="animate-spin text-[#E85D04]" />
+                                    Waiting for your waiter to open the table...
+                                </p>
+                            ) : requestSent ? (
                                 <div className="w-full bg-[#EBFDF2] border border-[#BFF3D4] rounded-2xl py-3 px-4 flex flex-col items-center justify-center gap-1.5 animate-scale-in">
                                     <span className="text-xl">🔔</span>
                                     <p className="text-green-600 text-xs font-black flex items-center gap-1">

@@ -36,7 +36,7 @@ export default function SettingsManager({
     canEdit: boolean
 }) {
     const [formData, setFormData] = useState<RestaurantSettings>(initialRestaurant)
-    const [taxRateStr, setTaxRateStr] = useState(initialRestaurant.tax_rate.toString())
+    const [taxRateStr, setTaxRateStr] = useState((initialRestaurant.tax_rate ?? 13).toString())
     const [uploadingField, setUploadingField] = useState<'logo_url' | 'payment_qr_url' | 'notification_sound' | null>(null)
     const logoInputRef = useRef<HTMLInputElement>(null)
     const qrInputRef = useRef<HTMLInputElement>(null)
@@ -541,6 +541,7 @@ export default function SettingsManager({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {([
                         { key: 'serviceRequestsEnabled' as const, label: 'Service Requests', desc: 'Customers can call waiter, request bill, etc.' },
+                        { key: 'selfOrderRequestEnabled' as const, label: 'Ring for Service', desc: 'Customers can request a waiter to open their table session' },
                         { key: 'splitBillingEnabled' as const, label: 'Split Billing', desc: 'Allow customers to split bills at checkout' },
                         { key: 'promosEnabled' as const, label: 'Promo Codes', desc: 'Allow promo/discount codes at checkout' },
                         { key: 'loyaltyEnabled' as const, label: 'Loyalty Program', desc: 'Points-based loyalty rewards for repeat customers' },

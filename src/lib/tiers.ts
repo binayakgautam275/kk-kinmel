@@ -1,0 +1,87 @@
+// lib/tiers.ts
+// Single source of truth for subscription tier limits + default feature flags.
+// Previously these constants were duplicated (and drifting) between
+// src/app/signup/actions.ts and src/app/(onboarding)/onboarding/create/actions.ts.
+
+export type Tier = 'free' | 'basic' | 'pro' | 'enterprise'
+
+export const TIER_LIMITS: Record<Tier, { max_staff: number; max_menu_items: number }> = {
+    free:       { max_staff: 3,   max_menu_items: 20   },
+    basic:      { max_staff: 10,  max_menu_items: 100  },
+    pro:        { max_staff: 50,  max_menu_items: 500  },
+    enterprise: { max_staff: 999, max_menu_items: 9999 },
+}
+
+const TIER_FEATURES: Record<Tier, {
+    loyaltyEnabled: boolean
+    promosEnabled: boolean
+    takeoutEnabled: boolean
+    multiLanguageEnabled: boolean
+    serviceRequestsEnabled: boolean
+    splitBillingEnabled: boolean
+    dynamicPricingEnabled: boolean
+    ingredientTrackingEnabled: boolean
+    staffShiftsEnabled: boolean
+}> = {
+    free: {
+        loyaltyEnabled: false, promosEnabled: true, takeoutEnabled: false,
+        multiLanguageEnabled: false, serviceRequestsEnabled: true,
+        splitBillingEnabled: true, dynamicPricingEnabled: false,
+        ingredientTrackingEnabled: false, staffShiftsEnabled: false,
+    },
+    basic: {
+        loyaltyEnabled: false, promosEnabled: true, takeoutEnabled: true,
+        multiLanguageEnabled: false, serviceRequestsEnabled: true,
+        splitBillingEnabled: true, dynamicPricingEnabled: false,
+        ingredientTrackingEnabled: false, staffShiftsEnabled: false,
+    },
+    pro: {
+        loyaltyEnabled: true, promosEnabled: true, takeoutEnabled: true,
+        multiLanguageEnabled: false, serviceRequestsEnabled: true,
+        splitBillingEnabled: true, dynamicPricingEnabled: true,
+        ingredientTrackingEnabled: true, staffShiftsEnabled: true,
+    },
+    enterprise: {
+        loyaltyEnabled: true, promosEnabled: true, takeoutEnabled: true,
+        multiLanguageEnabled: true, serviceRequestsEnabled: true,
+        splitBillingEnabled: true, dynamicPricingEnabled: true,
+        ingredientTrackingEnabled: true, staffShiftsEnabled: true,
+    },
+}
+
+/** Default theme applied to every newly-provisioned restaurant. */
+export const DEFAULT_THEME = {
+    primaryColor: '#E85D04',
+    secondaryColor: '#1B263B',
+    fontFamily: 'Inter',
+    borderRadius: '12px',
+    menuLayout: 'grid',
+} as const
+
+/** Legacy v1 features object (kept for backward compatibility with settings.features). */
+export const DEFAULT_FEATURES_V1 = {
+    tipsEnabled: true,
+    feedbackEnabled: true,
+    geofenceEnabled: false,
+    geofenceRadiusMeters: 100,
+} as const
+
+/** Build the full features_v2 object for a given tier (Nepal defaults). */
+export function buildFeaturesV2(tier: Tier) {
+    return {
+        ...TIER_FEATURES[tier],
+        defaultTaxRate: 13,
+        currency: 'NPR',
+        currencySymbol: 'Rs.',
+        nepalPayEnabled: true,
+        vatEnabled: false,
+        phoneOtpEnabled: false,
+        bsDateEnabled: false,
+        tipsEnabled: true,
+        feedbackEnabled: true,
+        geofenceEnabled: false,
+        geofenceRadiusMeters: 100,
+        // Phase 3: customers may request a waiter open their table session.
+        selfOrderRequestEnabled: true,
+    }
+}

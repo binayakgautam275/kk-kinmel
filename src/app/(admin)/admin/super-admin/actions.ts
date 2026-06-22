@@ -4,6 +4,7 @@ import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { validateInput, CreateTenantSchema } from '@/lib/validation'
+import { ORDER_STATUS_TO_TAKEOUT, type OrderStatus } from '@/lib/takeout'
 
 const TIER_LIMITS: Record<'free' | 'basic' | 'pro' | 'enterprise', { max_staff: number; max_menu_items: number; max_tables: number }> = {
     free: { max_staff: 3, max_menu_items: 20, max_tables: 10 },
@@ -660,14 +661,22 @@ export async function getAllTakeoutOrdersAcrossRestaurants(limit = 100) {
     await requireRole('super_admin')
     const supabase = await createAdminClient()
 
+    // Takeout now lives in the unified orders table (order_type='takeout').
     const { data, error } = await supabase
-        .from('takeout_orders')
+        .from('orders')
         .select('id, restaurant_id, customer_name, customer_phone, status, total_amount, placed_at, payment_status, restaurants(name)')
+        .eq('order_type', 'takeout')
         .order('placed_at', { ascending: false })
         .limit(limit)
 
     if (error) return { error: error.message, data: null }
-    return { data }
+
+    // Map order_status back to takeout-status labels for the existing UI.
+    const mapped = (data || []).map((o) => ({
+        ...o,
+        status: ORDER_STATUS_TO_TAKEOUT[o.status as OrderStatus] ?? o.status,
+    }))
+    return { data: mapped }
 }
 
 export async function getAllSubscriptionPayments(limit = 100) {

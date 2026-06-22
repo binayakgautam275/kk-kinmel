@@ -23,6 +23,15 @@ export default async function SettingsPage() {
 
     if (!restaurant) redirect('/unauthorized')
 
+    // tax_rate / currency / currency_symbol live in settings.features_v2
+    // (defaultTaxRate / currency / currencySymbol), NOT on the restaurants row.
+    const initialRestaurant = {
+        ...restaurant,
+        tax_rate: features?.defaultTaxRate ?? 13,
+        currency: features?.currency ?? 'NPR',
+        currency_symbol: features?.currencySymbol ?? 'Rs.',
+    }
+
     return (
         <div className="space-y-6">
             <header>
@@ -35,7 +44,7 @@ export default async function SettingsPage() {
             </header>
 
             <SettingsManager
-                initialRestaurant={restaurant}
+                initialRestaurant={initialRestaurant}
                 initialFeatures={features}
                 canEdit={role === 'super_admin' || role === 'manager'}
             />

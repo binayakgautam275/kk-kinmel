@@ -40,6 +40,8 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
 
     // Live order changes via the shared per-restaurant channel.
     useRestaurantTable(restaurantId, 'orders', async (payload) => {
+        // Takeout orders live in the dedicated TakeoutQueue — ignore them here.
+        if ((payload.new as { order_type?: string } | null)?.order_type === 'takeout') return
         if (payload.eventType === 'INSERT') {
             const supabase = supabaseRef.current
             const { data } = await supabase.from('orders').select(ORDER_SELECT).eq('id', payload.new.id).single()

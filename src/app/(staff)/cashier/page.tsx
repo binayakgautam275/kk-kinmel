@@ -1,11 +1,11 @@
-import { getCurrentUser } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import CashierClient, { type UnpaidOrder, type ActiveOrder } from '@/components/waiter/CashierClient'
 
 export const revalidate = 0
 
 export default async function CashierPage() {
-    const { restaurantId } = await getCurrentUser()
+    const { restaurantId } = await requireRole('waiter', 'manager', 'super_admin')
     const adminSupabase = await createAdminClient()
 
     const [

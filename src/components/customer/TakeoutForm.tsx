@@ -75,11 +75,11 @@ export default function TakeoutForm({ restaurantId, restaurantName, restaurantSl
         if (result.error) {
             toast.error(result.error)
             setIsSubmitting(false)
-        } else if (result.order) {
+        } else if (result.orderId) {
             toast.success('Takeout order placed successfully!')
             clearCart()
             // Redirect to order tracking page
-            router.push(`/takeout/${restaurantSlug}/order/${result.order.id}`)
+            router.push(`/takeout/${restaurantSlug}/order/${result.orderId}`)
         }
     }
 

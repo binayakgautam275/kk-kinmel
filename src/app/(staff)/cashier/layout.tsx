@@ -1,10 +1,10 @@
 import { ReactNode } from 'react'
-import { getCurrentUser } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import WaiterLayoutClient from '@/components/waiter/WaiterLayoutClient'
 
 export default async function CashierLayout({ children }: { children: ReactNode }) {
-    const { id: userId, restaurantId } = await getCurrentUser()
+    const { id: userId, restaurantId } = await requireRole('waiter', 'manager', 'super_admin')
     const adminSupabase = await createAdminClient()
 
     const [{ data: user }, { data: restaurant }] = await Promise.all([

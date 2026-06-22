@@ -261,6 +261,8 @@ export interface Settings {
         ingredientTrackingEnabled: boolean
         staffShiftsEnabled: boolean
         feedbackEnabled: boolean
+        // Customers can request a waiter to open their table session (Phase 3)
+        selfOrderRequestEnabled?: boolean
         defaultTaxRate: number
         currency: string
         currencySymbol: string

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatCurrency } from '@/lib/utils'
 import type { TakeoutOrder, TakeoutStatus } from '@/types/database'
+import { ORDER_STATUS_TO_TAKEOUT, type OrderStatus } from '@/lib/takeout'
 import {
     Clock, CheckCircle2, Package, ChefHat, ShoppingBag,
     Phone, MapPin, ArrowLeft
@@ -76,11 +77,25 @@ export default function TakeoutOrderTracker({ orderId, initialOrder, restaurantS
                 {
                     event: 'UPDATE',
                     schema: 'public',
-                    table: 'takeout_orders',
+                    table: 'orders',
                     filter: `id=eq.${orderId}`,
                 },
                 (payload) => {
-                    setOrder(payload.new as TakeoutOrder)
+                    // The orders row carries order_status + timestamps; keep the
+                    // items snapshot from current state and remap the status.
+                    const row = payload.new as {
+                        status: OrderStatus
+                        confirmed_at: string | null
+                        ready_at: string | null
+                        delivered_at: string | null
+                    }
+                    setOrder((prev) => ({
+                        ...prev,
+                        status: ORDER_STATUS_TO_TAKEOUT[row.status] ?? prev.status,
+                        confirmed_at: row.confirmed_at ?? prev.confirmed_at,
+                        ready_at: row.ready_at ?? prev.ready_at,
+                        picked_up_at: row.delivered_at ?? prev.picked_up_at,
+                    }))
                 }
             )
             .subscribe()

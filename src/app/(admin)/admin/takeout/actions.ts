@@ -2,33 +2,50 @@
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import {
+    TAKEOUT_ORDER_SELECT,
+    TAKEOUT_STATUS_TO_ORDER,
+    mapOrderRowToTakeout,
+    type TakeoutOrderRow,
+    type OrderStatus,
+} from '@/lib/takeout'
 
 export async function updateTakeoutStatusAction(orderId: string, newStatus: string) {
     const supabase = await createAdminClient()
+
+    const orderStatus: OrderStatus =
+        TAKEOUT_STATUS_TO_ORDER[newStatus as keyof typeof TAKEOUT_STATUS_TO_ORDER] ?? 'pending'
+
     const timestamps: Record<string, string> = {}
     const now = new Date().toISOString()
-    if (newStatus === 'confirmed') timestamps.confirmed_at = now
-    if (newStatus === 'ready_for_pickup') timestamps.ready_at = now
-    if (newStatus === 'picked_up') timestamps.picked_up_at = now
-    if (newStatus === 'cancelled') timestamps.cancelled_at = now
+    if (orderStatus === 'confirmed') timestamps.confirmed_at = now
+    if (orderStatus === 'ready') timestamps.ready_at = now
+    if (orderStatus === 'delivered') timestamps.delivered_at = now
 
     const { error } = await supabase
-        .from('takeout_orders')
-        .update({ status: newStatus, ...timestamps })
+        .from('orders')
+        .update({ status: orderStatus, ...timestamps })
         .eq('id', orderId)
+        .eq('order_type', 'takeout')
+
     if (error) return { error: error.message }
     revalidatePath('/admin/takeout')
+    revalidatePath('/kitchen')
+    revalidatePath('/waiter')
     return { success: true }
 }
 
 export async function getTakeoutOrdersAction(restaurantId: string) {
     const supabase = await createAdminClient()
     const { data } = await supabase
-        .from('takeout_orders')
-        .select('*')
+        .from('orders')
+        .select(TAKEOUT_ORDER_SELECT)
         .eq('restaurant_id', restaurantId)
-        .in('status', ['placed', 'confirmed', 'preparing', 'ready_for_pickup'])
+        .eq('order_type', 'takeout')
+        // active = not picked up / cancelled
+        .in('status', ['pending', 'confirmed', 'preparing', 'ready'])
         .order('placed_at', { ascending: false })
         .limit(50)
-    return { data: data || [] }
+
+    return { data: ((data || []) as unknown as TakeoutOrderRow[]).map(mapOrderRowToTakeout) }
 }
