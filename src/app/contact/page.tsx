@@ -1,9 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { ArrowLeft, ArrowRight, Mail } from 'lucide-react'
-import Logo from '@/components/shared/Logo'
 import { useState } from 'react'
+import { MarketingNav, MarketingFooter, Eyebrow } from '@/components/marketing'
 
 export default function ContactPage() {
     const [formState, setFormState] = useState({ name: '', email: '', message: '', phone: '' })
@@ -16,141 +14,103 @@ export default function ContactPage() {
         setTimeout(() => setSubmitted(false), 3000)
     }
 
-    return (
-        <div className="min-h-screen bg-slate-50 text-gray-900 relative">
-            {/* Ambient dot grid background */}
-            <div className="absolute inset-0 z-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+    const inputCls =
+        'w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl font-medium outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20'
 
-            {/* Navigation */}
-            <nav className="border-b border-gray-200/50 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <Logo className="h-8" />
-                    </Link>
-                    <Link href="/" className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-[var(--color-primary)] transition-colors px-4 py-2 rounded-xl hover:bg-gray-100">
-                        <ArrowLeft size={16} />
-                        Back to Home
-                    </Link>
-                </div>
-            </nav>
+    return (
+        <div className="min-h-screen bg-white text-gray-900">
+            <MarketingNav />
 
             {/* Hero */}
-            <section className="py-20 md:py-32 relative z-10 overflow-hidden">
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[var(--color-primary)]/5 rounded-full blur-[100px] pointer-events-none"></div>
-                <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center relative z-10">
-                    <div className="inline-block bg-[var(--color-primary)]/10 px-4 py-1.5 rounded-full mb-6 border border-[var(--color-primary)]/20">
-                        <span className="text-[var(--color-primary)] font-bold text-sm tracking-wide">Contact Us</span>
-                    </div>
-                    <h1 className="text-5xl md:text-7xl font-extrabold text-[var(--color-secondary)] tracking-tight">
-                        Get in Touch
+            <section className="relative overflow-hidden bg-white pb-14 pt-36 text-center">
+                <div className="pointer-events-none absolute right-0 top-0 h-[600px] w-[600px] rounded-full bg-[var(--color-primary)]/5 blur-[120px]" />
+                <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
+                    <Eyebrow tone="brand">Contact Us</Eyebrow>
+                    <h1 className="mt-6 text-5xl font-extrabold tracking-tight text-gray-900 md:text-7xl">
+                        Get in <span className="text-[var(--color-primary)]">Touch</span>
                     </h1>
-                    <p className="mt-8 text-xl text-gray-600 leading-relaxed font-medium">
-                        Have questions? Our team is here to help. Get in touch and we'll get back to you as soon as possible.
+                    <p className="mx-auto mt-8 max-w-xl text-xl font-medium leading-relaxed text-gray-500">
+                        Have questions? Our team is here to help. Get in touch and we&apos;ll get back to you as soon as possible.
                     </p>
                 </div>
             </section>
 
-            {/* Contact Form */}
-            <section className="pb-24 relative z-10">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6">
-                    <div className="bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-gray-100 grid md:grid-cols-5 gap-12 lg:gap-20">
+            {/* Contact form */}
+            <section className="bg-[#FAFAF8] pb-24 pt-4">
+                <div className="mx-auto max-w-6xl px-4 sm:px-6">
+                    <div className="grid gap-12 rounded-3xl border border-gray-100 bg-white p-8 shadow-xl md:grid-cols-5 md:p-12 lg:gap-20">
                         {/* Form */}
                         <div className="md:col-span-3">
-                            <h2 className="text-3xl font-extrabold text-gray-900 mb-8 tracking-tight">Send a Message</h2>
+                            <h2 className="mb-8 text-3xl font-extrabold tracking-tight text-gray-900">Send a Message</h2>
                             <form onSubmit={handleSubmit} className="space-y-6">
                                 {submitted && (
-                                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-green-700 font-medium flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">✓</div>
-                                        Thank you! We'll get back to you soon.
+                                    <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 p-4 font-medium text-green-700">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">✓</div>
+                                        Thank you! We&apos;ll get back to you soon.
                                     </div>
                                 )}
-
-                                <div className="grid sm:grid-cols-2 gap-6">
+                                <div className="grid gap-6 sm:grid-cols-2">
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Name</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={formState.name}
+                                        <label className="mb-2 block text-sm font-bold text-gray-700">Name</label>
+                                        <input type="text" required value={formState.name}
                                             onChange={(e) => setFormState({ ...formState, name: e.target.value })}
-                                            className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition font-medium"
-                                            placeholder="Your name"
-                                        />
+                                            className={inputCls} placeholder="Your name" />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Phone (Optional)</label>
-                                        <input
-                                            type="tel"
-                                            value={formState.phone}
+                                        <label className="mb-2 block text-sm font-bold text-gray-700">Phone (Optional)</label>
+                                        <input type="tel" value={formState.phone}
                                             onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
-                                            className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition font-medium"
-                                            placeholder="+977 98XXXXXXXX"
-                                        />
+                                            className={inputCls} placeholder="+977 98XXXXXXXX" />
                                     </div>
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        value={formState.email}
+                                    <label className="mb-2 block text-sm font-bold text-gray-700">Email</label>
+                                    <input type="email" required value={formState.email}
                                         onChange={(e) => setFormState({ ...formState, email: e.target.value })}
-                                        className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition font-medium"
-                                        placeholder="your@email.com"
-                                    />
+                                        className={inputCls} placeholder="your@email.com" />
                                 </div>
-
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Message</label>
-                                    <textarea
-                                        required
-                                        value={formState.message}
+                                    <label className="mb-2 block text-sm font-bold text-gray-700">Message</label>
+                                    <textarea required value={formState.message}
                                         onChange={(e) => setFormState({ ...formState, message: e.target.value })}
                                         rows={5}
-                                        className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition font-medium resize-none"
-                                        placeholder="Tell us about your inquiry..."
-                                    />
+                                        className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-4 font-medium outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+                                        placeholder="Tell us about your inquiry..." />
                                 </div>
-
-                                <button
-                                    type="submit"
-                                    className="w-full py-4 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white font-bold rounded-xl transition shadow-lg shadow-[var(--color-primary)]/20 text-lg"
-                                >
+                                <button type="submit"
+                                    className="w-full rounded-full bg-[var(--color-primary)] py-4 text-lg font-bold text-white shadow-lg shadow-[var(--color-primary)]/20 transition-transform hover:scale-[1.02]">
                                     Send Message
                                 </button>
                             </form>
                         </div>
 
                         {/* Info */}
-                        <div className="md:col-span-2 space-y-10 bg-slate-50 p-8 rounded-2xl border border-gray-100 h-fit">
+                        <div className="h-fit space-y-10 rounded-2xl border border-gray-100 bg-[#FAFAF8] p-8 md:col-span-2">
                             <div>
-                                <h3 className="text-xl font-extrabold text-gray-900 mb-3">Direct Contact</h3>
+                                <h3 className="mb-3 text-xl font-extrabold text-gray-900">Direct Contact</h3>
                                 <div className="space-y-4">
-                                    <a href="mailto:hello@kkkhane.com" className="flex items-center gap-3 text-gray-600 hover:text-[var(--color-primary)] font-medium transition">
-                                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-100">📧</div>
+                                    <a href="mailto:hello@kkkhane.com" className="flex items-center gap-3 font-medium text-gray-600 transition hover:text-[var(--color-primary)]">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-100 bg-white shadow-sm">📧</div>
                                         hello@kkkhane.com
                                     </a>
-                                    <a href="tel:+9779800000000" className="flex items-center gap-3 text-gray-600 hover:text-[var(--color-primary)] font-medium transition">
-                                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-100">📞</div>
+                                    <a href="tel:+9779800000000" className="flex items-center gap-3 font-medium text-gray-600 transition hover:text-[var(--color-primary)]">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-100 bg-white shadow-sm">📞</div>
                                         +977 9800000000
                                     </a>
                                 </div>
                             </div>
-
                             <div>
-                                <h3 className="text-xl font-extrabold text-gray-900 mb-3">Headquarters</h3>
-                                <div className="flex items-start gap-3 text-gray-600 font-medium">
-                                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm border border-gray-100 shrink-0">📍</div>
+                                <h3 className="mb-3 text-xl font-extrabold text-gray-900">Headquarters</h3>
+                                <div className="flex items-start gap-3 font-medium text-gray-600">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-white shadow-sm">📍</div>
                                     <p className="mt-2">Kathmandu, Nepal<br />South Asia</p>
                                 </div>
                             </div>
-
-                            <div className="pt-6 border-t border-gray-200">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">Connect on Social</h3>
+                            <div className="border-t border-gray-200 pt-6">
+                                <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-400">Connect on Social</h3>
                                 <div className="flex gap-3">
-                                    {['Twitter', 'Facebook', 'Instagram', 'LinkedIn'].map(social => (
-                                        <a key={social} href="#" className="flex-1 bg-white border border-gray-200 text-gray-600 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition text-center py-2.5 rounded-lg text-sm font-bold shadow-sm">
+                                    {['Twitter', 'Facebook', 'Instagram', 'LinkedIn'].map((social) => (
+                                        <a key={social} href="#" className="flex-1 rounded-lg border border-gray-200 bg-white py-2.5 text-center text-sm font-bold text-gray-600 shadow-sm transition hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]">
                                             {social}
                                         </a>
                                     ))}
@@ -160,6 +120,8 @@ export default function ContactPage() {
                     </div>
                 </div>
             </section>
+
+            <MarketingFooter />
         </div>
     )
 }

@@ -1,18 +1,14 @@
 import { redirect } from 'next/navigation'
 import { getOptionalUser } from '@/lib/auth'
 import Link from 'next/link'
-import Logo from '@/components/shared/Logo'
-import CopyrightYear from '@/components/shared/CopyrightYear'
-import MobileNav from './MobileNav'
 import Image from 'next/image'
+import { MarketingNav, MarketingFooter } from '@/components/marketing'
 import {
-    QrCode, ChefHat, ArrowRight, Smartphone, BarChart3,
-    Clock, ShieldCheck, Globe, Users, Utensils,
-    Gift, Receipt, CheckCircle, ChevronDown,
-    LayoutGrid, Phone, FileText, PiggyBank, Play, Apple,
-    MessageCircle, Users2, Star,
-    Plus,
-    MapPin, Facebook, Instagram, Youtube, Twitter
+    QrCode, ArrowRight, Smartphone, BarChart3,
+    ShieldCheck, Globe, FileText,
+    CheckCircle,
+    Play, Apple,
+    Star, Plus,
 } from 'lucide-react'
 
 const ROLE_LANDING: Record<string, string> = {
@@ -46,97 +42,7 @@ export default async function Home() {
         <div className="min-h-screen bg-white text-gray-900 overflow-x-hidden font-sans">
 
             {/* ── 1. Header & Navigation Bar ─────────────────────────────── */}
-            <nav className="fixed top-0 inset-x-0 z-50 bg-white/75 backdrop-blur-md border-b border-gray-100">
-                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-                    <Link href="/" className="shrink-0 flex items-center gap-2">
-                        <Logo className="h-8" />
-                    </Link>
-
-                    <div className="hidden lg:flex items-center gap-8 text-[15px] font-semibold text-gray-700">
-                        {/* Features Dropdown */}
-                        <div className="group relative h-20 flex items-center">
-                            <button className="flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
-                                Features <ChevronDown size={14} className="group-hover:-rotate-180 transition-transform duration-200" />
-                            </button>
-                            <div className="absolute top-[80px] left-1/2 -translate-x-1/2 w-[800px] bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 p-6 flex gap-6">
-                                <div className="flex-1 grid grid-cols-2 gap-4">
-                                    {[
-                                        { title: 'Order & KOT Management', desc: 'Take orders perfectly and reduce errors.', icon: <FileText className="text-gray-500" />, href: '/features/order-kot-management' },
-                                        { title: 'Inventory & Waste Control', desc: 'Track real-time stock to lower food costs.', icon: <LayoutGrid className="text-gray-500" />, href: '/features/inventory' },
-                                        { title: 'Accounting & Expense', desc: 'Track every expense, bill, and payment.', icon: <PiggyBank className="text-gray-500" />, href: '/features/accounting' },
-                                        { title: 'Digital QR Menu', desc: 'Let guests scan and order without waiting.', icon: <QrCode className="text-gray-500" />, href: '/features/qr-menu' },
-                                        { title: 'Table & Space Management', desc: 'Optimize seating and turn tables faster.', icon: <LayoutGrid className="text-gray-500" />, href: '/features/table-management' },
-                                        { title: 'Loyalty & Rewards', desc: 'Keep customers coming back for more.', icon: <Gift className="text-gray-500" />, href: '/features/loyalty' },
-                                    ].map(f => (
-                                        <Link href={f.href} key={f.title} className="flex gap-3 hover:bg-gray-50 p-3 rounded-xl cursor-pointer transition-colors block">
-                                            <div className="mt-1">{f.icon}</div>
-                                            <div>
-                                                <h4 className="font-bold text-gray-900 text-sm mb-0.5">{f.title}</h4>
-                                                <p className="text-xs text-gray-500 leading-snug">{f.desc}</p>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                                <div className="w-[280px] flex flex-col gap-4 border-l border-gray-100 pl-6">
-                                    {[
-                                        { title: 'Real-Time Sales Report', desc: 'Monitor live sales and profit analytics.', icon: <Clock size={18} />, href: '/features/analytics' },
-                                        { title: 'Mobile & Web App', desc: 'Works on iOS, Android, or Web.', icon: <Globe size={18} />, href: '/features/apps' },
-                                        { title: 'Refer & Earn', desc: 'Refer others, earn free Premium', icon: <Gift size={18} />, href: '/legal/referrals' },
-                                    ].map(l => (
-                                        <Link href={l.href} key={l.title} className="flex gap-3 hover:text-[var(--color-primary)] cursor-pointer transition-colors block">
-                                            <div className="mt-0.5 text-gray-400">{l.icon}</div>
-                                            <div>
-                                                <h4 className="font-bold text-sm mb-0.5">{l.title}</h4>
-                                                <p className="text-xs text-gray-500">{l.desc}</p>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                    <Link href="/signup" className="mt-auto bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-xl relative overflow-hidden group/card cursor-pointer block">
-                                        <h4 className="font-bold text-sm text-gray-900 mb-4 pr-10 relative z-10">Digital QR Menu to make your Restaurant smart.</h4>
-                                        <span className="text-xs font-bold text-white bg-[var(--color-primary)] px-3 py-1.5 rounded-lg relative z-10">Start for free</span>
-                                    </Link>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Resources Dropdown */}
-                        <div className="group relative h-20 flex items-center">
-                            <button className="flex items-center gap-1 hover:text-[var(--color-primary)] transition-colors">
-                                Resources <ChevronDown size={14} className="group-hover:-rotate-180 transition-transform duration-200" />
-                            </button>
-                            <div className="absolute top-[80px] left-0 w-[300px] bg-white rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 p-3">
-                                {[
-                                    { title: 'Blog', desc: 'Blogs help you to optimize your restaurant', icon: <FileText size={18} />, href: '/blog' },
-                                    { title: 'Reviews', desc: 'Read reviews from our customers', icon: <MessageCircle size={18} />, href: '/about#reviews' },
-                                    { title: 'Customer Stories', desc: 'See how we are helping restaurants', icon: <Users2 size={18} />, href: '/about#stories' },
-                                ].map(r => (
-                                    <Link href={r.href} key={r.title} className="flex gap-3 hover:bg-gray-50 p-3 rounded-xl cursor-pointer transition-colors block">
-                                        <div className="mt-0.5 text-[var(--color-primary)]">{r.icon}</div>
-                                        <div>
-                                            <h4 className="font-bold text-gray-900 text-sm mb-0.5">{r.title}</h4>
-                                            <p className="text-xs text-gray-500">{r.desc}</p>
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                        </div>
-
-                        <Link href="/pricing" className="hover:text-[var(--color-primary)] transition-colors">Pricing</Link>
-                        <Link href="/legal/career" className="hover:text-[var(--color-primary)] transition-colors">Career</Link>
-                        <Link href="/contact" className="hover:text-[var(--color-primary)] transition-colors">Contact</Link>
-                    </div>
-
-                    <div className="flex items-center gap-6">
-                        <Link href="/login" className="hidden sm:block font-bold text-gray-700 hover:text-[var(--color-primary)] transition-colors">
-                            Login
-                        </Link>
-                        <Link href="/signup" className="bg-[var(--color-primary)] text-white px-6 py-2.5 rounded-full font-bold hover:scale-105 transition-transform shadow-md hover:shadow-lg">
-                            Start For Free
-                        </Link>
-                        <MobileNav />
-                    </div>
-                </div>
-            </nav>
+            <MarketingNav />
 
             {/* ── 2. Hero Section ────────────────────────────────────────────── */}
             <section className="relative pt-36 pb-20 overflow-hidden bg-white text-center">
@@ -423,7 +329,7 @@ export default async function Home() {
                                         <div className="flex gap-1 text-amber-400 mb-3">
                                             {[...Array(review.stars)].map((_, idx) => <Star key={idx} size={14} fill="currentColor" />)}
                                         </div>
-                                        <p className="text-sm font-medium text-gray-700 leading-relaxed mb-4">"{review.text}"</p>
+                                        <p className="text-sm font-medium text-gray-700 leading-relaxed mb-4">&ldquo;{review.text}&rdquo;</p>
                                         <p className="text-xs font-bold text-gray-900">- {review.name}</p>
                                     </div>
                                 ))}
@@ -664,110 +570,7 @@ export default async function Home() {
             </section>
 
             {/* ── 11. Footer ─────────────────────────────────────────────────── */}
-            <footer className="bg-[#f9fafb] border-t border-gray-200 pt-20 pb-10">
-                <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-                        {/* Col 1 */}
-                        <div>
-                            <Logo className="h-8 mb-6" />
-                            <p className="text-sm text-gray-500 font-medium leading-relaxed mb-8">
-                                #1 Restaurant Software to manage and grow your restaurant - smarter, faster.
-                            </p>
-                            <div className="flex gap-3">
-                                {[
-                                    { icon: <Facebook size={18}/>, url: 'https://facebook.com/kkkhane' },
-                                    { icon: <Instagram size={18}/>, url: 'https://instagram.com/kkkhane' },
-                                    { icon: <Youtube size={18}/>, url: 'https://youtube.com/@kkkhane' },
-                                    { icon: <Twitter size={18}/>, url: 'https://twitter.com/kkkhane' }
-                                ].map(s => (
-                                    <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-colors shadow-sm">
-                                        {s.icon}
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Col 2 */}
-                        <div>
-                            <h4 className="font-bold text-gray-900 mb-6 text-lg">Features</h4>
-                            <ul className="space-y-4">
-                                {['Order Management with KOT', 'Inventory & Waste Control', 'Accounting & Expense Manager', 'Digital QR Menu', 'Menu & Table Management', 'Real Time Sales Report', 'Loyalty & Rewards', 'Refer & Earn'].map(l => (
-                                    <li key={l}><Link href={`/features/${l.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} className="text-sm text-gray-600 font-medium hover:text-[var(--color-primary)] transition-colors">{l}</Link></li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        {/* Col 3 */}
-                        <div>
-                            <h4 className="font-bold text-gray-900 mb-6 text-lg">Resources</h4>
-                            <ul className="space-y-4">
-                                {['Blogs', 'Contact Us', 'Reviews', 'Customer Stories'].map(l => (
-                                    <li key={l}><Link href={l === 'Blogs' ? '/blog' : l === 'Contact Us' ? '/contact' : '/about'} className="text-sm text-gray-600 font-medium hover:text-[var(--color-primary)] transition-colors">{l}</Link></li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        {/* Col 4 */}
-                        <div>
-                            <h4 className="font-bold text-gray-900 mb-6 text-lg">Download our App</h4>
-                            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm inline-block mb-6">
-                                <QrCode size={80} className="text-gray-800" />
-                            </div>
-                            <div className="flex flex-col gap-3">
-                                <Link href="#" className="bg-black text-white px-4 py-2.5 rounded-xl flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-md">
-                                    <Play size={24} className="fill-current" />
-                                    <div className="text-left">
-                                        <div className="text-[10px] uppercase font-bold text-gray-400">Get it on</div>
-                                        <div className="text-sm font-bold leading-tight">Google Play</div>
-                                    </div>
-                                </Link>
-                                <Link href="#" className="bg-black text-white px-4 py-2.5 rounded-xl flex items-center gap-3 hover:bg-gray-800 transition-colors shadow-md">
-                                    <Apple size={24} className="fill-current" />
-                                    <div className="text-left">
-                                        <div className="text-[10px] uppercase font-bold text-gray-400">Download on the</div>
-                                        <div className="text-sm font-bold leading-tight">App Store</div>
-                                    </div>
-                                </Link>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Pre-footer */}
-                    <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-3xl p-8 sm:p-10 mb-12 border border-gray-100 shadow-sm">
-                        <div className="mb-8">
-                            <h3 className="text-2xl font-extrabold text-gray-900 flex items-center gap-2 mb-2">Get in Touch 👋</h3>
-                            <p className="text-gray-600 font-medium">Ready to transform your restaurant? Contact our team today.</p>
-                        </div>
-                        <div className="grid md:grid-cols-3 gap-6">
-                            <div className="bg-white/80 backdrop-blur p-6 rounded-2xl border border-white shadow-sm">
-                                <div className="flex items-center gap-2 text-blue-600 font-bold mb-4"><Phone size={18} /> Sales Team</div>
-                                <p className="text-sm font-bold text-gray-900 mb-2">+977 9800000000</p>
-                                <p className="text-sm font-bold text-gray-900">sales@kkkhane.com</p>
-                            </div>
-                            <div className="bg-white/80 backdrop-blur p-6 rounded-2xl border border-white shadow-sm">
-                                <div className="flex items-center gap-2 text-green-600 font-bold mb-4"><Phone size={18} /> Support Team</div>
-                                <p className="text-sm font-bold text-gray-900 mb-2">+977 9800000000</p>
-                                <p className="text-sm font-bold text-gray-900">support@kkkhane.com</p>
-                            </div>
-                            <div className="bg-white/80 backdrop-blur p-6 rounded-2xl border border-white shadow-sm">
-                                <div className="flex items-center gap-2 text-[var(--color-primary)] font-bold mb-4"><MapPin size={18} /> Service Location</div>
-                                <p className="text-sm text-gray-600 font-medium leading-relaxed">
-                                    We provide comprehensive restaurant management solutions across all regions of Nepal.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-gray-200 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-500 font-medium">
-                        <div className="flex gap-6">
-                            <Link href="/legal/refund" className="hover:text-gray-900 transition-colors">Refund</Link>
-                            <Link href="/legal/privacy" className="hover:text-gray-900 transition-colors">Privacy Policy</Link>
-                            <Link href="/legal/terms" className="hover:text-gray-900 transition-colors">Terms & Conditions</Link>
-                        </div>
-                        <p>&copy; <CopyrightYear /> kkkhane. All Rights Reserved.</p>
-                    </div>
-                </div>
-            </footer>
+            <MarketingFooter />
         </div>
     )
 }

@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, CheckCircle, ArrowRight } from 'lucide-react'
-import Logo from '@/components/shared/Logo'
+import { CheckCircle } from 'lucide-react'
+import { MarketingNav, MarketingFooter, Eyebrow, MarketingButton } from '@/components/marketing'
 
 // Mapping slugs back to features
 const FEATURE_CONTENT: Record<string, { title: string, subtitle: string, icon: string, description: string, benefits: string[] }> = {
@@ -24,7 +24,7 @@ const FEATURE_CONTENT: Record<string, { title: string, subtitle: string, icon: s
         title: 'Nepal QR Payments',
         subtitle: 'Seamless eSewa, Khalti, and Fonepay integration.',
         icon: '💳',
-        description: 'Built specifically for Nepal\'s digital payment ecosystem. Accept payments directly via QR codes and use our automated screenshot verification system to instantly confirm transfers without manually checking SMS alerts.',
+        description: "Built specifically for Nepal's digital payment ecosystem. Accept payments directly via QR codes and use our automated screenshot verification system to instantly confirm transfers without manually checking SMS alerts.",
         benefits: ['Native eSewa, Khalti, and Fonepay support', 'Automated screenshot verification', '100% VAT and PAN compliant billing', 'Automatic digital invoice generation', 'Direct integration with daily Z-reports']
     },
     'staff-management': {
@@ -71,62 +71,53 @@ export default function FeatureSlugPage({ params }: { params: { slug: string } }
 
     if (!feature) {
         return (
-            <div className="min-h-screen bg-slate-50 flex items-center justify-center flex-col text-center px-4">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center text-4xl mb-6">🔍</div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">Feature Not Found</h1>
-                <p className="text-gray-500 mb-8 max-w-md">We couldn't find the specific feature you're looking for. It might be in development or under a different name.</p>
-                <Link href="/features" className="bg-[var(--color-primary)] text-white px-6 py-3 rounded-xl font-bold hover:bg-[var(--color-primary)]/90 transition">
-                    View All Features
-                </Link>
+            <div className="min-h-screen bg-white text-gray-900">
+                <MarketingNav />
+                <div className="flex min-h-[70vh] flex-col items-center justify-center px-4 pt-20 text-center">
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 text-4xl">🔍</div>
+                    <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-gray-900">Feature Not Found</h1>
+                    <p className="mb-8 max-w-md font-medium text-gray-500">
+                        We couldn&apos;t find the specific feature you&apos;re looking for. It might be in development or under a different name.
+                    </p>
+                    <MarketingButton href="/features">View All Features</MarketingButton>
+                </div>
+                <MarketingFooter />
             </div>
         )
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 text-gray-900 relative">
-            {/* Ambient dot grid background */}
-            <div className="absolute inset-0 z-0 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#e5e7eb 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+        <div className="min-h-screen bg-white text-gray-900">
+            <MarketingNav />
 
-            {/* Navigation */}
-            <nav className="border-b border-gray-200/50 bg-white/80 backdrop-blur-md sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
-                    <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <Logo className="h-8" />
-                    </Link>
-                    <Link href="/features" className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-[var(--color-primary)] transition-colors px-4 py-2 rounded-xl hover:bg-gray-100">
-                        <ArrowLeft size={16} />
-                        All Features
-                    </Link>
-                </div>
-            </nav>
+            <main className="bg-[#FAFAF8] pb-24 pt-32">
+                <div className="mx-auto max-w-4xl px-4 sm:px-6">
+                    <div className="relative overflow-hidden rounded-3xl border border-gray-100 bg-white p-8 shadow-xl md:p-16">
+                        <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-[var(--color-primary)]/5 blur-3xl" />
 
-            <main className="relative z-10 py-20 md:py-32">
-                <div className="max-w-4xl mx-auto px-4 sm:px-6">
-                    <div className="bg-white rounded-3xl p-8 md:p-16 shadow-xl border border-gray-100 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--color-primary)]/5 rounded-full blur-3xl pointer-events-none"></div>
-                        
-                        <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-gray-100 flex items-center justify-center text-4xl mb-8 shadow-sm">
+                        <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl border border-gray-100 bg-[#FAFAF8] text-4xl shadow-sm">
                             {feature.icon}
                         </div>
-                        
-                        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 tracking-tight">
+
+                        <div className="mb-4"><Eyebrow tone="brand">Feature</Eyebrow></div>
+                        <h1 className="mb-4 text-4xl font-extrabold tracking-tight text-gray-900 md:text-5xl">
                             {feature.title}
                         </h1>
-                        <h2 className="text-xl md:text-2xl text-[var(--color-primary)] font-bold mb-8">
+                        <h2 className="mb-8 text-xl font-bold text-[var(--color-primary)] md:text-2xl">
                             {feature.subtitle}
                         </h2>
-                        
-                        <p className="text-lg text-gray-600 leading-relaxed font-medium mb-12">
+
+                        <p className="mb-12 text-lg font-medium leading-relaxed text-gray-600">
                             {feature.description}
                         </p>
 
-                        <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100">
-                            <h3 className="text-xl font-bold text-gray-900 mb-6">Key Capabilities</h3>
+                        <div className="rounded-2xl border border-gray-100 bg-[#FAFAF8] p-8">
+                            <h3 className="mb-6 text-xl font-bold text-gray-900">Key Capabilities</h3>
                             <ul className="space-y-4">
                                 {feature.benefits.map((item, i) => (
-                                    <li key={i} className="flex items-center gap-4 text-gray-700 font-medium">
-                                        <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0">
-                                            <CheckCircle size={18} className="text-[#10B981]" />
+                                    <li key={i} className="flex items-center gap-4 font-medium text-gray-700">
+                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm">
+                                            <CheckCircle size={18} className="text-[var(--success)]" />
                                         </div>
                                         {item}
                                     </li>
@@ -134,17 +125,15 @@ export default function FeatureSlugPage({ params }: { params: { slug: string } }
                             </ul>
                         </div>
 
-                        <div className="mt-12 flex items-center gap-4">
-                            <Link href="/signup" className="flex-1 bg-[var(--color-primary)] text-white text-center py-4 rounded-xl font-bold text-lg hover:bg-[var(--color-primary)]/90 transition shadow-lg shadow-[var(--color-primary)]/20">
-                                Start Free Trial
-                            </Link>
-                            <Link href="/contact" className="flex-1 bg-white border-2 border-gray-200 text-gray-700 text-center py-4 rounded-xl font-bold text-lg hover:bg-gray-50 transition">
-                                Talk to Sales
-                            </Link>
+                        <div className="mt-12 flex flex-col gap-4 sm:flex-row">
+                            <MarketingButton href="/signup" size="lg" className="flex-1">Start Free Trial</MarketingButton>
+                            <MarketingButton href="/contact" size="lg" variant="secondary" className="flex-1">Talk to Sales</MarketingButton>
                         </div>
                     </div>
                 </div>
             </main>
+
+            <MarketingFooter />
         </div>
     )
 }
