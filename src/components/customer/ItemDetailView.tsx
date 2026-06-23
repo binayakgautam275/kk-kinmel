@@ -373,7 +373,16 @@ export default function ItemDetailView({
                                                         : 'hover:bg-gray-50/50'
                                             }`}
                                         >
-                                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                                            <div className="flex-1 min-w-0 flex items-center gap-2.5">
+                                                {variation.image_url && (
+                                                    <Image
+                                                        src={variation.image_url}
+                                                        alt={variation.name}
+                                                        width={40}
+                                                        height={40}
+                                                        className="w-10 h-10 rounded-lg object-cover shrink-0 border border-gray-100"
+                                                    />
+                                                )}
                                                 <span className={`text-xs font-semibold ${isSelected ? 'text-gray-900 font-bold' : 'text-gray-700'}`}>
                                                     {variation.name}
                                                 </span>

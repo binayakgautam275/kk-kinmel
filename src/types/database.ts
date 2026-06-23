@@ -5,7 +5,7 @@
 export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
 export type SessionStatus = 'active' | 'closed' | 'expired'
 export type PaymentStatus = 'unpaid' | 'pending' | 'paid' | 'refunded' | 'failed'
-export type RoleName = 'super_admin' | 'manager' | 'kitchen' | 'waiter' | 'customer'
+export type RoleName = 'super_admin' | 'manager' | 'kitchen' | 'waiter' | 'cashier' | 'customer'
 export type PricingRuleType = 'percentage_off' | 'fixed_price' | 'amount_off'
 export type PromoType = 'percentage_off' | 'amount_off' | 'free_item' | 'bogo'
 export type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum'
@@ -105,6 +105,7 @@ export interface MenuItemVariation {
     name: string
     price: number
     is_available: boolean
+    image_url: string | null
     created_at: string
 }
 

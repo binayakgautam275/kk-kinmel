@@ -45,7 +45,7 @@ export async function deleteCategoryAction(id: string) {
     return { success: true }
 }
 
-export async function addItemAction(item: Record<string, unknown>, variations?: { name: string; price: number; is_available?: boolean }[]) {
+export async function addItemAction(item: Record<string, unknown>, variations?: { name: string; price: number; is_available?: boolean; image_url?: string | null }[]) {
     const supabase = await createAdminClient()
 
     // Enforce plan menu item limit
@@ -84,7 +84,8 @@ export async function addItemAction(item: Record<string, unknown>, variations?: 
             menu_item_id: data.id,
             name: v.name,
             price: Number(v.price),
-            is_available: v.is_available ?? true
+            is_available: v.is_available ?? true,
+            image_url: v.image_url || null
         }))
         const { error: varError } = await supabase
             .from('menu_item_variations')
@@ -100,7 +101,7 @@ export async function addItemAction(item: Record<string, unknown>, variations?: 
     return { data }
 }
 
-export async function updateItemAction(id: string, updates: Record<string, unknown>, variations?: { id?: string; name: string; price: number; is_available?: boolean }[]) {
+export async function updateItemAction(id: string, updates: Record<string, unknown>, variations?: { id?: string; name: string; price: number; is_available?: boolean; image_url?: string | null }[]) {
     const supabase = await createAdminClient()
     
     // Exclude variations from updates object if present
@@ -140,7 +141,8 @@ export async function updateItemAction(id: string, updates: Record<string, unkno
                 menu_item_id: id,
                 name: v.name,
                 price: Number(v.price),
-                is_available: v.is_available ?? true
+                is_available: v.is_available ?? true,
+                image_url: v.image_url || null
             }))
         if (toInsert.length > 0) {
             await supabase
@@ -156,7 +158,8 @@ export async function updateItemAction(id: string, updates: Record<string, unkno
                 .update({
                     name: v.name,
                     price: Number(v.price),
-                    is_available: v.is_available ?? true
+                    is_available: v.is_available ?? true,
+                    image_url: v.image_url || null
                 })
                 .eq('id', v.id)
         }

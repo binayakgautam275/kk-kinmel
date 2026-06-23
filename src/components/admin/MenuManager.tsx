@@ -17,6 +17,10 @@ import TranslationModal from '@/components/admin/TranslationModal'
 
 type TranslationRow = { language_code: string; entity_type: string; entity_id: string; translated_text: string }
 
+// Monotonic counter for unique upload paths. Avoids crypto.randomUUID (unavailable
+// on non-HTTPS LAN origins) and Date.now/Math.random (flagged by react-hooks/purity).
+let uploadSeq = 0
+
 export default function MenuManager({
     initialCategories,
     initialItems,
@@ -45,7 +49,8 @@ export default function MenuManager({
         name: '', description: '', price: 0, is_available: true, category_id: '', image_url: ''
     })
     const [hasVariations, setHasVariations] = useState(false)
-    const [itemVariations, setItemVariations] = useState<{ id?: string; name: string; price: number; is_available: boolean }[]>([])
+    const [itemVariations, setItemVariations] = useState<{ id?: string; name: string; price: number; is_available: boolean; image_url?: string | null }[]>([])
+    const [variationUploadIdx, setVariationUploadIdx] = useState<number | null>(null)
 
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [imageUploading, setImageUploading] = useState(false)
@@ -130,22 +135,39 @@ export default function MenuManager({
         }
     }
 
-    // --- Image Upload Handler ---
+    // --- Image Upload Handlers ---
+    const uploadToStorage = async (file: File): Promise<string | null> => {
+        const supabase = createClient()
+        const ext = file.name.split('.').pop()
+        const path = `${restaurantId}/${file.lastModified}-${uploadSeq++}.${ext}`
+        const { error } = await supabase.storage.from('menu-images').upload(path, file, { upsert: true })
+        if (error) throw error
+        const { data: urlData } = supabase.storage.from('menu-images').getPublicUrl(path)
+        return urlData.publicUrl
+    }
+
     const uploadMenuImage = async (file: File) => {
         setImageUploading(true)
         try {
-            const supabase = createClient()
-            const ext = file.name.split('.').pop()
-            const path = `${restaurantId}/${Date.now()}.${ext}`
-            const { error } = await supabase.storage.from('menu-images').upload(path, file, { upsert: true })
-            if (error) throw error
-            const { data: urlData } = supabase.storage.from('menu-images').getPublicUrl(path)
-            setItemFormData(prev => ({ ...prev, image_url: urlData.publicUrl }))
+            const url = await uploadToStorage(file)
+            setItemFormData(prev => ({ ...prev, image_url: url }))
             toast.success('Image uploaded')
-        } catch {
-            toast.error('Failed to upload image')
+        } catch (err) {
+            toast.error(err instanceof Error ? `Upload failed: ${err.message}` : 'Failed to upload image')
         } finally {
             setImageUploading(false)
+        }
+    }
+
+    const uploadVariationImage = async (idx: number, file: File) => {
+        setVariationUploadIdx(idx)
+        try {
+            const url = await uploadToStorage(file)
+            setItemVariations(prev => prev.map((v, i) => i === idx ? { ...v, image_url: url } : v))
+        } catch (err) {
+            toast.error(err instanceof Error ? `Upload failed: ${err.message}` : 'Failed to upload image')
+        } finally {
+            setVariationUploadIdx(null)
         }
     }
 
@@ -362,8 +384,13 @@ export default function MenuManager({
                                                         {item.variations && item.variations.length > 0 && (
                                                             <div className="mt-2 flex flex-wrap gap-1.5">
                                                                 {item.variations.map(v => (
-                                                                    <span key={v.id || v.name} className="inline-flex items-center text-[10px] font-medium bg-gray-50 border border-gray-150 text-gray-600 px-2 py-0.5 rounded-md">
-                                                                        {v.name}: <strong className="ml-1 text-gray-900">{formatCurrency(v.price)}</strong>
+                                                                    <span key={v.id || v.name} className="inline-flex items-center gap-1.5 text-[10px] font-medium bg-gray-50 border border-gray-200 text-gray-600 pr-2 rounded-md overflow-hidden">
+                                                                        {v.image_url ? (
+                                                                            <Image src={v.image_url} alt={v.name} width={20} height={20} className="w-5 h-5 object-cover shrink-0" />
+                                                                        ) : (
+                                                                            <span className="pl-2" />
+                                                                        )}
+                                                                        <span className="py-0.5">{v.name}: <strong className="text-gray-900">{formatCurrency(v.price)}</strong></span>
                                                                     </span>
                                                                 ))}
                                                             </div>
@@ -375,7 +402,7 @@ export default function MenuManager({
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex flex-col gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="flex flex-col gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                                         {hasNepali && (
                                                             <button onClick={() => setTranslateTarget({ entityId: item.id, entityType: 'menu_item', name: item.name, description: item.description })} className="p-1.5 text-gray-400 hover:text-purple-500 rounded bg-gray-50 hover:bg-purple-50" title="Translate">
                                                                 <Globe size={14} />
@@ -593,7 +620,7 @@ export default function MenuManager({
                                             onChange={e => {
                                                 setHasVariations(e.target.checked)
                                                 if (e.target.checked && itemVariations.length === 0) {
-                                                    setItemVariations([{ name: '', price: 0, is_available: true }])
+                                                    setItemVariations([{ name: '', price: 0, is_available: true, image_url: null }])
                                                 }
                                             }} 
                                         />
@@ -604,50 +631,90 @@ export default function MenuManager({
                                 {hasVariations && (
                                     <div className="space-y-2 mt-3 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
                                         {itemVariations.map((v, idx) => (
-                                            <div key={idx} className="flex gap-2 items-center">
-                                                <input
-                                                    type="text"
-                                                    value={v.name}
-                                                    onChange={e => {
-                                                        const newVars = [...itemVariations]
-                                                        newVars[idx].name = e.target.value
-                                                        setItemVariations(newVars)
-                                                    }}
-                                                    placeholder="Variation Name (e.g. Small)"
-                                                    className="flex-1 border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2 border bg-white"
-                                                />
-                                                <div className="relative w-28">
-                                                    <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                                                        <span className="text-gray-500 text-xs">$</span>
-                                                    </div>
+                                            <div key={idx} className="flex gap-3 bg-white p-2.5 rounded-xl border border-gray-200">
+                                                {/* Variation image */}
+                                                <label className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center cursor-pointer group/var">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        className="hidden"
+                                                        disabled={variationUploadIdx !== null}
+                                                        onChange={e => { const f = e.target.files?.[0]; if (f) uploadVariationImage(idx, f); e.target.value = '' }}
+                                                    />
+                                                    {variationUploadIdx === idx ? (
+                                                        <Loader2 size={18} className="animate-spin text-gray-400" />
+                                                    ) : v.image_url ? (
+                                                        <>
+                                                            <Image src={v.image_url} alt={v.name || 'Variation'} fill sizes="64px" className="object-cover" />
+                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/var:opacity-100 transition-opacity flex items-center justify-center">
+                                                                <Upload size={14} className="text-white" />
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex flex-col items-center gap-0.5 text-gray-400 group-hover/var:text-[var(--color-primary)] transition-colors">
+                                                            <ImageIcon size={16} />
+                                                            <span className="text-[9px] font-medium leading-none">Photo</span>
+                                                        </div>
+                                                    )}
+                                                </label>
+
+                                                {/* Variation fields */}
+                                                <div className="flex-1 min-w-0 flex flex-col gap-2">
                                                     <input
                                                         type="text"
-                                                        inputMode="decimal"
-                                                        value={v.price === 0 ? '' : v.price}
+                                                        value={v.name}
                                                         onChange={e => {
-                                                            const val = e.target.value
-                                                            if (/^\d*\.?\d*$/.test(val)) {
-                                                                const newVars = [...itemVariations]
-                                                                newVars[idx].price = val === '' ? 0 : Number(val)
-                                                                setItemVariations(newVars)
-                                                            }
+                                                            const newVars = [...itemVariations]
+                                                            newVars[idx].name = e.target.value
+                                                            setItemVariations(newVars)
                                                         }}
-                                                        placeholder="Price"
-                                                        className="w-full pl-6 border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2 border bg-white"
+                                                        placeholder="Variation Name (e.g. Small)"
+                                                        className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2 border bg-white"
                                                     />
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="relative flex-1 sm:flex-none sm:w-32">
+                                                            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                                                                <span className="text-gray-500 text-xs">$</span>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                inputMode="decimal"
+                                                                value={v.price === 0 ? '' : v.price}
+                                                                onChange={e => {
+                                                                    const val = e.target.value
+                                                                    if (/^\d*\.?\d*$/.test(val)) {
+                                                                        const newVars = [...itemVariations]
+                                                                        newVars[idx].price = val === '' ? 0 : Number(val)
+                                                                        setItemVariations(newVars)
+                                                                    }
+                                                                }}
+                                                                placeholder="Price"
+                                                                className="w-full pl-6 border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2 border bg-white"
+                                                            />
+                                                        </div>
+                                                        {v.image_url && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setItemVariations(prev => prev.map((vv, i) => i === idx ? { ...vv, image_url: null } : vv))}
+                                                                className="text-[11px] font-medium text-gray-400 hover:text-red-500 px-1 shrink-0"
+                                                            >
+                                                                Remove photo
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setItemVariations(itemVariations.filter((_, i) => i !== idx))}
+                                                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg shrink-0 ml-auto"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setItemVariations(itemVariations.filter((_, i) => i !== idx))}
-                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg shrink-0"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
                                             </div>
                                         ))}
                                         <button
                                             type="button"
-                                            onClick={() => setItemVariations([...itemVariations, { name: '', price: 0, is_available: true }])}
+                                            onClick={() => setItemVariations([...itemVariations, { name: '', price: 0, is_available: true, image_url: null }])}
                                             className="w-full py-2 border border-dashed border-gray-200 text-gray-500 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors bg-white mt-1"
                                         >
                                             <Plus size={14} /> Add Option
