@@ -5,7 +5,7 @@ import TakeoutQueue from '@/components/kitchen/TakeoutQueue'
 import KitchenStats from '@/components/kitchen/KitchenStats'
 import StaffShiftClock from '@/components/shared/StaffShiftClock'
 import { getRestaurantFeatures } from '@/lib/features'
-import type { TakeoutOrder } from '@/types/database'
+import { TAKEOUT_ORDER_SELECT, mapOrderRowToTakeout, type TakeoutOrderRow } from '@/lib/takeout'
 
 export const revalidate = 0
 
@@ -45,13 +45,15 @@ export default async function KitchenPage() {
                 )
             `)
             .eq('restaurant_id', restaurantId)
+            .eq('order_type', 'dine_in')
             .in('status', ['pending', 'confirmed', 'preparing', 'ready'])
             .order('placed_at', { ascending: true }),
         adminSupabase
-            .from('takeout_orders')
-            .select('*')
+            .from('orders')
+            .select(TAKEOUT_ORDER_SELECT)
             .eq('restaurant_id', restaurantId)
-            .in('status', ['placed', 'confirmed', 'preparing'])
+            .eq('order_type', 'takeout')
+            .in('status', ['pending', 'confirmed', 'preparing', 'ready'])
             .order('pickup_time', { ascending: true }),
         // Orders completed (delivered) today
         adminSupabase
@@ -137,7 +139,7 @@ export default async function KitchenPage() {
                 {features?.takeoutEnabled && (
                     <div className="px-4 pb-4 shrink-0 print:hidden">
                         <TakeoutQueue
-                            initialOrders={(takeoutOrders || []) as unknown as TakeoutOrder[]}
+                            initialOrders={((takeoutOrders || []) as unknown as TakeoutOrderRow[]).map(mapOrderRowToTakeout)}
                             restaurantId={restaurantId}
                         />
                     </div>

@@ -36,6 +36,8 @@ export default async function AdminDashboardPage() {
         { data: activeShifts },
         { data: lowStockIngredients },
         { count: activePromos },
+        { count: staffCount },
+        { data: restaurantSettings },
     ] = await Promise.all([
         // All queries use adminSupabase (service role) — skips RLS policy evaluation
         adminSupabase.from('orders').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).gte('placed_at', today.toISOString()),
@@ -50,6 +52,8 @@ export default async function AdminDashboardPage() {
         adminSupabase.from('staff_shifts').select('id, clock_in, users(full_name, roles(name))').eq('restaurant_id', restaurantId).is('clock_out', null).order('clock_in', { ascending: false }),
         adminSupabase.from('ingredients').select('id, name, stock_quantity, reorder_level, unit').eq('restaurant_id', restaurantId).eq('is_active', true).not('reorder_level', 'is', null),
         adminSupabase.from('promo_codes').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).eq('is_active', true),
+        adminSupabase.from('users').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
+        adminSupabase.from('settings').select('business_hours').eq('restaurant_id', restaurantId).maybeSingle(),
     ])
 
     const totalRevenueToday = (todayOrders || []).filter(o => o.status === 'delivered').reduce((s, o) => s + (o.total_amount || 0), 0)
@@ -69,9 +73,11 @@ export default async function AdminDashboardPage() {
     }>
 
     const onboardingSteps = [
-        { done: (menuCategoryCount || 0) > 0, label: 'Add your first menu category', href: '/admin/menu' },
-        { done: (menuItemCount || 0) > 0, label: 'Add your first menu item', href: '/admin/menu' },
-        { done: (tableCount || 0) > 0, label: 'Create a table and generate a QR code', href: '/admin/tables' },
+        { done: (menuCategoryCount || 0) > 0, label: 'Add a menu category (we added a few to start)', href: '/admin/menu' },
+        { done: (menuItemCount || 0) > 0, label: 'Customize your menu items', href: '/admin/menu' },
+        { done: (tableCount || 0) > 0, label: 'Review tables and print their QR codes', href: '/admin/tables' },
+        { done: (staffCount || 0) > 1, label: 'Invite your staff', href: '/admin/staff' },
+        { done: !!restaurantSettings?.business_hours, label: 'Set business hours & tax', href: '/admin/settings' },
     ]
     const showChecklist = onboardingSteps.some(s => !s.done)
 

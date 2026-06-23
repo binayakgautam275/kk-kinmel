@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createTakeoutOrder } from '@/app/api/takeout/actions'
 import { useCartStore } from '@/lib/stores/cart'
+import { useActiveOrders } from '@/lib/stores/activeOrders'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
 import { formatCurrency } from '@/lib/utils'
 import PromoCodeInput from '@/components/customer/PromoCodeInput'
@@ -75,11 +76,12 @@ export default function TakeoutForm({ restaurantId, restaurantName, restaurantSl
         if (result.error) {
             toast.error(result.error)
             setIsSubmitting(false)
-        } else if (result.order) {
+        } else if (result.orderId) {
             toast.success('Takeout order placed successfully!')
+            useActiveOrders.getState().addActiveOrder({ id: result.orderId, type: 'takeout', slug: restaurantSlug })
             clearCart()
             // Redirect to order tracking page
-            router.push(`/takeout/${restaurantSlug}/order/${result.order.id}`)
+            router.push(`/takeout/${restaurantSlug}/order/${result.orderId}`)
         }
     }
 

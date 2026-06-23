@@ -39,7 +39,7 @@ export default function KitchenLayoutClient({ children, restaurantName, staffNam
     }
 
     return (
-        <div className="min-h-screen flex flex-col bg-dark-bg">
+        <div className="min-h-screen flex flex-col bg-dark-bg print:bg-white print:text-black">
             <header className="shrink-0 border-b border-dark-border px-4 md:px-6 h-16 flex items-center justify-between gap-4 print:hidden bg-dark-surface">
                 <div className="flex items-center gap-3 min-w-0">
                     <Logo className="h-7 shrink-0" variant="dark" />

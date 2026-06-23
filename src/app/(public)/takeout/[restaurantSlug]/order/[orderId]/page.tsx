@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import TakeoutOrderTracker from '@/components/customer/TakeoutOrderTracker'
+import { TAKEOUT_ORDER_SELECT, mapOrderRowToTakeout, type TakeoutOrderRow } from '@/lib/takeout'
 
 export const revalidate = 0
 
@@ -12,13 +13,15 @@ export default async function TakeoutOrderPage({
     const { restaurantSlug, orderId } = await params
     const supabase = await createAdminClient()
 
-    const { data: order } = await supabase
-        .from('takeout_orders')
-        .select('*')
+    const { data: orderRow } = await supabase
+        .from('orders')
+        .select(TAKEOUT_ORDER_SELECT)
         .eq('id', orderId)
+        .eq('order_type', 'takeout')
         .single()
 
-    if (!order) return notFound()
+    if (!orderRow) return notFound()
+    const order = mapOrderRowToTakeout(orderRow as unknown as TakeoutOrderRow)
 
     // Fetch restaurant name for display
     const { data: restaurant } = await supabase

@@ -10,6 +10,7 @@ import FloorStats from '@/components/waiter/FloorStats'
 import CashPaymentFeed, { type UnpaidOrder } from '@/components/waiter/CashPaymentFeed'
 import ActiveSessionsList from '@/components/waiter/ActiveSessionsList'
 import { getRestaurantFeatures } from '@/lib/features'
+import { TAKEOUT_ORDER_SELECT, mapOrderRowToTakeout, type TakeoutOrderRow } from '@/lib/takeout'
 import type { TakeoutOrder } from '@/types/database'
 import { Users, Package, Bell, ChefHat } from 'lucide-react'
 
@@ -95,13 +96,15 @@ export default async function WaiterPage() {
                 order_items ( id, quantity, menu_items ( name ) )
             `)
             .eq('restaurant_id', restaurantId)
+            .eq('order_type', 'dine_in')
             .in('status', ['pending', 'confirmed', 'preparing', 'ready'])
             .order('placed_at', { ascending: true }),
         adminSupabase
-            .from('takeout_orders')
-            .select('*')
+            .from('orders')
+            .select(TAKEOUT_ORDER_SELECT)
             .eq('restaurant_id', restaurantId)
-            .eq('status', 'ready_for_pickup')
+            .eq('order_type', 'takeout')
+            .eq('status', 'ready')
             .order('pickup_time', { ascending: true })
             .limit(20),
         adminSupabase
@@ -111,6 +114,7 @@ export default async function WaiterPage() {
                 sessions ( id, tables ( label ) )
             `)
             .eq('restaurant_id', restaurantId)
+            .eq('order_type', 'dine_in')
             .eq('status', 'delivered')
             .eq('payment_status', 'unpaid')
             .order('delivered_at', { ascending: true })
@@ -199,7 +203,7 @@ export default async function WaiterPage() {
             {/* 5. Takeout Pickup Feed */}
             {features?.takeoutEnabled && (
                 <WaiterTakeoutFeed
-                    initialOrders={(readyTakeouts || []) as unknown as TakeoutOrder[]}
+                    initialOrders={((readyTakeouts || []) as unknown as TakeoutOrderRow[]).map(mapOrderRowToTakeout)}
                     restaurantId={restaurantId}
                 />
             )}

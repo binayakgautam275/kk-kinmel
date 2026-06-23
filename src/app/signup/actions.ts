@@ -4,57 +4,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { validateInput, PublicSignupSchema } from '@/lib/validation'
 import { checkRateLimit } from '@/lib/ratelimit'
 import { sendOnboardingEmail } from '@/lib/email'
-
-const TIER_LIMITS = {
-    free:       { max_staff: 3,   max_menu_items: 20   },
-    basic:      { max_staff: 10,  max_menu_items: 100  },
-    pro:        { max_staff: 50,  max_menu_items: 500  },
-    enterprise: { max_staff: 999, max_menu_items: 9999 },
-} as const
-
-const TIER_FEATURES = {
-    free: {
-        loyaltyEnabled: false, promosEnabled: true, takeoutEnabled: false,
-        multiLanguageEnabled: false, serviceRequestsEnabled: true,
-        splitBillingEnabled: true, dynamicPricingEnabled: false,
-        ingredientTrackingEnabled: false, staffShiftsEnabled: false,
-    },
-    basic: {
-        loyaltyEnabled: false, promosEnabled: true, takeoutEnabled: true,
-        multiLanguageEnabled: false, serviceRequestsEnabled: true,
-        splitBillingEnabled: true, dynamicPricingEnabled: false,
-        ingredientTrackingEnabled: false, staffShiftsEnabled: false,
-    },
-    pro: {
-        loyaltyEnabled: true, promosEnabled: true, takeoutEnabled: true,
-        multiLanguageEnabled: false, serviceRequestsEnabled: true,
-        splitBillingEnabled: true, dynamicPricingEnabled: true,
-        ingredientTrackingEnabled: true, staffShiftsEnabled: true,
-    },
-    enterprise: {
-        loyaltyEnabled: true, promosEnabled: true, takeoutEnabled: true,
-        multiLanguageEnabled: true, serviceRequestsEnabled: true,
-        splitBillingEnabled: true, dynamicPricingEnabled: true,
-        ingredientTrackingEnabled: true, staffShiftsEnabled: true,
-    },
-} as const
-
-function buildFeaturesV2(tier: keyof typeof TIER_FEATURES) {
-    return {
-        ...TIER_FEATURES[tier],
-        defaultTaxRate: 13,
-        currency: 'NPR',
-        currencySymbol: 'Rs.',
-        nepalPayEnabled: true,
-        vatEnabled: false,
-        phoneOtpEnabled: false,
-        bsDateEnabled: false,
-        tipsEnabled: true,
-        feedbackEnabled: true,
-        geofenceEnabled: false,
-        geofenceRadiusMeters: 100,
-    }
-}
+import { provisionRestaurant } from '@/lib/provisioning'
+import { type Tier } from '@/lib/tiers'
 
 function normalizeSlug(value: string) {
     return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
@@ -84,7 +35,7 @@ export async function signupRestaurant(input: unknown): Promise<SignupResult> {
     const restaurantSlug  = normalizeSlug(data.restaurantSlug || data.restaurantName)
     const contactPhone    = data.contactPhone?.trim() || null
     const address         = data.address?.trim() || null
-    const tier            = (data.subscriptionTier || 'free') as keyof typeof TIER_LIMITS
+    const tier            = (data.subscriptionTier || 'free') as Tier
     const panNumber       = data.panNumber?.trim() || null
     const vatRegistered   = data.vatRegistered ?? false
     const vatNumber       = data.vatNumber?.trim() || null
@@ -95,16 +46,13 @@ export async function signupRestaurant(input: unknown): Promise<SignupResult> {
     const longitude       = data.longitude ?? null
 
     const supabase = await createAdminClient()
-    const limits = TIER_LIMITS[tier]
 
-    // Check slug uniqueness
+    // Check slug uniqueness early for a friendly error (provisionRestaurant re-checks)
     const { data: existingSlug } = await supabase
         .from('restaurants').select('id').eq('slug', restaurantSlug).maybeSingle()
-
     if (existingSlug) return { error: 'That restaurant URL slug is already taken. Please choose another.', field: 'restaurantSlug' }
 
     let authUserId: string | null = null
-    let restaurantId: string | null = null
 
     try {
         // 1. Create auth user — returns specific error if email already exists
@@ -124,68 +72,41 @@ export async function signupRestaurant(input: unknown): Promise<SignupResult> {
         }
         authUserId = createdUser.user.id
 
-        // 2. Create restaurant row
-        const { data: restaurant, error: restaurantError } = await supabase
-            .from('restaurants')
-            .insert({
-                owner_id: authUserId,
-                name: restaurantName,
-                slug: restaurantSlug,
-                contact_email: restaurantEmail || ownerEmail,
-                contact_phone: contactPhone,
-                address,
-                slogan,
-                telephone,
-                pan_number: panNumber,
-                vat_registered: vatRegistered,
-                vat_number: vatNumber,
-                latitude,
-                longitude,
-                subscription_tier: tier,
-                subscription_status: 'active',
-                max_staff: limits.max_staff,
-                max_menu_items: limits.max_menu_items,
-            })
-            .select('id')
-            .single()
-
-        if (restaurantError || !restaurant) {
-            throw new Error(restaurantError?.message || 'Failed to create restaurant.')
-        }
-        restaurantId = restaurant.id
-
-        // 3. Wait briefly for auth trigger, then upsert users row
+        // 2. Provision the restaurant (restaurant + user row + settings + starter menu + tables)
+        // Brief wait so the auth → public.users trigger (if any) settles before our upsert.
         await new Promise(r => setTimeout(r, 400))
-        const { error: userRowError } = await supabase.from('users').upsert({
-            id: authUserId,
-            restaurant_id: restaurantId,
-            full_name: ownerFullName,
-            role_id: 2, // manager/owner
-            is_active: true,
-        }, { onConflict: 'id' })
-
-        if (userRowError) throw new Error(userRowError.message)
-
-        // 4. Create settings row with tier-appropriate feature flags
-        const { error: settingsError } = await supabase.from('settings').insert({
-            restaurant_id: restaurantId,
-            theme: { primaryColor: '#E85D04', secondaryColor: '#1B263B', fontFamily: 'Inter', borderRadius: '12px', menuLayout: 'grid' },
-            features: { tipsEnabled: true, feedbackEnabled: true, geofenceEnabled: false, geofenceRadiusMeters: 100 },
-            features_v2: buildFeaturesV2(tier),
-            business_hours: null,
+        const result = await provisionRestaurant({
+            ownerId: authUserId,
+            ownerEmail,
+            ownerName: ownerFullName,
+            name: restaurantName,
+            slug: restaurantSlug,
+            contactPhone,
+            address,
+            tier,
+            contactEmail: restaurantEmail,
+            slogan,
+            telephone,
+            panNumber,
+            vatRegistered,
+            vatNumber,
+            latitude,
+            longitude,
         })
 
-        if (settingsError) throw new Error(settingsError.message)
+        if (result.error || !result.restaurantId) {
+            throw new Error(result.error || 'Failed to create restaurant.')
+        }
 
-        // 5. Send welcome email (best-effort — don't fail signup if email fails)
+        // 3. Send welcome email (best-effort — don't fail signup if email fails)
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://yourapp.com'
         sendOnboardingEmail(ownerEmail, restaurantName, ownerFullName, `${appUrl}/admin/dashboard`).catch(() => {})
 
         return { success: true }
 
     } catch (error) {
-        // Rollback: delete restaurant and auth user if anything failed
-        if (restaurantId) await supabase.from('restaurants').delete().eq('id', restaurantId)
+        // Rollback: provisionRestaurant already cleans up the restaurant on failure;
+        // here we additionally delete the orphaned auth user.
         if (authUserId) await supabase.auth.admin.deleteUser(authUserId)
         return { error: error instanceof Error ? error.message : 'Signup failed. Please try again.' }
     }

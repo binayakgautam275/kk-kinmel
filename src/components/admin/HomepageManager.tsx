@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { HomepageConfig, HomepageTemplate, HOMEPAGE_TEMPLATES } from '@/types/database'
 import { Eye, Loader2, AlertCircle, Upload, X, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { uploadMedia } from '@/lib/uploadMedia'
 import HomepageRenderer from '@/components/customer/homepage/HomepageRenderer'
 import { useHomepageConfig } from '@/lib/hooks/useHomepageConfig'
 
@@ -158,23 +159,17 @@ export default function HomepageManager({ restaurantId }: HomepageManagerProps) 
     const patchFooter = (p: Partial<NonNullable<HomepageConfig['footer']>>) =>
         setConfig((c) => ({ ...c, footer: { ...DEFAULT_CONFIG.footer!, ...c.footer, ...p } }))
 
+    // Direct-to-Storage upload (signed URL) so large hero videos / gallery clips
+    // aren't blocked by the serverless request-body cap on /api/upload.
     const uploadFile = async (file: File, type: 'image' | 'video'): Promise<string | null> => {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('type', type)
-        formData.append('folder', 'homepage')
-        try {
-            const res = await fetch('/api/upload', { method: 'POST', body: formData })
-            const data = await res.json()
-            if (!res.ok) {
-                toast.error(data.error || 'Upload failed')
-                return null
-            }
-            return data.url as string
-        } catch {
-            toast.error('Network error during upload')
+        const toastId = toast.loading(type === 'video' ? 'Uploading video…' : 'Uploading…')
+        const { url, error } = await uploadMedia(file, type, 'homepage')
+        toast.dismiss(toastId)
+        if (error || !url) {
+            toast.error(error || 'Upload failed')
             return null
         }
+        return url
     }
 
     const saveConfig = async (updatedConfig: HomepageConfig) => {

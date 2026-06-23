@@ -1,19 +1,18 @@
 import { ReactNode } from 'react'
-import { getCurrentUser } from '@/lib/auth'
+import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { verifyClientIp } from '@/lib/ip-check'
 import { redirect } from 'next/navigation'
 import WaiterLayoutClient from '@/components/waiter/WaiterLayoutClient'
 
 export default async function CashierLayout({ children }: { children: ReactNode }) {
-    const { id: userId, restaurantId, role } = await getCurrentUser()
+    const { id: userId, restaurantId, role } = await requireRole('waiter', 'manager', 'super_admin')
 
     // Enforce WiFi IP check for staff
     const { allowed } = await verifyClientIp(restaurantId, role)
     if (!allowed) {
         redirect('/wifi-required?redirect=/cashier')
     }
-
     const adminSupabase = await createAdminClient()
 
     const [{ data: user }, { data: restaurant }] = await Promise.all([

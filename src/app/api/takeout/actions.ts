@@ -3,6 +3,14 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { CartItem, TakeoutOrder } from '@/types/database'
+import { checkAndAlertLowStock } from '@/app/(admin)/admin/ingredients/actions'
+import {
+    TAKEOUT_ORDER_SELECT,
+    TAKEOUT_STATUS_TO_ORDER,
+    mapOrderRowToTakeout,
+    type TakeoutOrderRow,
+    type OrderStatus,
+} from '@/lib/takeout'
 
 interface TakeoutInput {
     restaurantId: string
@@ -13,120 +21,93 @@ interface TakeoutInput {
     items: CartItem[]
     customerNote?: string
     promoCode?: string | null
+    loyaltyMemberId?: string | null
+    clientRequestId?: string | null
 }
 
+/**
+ * Place a takeout order through the unified orders pipeline (place_takeout_order
+ * RPC): real order_items, ingredient deduction, dynamic pricing, promo, tax and
+ * loyalty — the same as dine-in, minus the table session.
+ */
 export async function createTakeoutOrder(
     input: TakeoutInput
-): Promise<{ order?: TakeoutOrder; error?: string }> {
+): Promise<{ orderId?: string; total?: number; error?: string }> {
     const supabase = await createAdminClient()
 
-    // Calculate subtotal from items
-    const subtotal = input.items.reduce((total, item) => {
-        const modTotal = (item.modifiers || []).reduce((s, m) => s + m.priceAdjustment, 0)
-        return total + (item.price + modTotal) * item.quantity
-    }, 0)
-
-    // Apply promo code if present
-    let discountAmount = 0
-    if (input.promoCode) {
-        const { data: promo } = await supabase
-            .from('promo_codes')
-            .select('*')
-            .eq('restaurant_id', input.restaurantId)
-            .eq('code', input.promoCode.toUpperCase().trim())
-            .eq('is_active', true)
-            .single()
-
-        if (promo) {
-            if (promo.promo_type === 'percentage_off') {
-                discountAmount = Math.round(subtotal * promo.value / 100 * 100) / 100
-                if (promo.max_discount_amount) {
-                    discountAmount = Math.min(discountAmount, promo.max_discount_amount)
-                }
-            } else if (promo.promo_type === 'amount_off') {
-                discountAmount = Math.min(promo.value, subtotal)
-            }
-
-            // Increment usage
-            await supabase
-                .from('promo_codes')
-                .update({ current_uses: promo.current_uses + 1 })
-                .eq('id', promo.id)
-        }
-    }
-
-    // Get tax rate from settings
-    const { data: settings } = await supabase
-        .from('settings')
-        .select('features_v2')
-        .eq('restaurant_id', input.restaurantId)
-        .single()
-
-    const taxRate = (settings?.features_v2 as Record<string, unknown>)?.defaultTaxRate as number || 0
-    const taxAmount = Math.round((subtotal - discountAmount) * taxRate / 100 * 100) / 100
-    const totalAmount = subtotal - discountAmount + taxAmount
-
-    // Build items payload as JSONB
-    const itemsPayload = input.items.map((i) => ({
+    const payload = input.items.map((i) => ({
         menu_item_id: i.menuItemId,
-        name: i.name,
         quantity: i.quantity,
-        unit_price: i.price,
-        modifiers: (i.modifiers || []).map((m) => ({
-            modifier_id: m.modifierId,
-            name: m.name,
-            price: m.priceAdjustment,
-        })),
         special_request: i.specialRequest || null,
+        modifiers: (i.modifiers || []).map((m) => ({ modifier_id: m.modifierId })),
     }))
 
-    const { data: order, error } = await supabase
-        .from('takeout_orders')
-        .insert({
-            restaurant_id: input.restaurantId,
-            customer_name: input.customerName,
-            customer_phone: input.customerPhone,
-            customer_email: input.customerEmail || null,
-            pickup_time: input.pickupTime,
-            items: itemsPayload,
-            subtotal_amount: subtotal,
-            discount_amount: discountAmount,
-            tax_amount: taxAmount,
-            total_amount: totalAmount,
-            customer_note: input.customerNote || null,
-            status: 'placed',
-        })
-        .select()
-        .single()
+    const { data, error } = await supabase.rpc('place_takeout_order', {
+        p_restaurant_id: input.restaurantId,
+        p_items: payload,
+        p_customer_name: input.customerName,
+        p_customer_phone: input.customerPhone,
+        p_customer_email: input.customerEmail || null,
+        p_pickup_time: input.pickupTime,
+        p_customer_note: input.customerNote || null,
+        p_promo_code: input.promoCode || null,
+        p_loyalty_member_id: input.loyaltyMemberId || null,
+        p_client_request_id: input.clientRequestId || null,
+    })
 
     if (error) {
-        console.error('Takeout order error:', error)
+        console.error('Takeout order RPC error:', error)
+        if (error.message?.includes('OUT_OF_STOCK') || error.message?.includes('ITEM_UNAVAILABLE')) {
+            return { error: 'Sorry, one or more items just sold out or are unavailable.' }
+        }
+        if (error.message?.includes('INVALID_RESTAURANT')) {
+            return { error: 'This restaurant is not currently accepting orders.' }
+        }
         return { error: 'Failed to place takeout order. Please try again.' }
     }
 
-    revalidatePath(`/takeout`)
+    const result = data as { order_id: string; total: number }
 
-    return { order: order as TakeoutOrder }
+    // Low-stock check in the background (never blocks the order).
+    if (result.order_id) void checkAndAlertLowStock(input.restaurantId)
+
+    revalidatePath('/takeout')
+    revalidatePath('/kitchen')
+    revalidatePath('/waiter')
+    revalidatePath('/admin/takeout')
+
+    return { orderId: result.order_id, total: result.total }
 }
+
+// Active (kitchen-relevant) takeout statuses.
+const ACTIVE_TAKEOUT_ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'ready']
 
 export async function getTakeoutOrders(
     restaurantId: string,
-    status?: string
+    status?: string,
+    limit = 100,
 ): Promise<TakeoutOrder[]> {
     const supabase = await createAdminClient()
 
     let query = supabase
-        .from('takeout_orders')
-        .select('*')
+        .from('orders')
+        .select(TAKEOUT_ORDER_SELECT)
         .eq('restaurant_id', restaurantId)
+        .eq('order_type', 'takeout')
         .order('pickup_time', { ascending: true })
+        .limit(limit)
 
     if (status) {
-        query = query.eq('status', status)
+        const mapped = TAKEOUT_STATUS_TO_ORDER[status as keyof typeof TAKEOUT_STATUS_TO_ORDER]
+        if (mapped) query = query.eq('status', mapped)
+    } else {
+        // No status filter = the kitchen's live queue: only active orders, never
+        // the entire (unbounded) takeout history.
+        query = query.in('status', ACTIVE_TAKEOUT_ORDER_STATUSES)
     }
 
     const { data } = await query
-    return (data || []) as TakeoutOrder[]
+    return ((data || []) as unknown as TakeoutOrderRow[]).map(mapOrderRowToTakeout)
 }
 
 export async function updateTakeoutStatus(
@@ -135,31 +116,31 @@ export async function updateTakeoutStatus(
 ): Promise<{ error?: string }> {
     const supabase = await createAdminClient()
 
-    const updateData: Record<string, unknown> = { status }
+    const orderStatus: OrderStatus = TAKEOUT_STATUS_TO_ORDER[status]
+    const updateData: Record<string, unknown> = { status: orderStatus }
     const now = new Date().toISOString()
 
-    if (status === 'confirmed') updateData.confirmed_at = now
-    if (status === 'ready_for_pickup') updateData.ready_at = now
-    if (status === 'picked_up') updateData.picked_up_at = now
-    if (status === 'cancelled') updateData.cancelled_at = now
+    if (orderStatus === 'confirmed') updateData.confirmed_at = now
+    if (orderStatus === 'ready') updateData.ready_at = now
+    if (orderStatus === 'delivered') updateData.delivered_at = now
 
     const { error } = await supabase
-        .from('takeout_orders')
+        .from('orders')
         .update(updateData)
         .eq('id', orderId)
+        .eq('order_type', 'takeout')
 
-    if (error) {
-        return { error: 'Failed to update status.' }
-    }
+    if (error) return { error: 'Failed to update status.' }
 
     revalidatePath('/takeout')
     revalidatePath('/waiter')
+    revalidatePath('/kitchen')
     revalidatePath('/admin/takeout')
     return {}
 }
 
 /**
- * Complete a takeout order: mark as picked_up + paid.
+ * Complete a takeout order: mark picked up (delivered) + paid.
  * Used by the waiter/cashier when the customer arrives to pay and collect.
  */
 export async function completeTakeoutOrder(
@@ -168,17 +149,17 @@ export async function completeTakeoutOrder(
     const supabase = await createAdminClient()
 
     const { error } = await supabase
-        .from('takeout_orders')
+        .from('orders')
         .update({
-            status: 'picked_up',
+            status: 'delivered',
             payment_status: 'paid',
-            picked_up_at: new Date().toISOString(),
+            delivered_at: new Date().toISOString(),
+            paid_at: new Date().toISOString(),
         })
         .eq('id', orderId)
+        .eq('order_type', 'takeout')
 
-    if (error) {
-        return { error: 'Failed to complete order.' }
-    }
+    if (error) return { error: 'Failed to complete order.' }
 
     revalidatePath('/waiter')
     revalidatePath('/admin/takeout')

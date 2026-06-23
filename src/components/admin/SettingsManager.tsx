@@ -7,6 +7,7 @@ import { updateRestaurantSettingsAction } from '@/app/(admin)/admin/settings/act
 import { updateFeaturesAction } from '@/lib/features'
 import { toast } from 'react-hot-toast'
 import type { Settings } from '@/types/database'
+import { unlockAudio, setCustomNotificationSound, playNewOrder } from '@/lib/audio'
 
 type RestaurantSettings = {
     id: string
@@ -56,7 +57,7 @@ export default function SettingsManager({
         bsDateEnabled: false,
         feedbackEnabled: true,
     })
-    const [taxRateStr, setTaxRateStr] = useState((initialFeatures?.defaultTaxRate ?? 13.0).toString())
+    const [taxRateStr, setTaxRateStr] = useState((initialRestaurant.tax_rate ?? 13).toString())
     const [uploadingField, setUploadingField] = useState<'logo_url' | 'payment_qr_url' | 'notification_sound' | null>(null)
     const logoInputRef = useRef<HTMLInputElement>(null)
     const qrInputRef = useRef<HTMLInputElement>(null)
@@ -113,6 +114,22 @@ export default function SettingsManager({
         toast.success('Notification sound removed')
     }
 
+    const [testingSound, setTestingSound] = useState(false)
+    // Play exactly what kitchen/waiter screens will hear: unlock the audio context
+    // (autoplay policy), point the shared player at the chosen sound, then play it.
+    // Surfaces failures instead of swallowing them like the old new Audio().catch().
+    const handleTestSound = async () => {
+        setTestingSound(true)
+        try {
+            await unlockAudio()
+            setCustomNotificationSound(features.notificationSoundUrl ?? null)
+            await playNewOrder()
+        } catch {
+            toast.error('Could not play the sound. Check the file format, or tap the page once and retry.')
+        } finally {
+            setTimeout(() => setTestingSound(false), 600)
+        }
+    }
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isSavingFeatures, setIsSavingFeatures] = useState(false)
     const [isSuccess, setIsSuccess] = useState(false)
@@ -582,6 +599,7 @@ export default function SettingsManager({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {([
                         { key: 'serviceRequestsEnabled' as const, label: 'Service Requests', desc: 'Customers can call waiter, request bill, etc.' },
+                        { key: 'selfOrderRequestEnabled' as const, label: 'Ring for Service', desc: 'Customers can request a waiter to open their table session' },
                         { key: 'splitBillingEnabled' as const, label: 'Split Billing', desc: 'Allow customers to split bills at checkout' },
                         { key: 'promosEnabled' as const, label: 'Promo Codes', desc: 'Allow promo/discount codes at checkout' },
                         { key: 'loyaltyEnabled' as const, label: 'Loyalty Program', desc: 'Points-based loyalty rewards for repeat customers' },
@@ -653,10 +671,11 @@ export default function SettingsManager({
                     <div className="flex items-center gap-3 flex-wrap">
                         <button
                             type="button"
-                            onClick={() => new Audio(features.notificationSoundUrl!).play().catch(() => {})}
-                            className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg hover:bg-green-100 transition"
+                            onClick={handleTestSound}
+                            disabled={testingSound}
+                            className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg hover:bg-green-100 transition disabled:opacity-60"
                         >
-                            <Play size={13} /> Test sound
+                            {testingSound ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Test sound
                         </button>
                         <button
                             type="button"
@@ -671,7 +690,17 @@ export default function SettingsManager({
                 )}
 
                 {!features.notificationSoundUrl && (
-                    <p className="text-sm text-gray-400 py-2">No custom sound — default pip-pip tone will play</p>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={handleTestSound}
+                            disabled={testingSound}
+                            className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg hover:bg-green-100 transition disabled:opacity-60"
+                        >
+                            {testingSound ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Test default tone
+                        </button>
+                        <span className="text-sm text-gray-400">No custom sound — default pip-pip tone will play</span>
+                    </div>
                 )}
             </div>
         </div>

@@ -206,6 +206,11 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,.2); }
 ::-webkit-scrollbar-track { background: transparent; }
 
+/* ─── Global Button Cursor States ─────────────────────────── */
+button, [role="button"] { cursor: pointer; }
+button:disabled, button[disabled], button.cursor-not-allowed { cursor: not-allowed; }
+button.cursor-progress, button[aria-busy="true"], button[data-loading="true"] { cursor: progress !important; }
+
 /* ─── Reduced motion ────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

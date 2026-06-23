@@ -10,9 +10,10 @@ import Logo from '@/components/shared/Logo'
 import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
-import { UtensilsCrossed, RefreshCw, Bell, Check, Loader2, Home } from 'lucide-react'
+import { UtensilsCrossed, RefreshCw, Bell, Check, Loader2, Home, X } from 'lucide-react'
 import { useCartStore } from '@/lib/stores/cart'
 import { requestSessionOpen } from '@/app/api/service-requests/actions'
+import ActiveOrderPill from '@/components/customer/ActiveOrderPill'
 
 interface TablePageClientProps {
     tableData: {
@@ -29,6 +30,7 @@ interface TablePageClientProps {
     sessionUUID: string | undefined
     isValidSession: boolean
     serviceRequestsEnabled: boolean
+    selfOrderRequestEnabled?: boolean
     multiLanguageEnabled: boolean
     menuLayout?: 'grid' | 'list'
     translations: { language_code: string; entity_type: string; entity_id: string; translated_text: string }[]
@@ -45,6 +47,7 @@ export default function TablePageClient({
     sessionUUID,
     isValidSession,
     serviceRequestsEnabled,
+    selfOrderRequestEnabled = true,
     multiLanguageEnabled,
     menuLayout = 'grid',
     translations,
@@ -59,7 +62,6 @@ export default function TablePageClient({
     const [showMenu, setShowMenu] = useState(true)
     const [requestSent, setRequestSent] = useState(false)
     const [requestLoading, setRequestLoading] = useState(false)
-    
     // WiFi IP restriction states
     const [isRestricted, setIsRestricted] = useState(isIpRestricted)
     const [verifyingIp, setVerifyingIp] = useState(false)
@@ -91,6 +93,10 @@ export default function TablePageClient({
             checkIpStatus()
         }
     }, [isIpRestricted])
+
+    // Customers can dismiss the "open session" popup to browse the menu in
+    // view-only mode; a floating button lets them bring it back to ring for service.
+    const [popupDismissed, setPopupDismissed] = useState(false)
 
     // Keep the Zustand cart store in sync with the live session so checkout
     // always sees a non-null sessionId regardless of how the session arrived
@@ -174,6 +180,7 @@ export default function TablePageClient({
 
     const menuContent = (onBackToHome: (() => void) | null) => (
         <div className="min-h-screen bg-gray-50 pb-28">
+            <ActiveOrderPill />
             {/* Sticky header — compact, restaurant-branded */}
             <header className="bg-white border-b border-gray-100 sticky top-0 z-20">
                 <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
@@ -218,10 +225,18 @@ export default function TablePageClient({
             </header>
 
             <main className="max-w-2xl mx-auto px-4 pt-4">
-                {/* Blurred fullscreen modal shown when there's no active session */}
-                {!hasSession && (
+                {/* Blurred fullscreen modal shown when there's no active session.
+                    Dismissable so the guest can browse the menu in view-only mode. */}
+                {!hasSession && !popupDismissed && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1006]/40 backdrop-blur-md animate-fade-in">
-                        <div className="bg-white p-6 rounded-3xl max-w-sm w-full border border-[#EDD9C8] shadow-2xl text-center flex flex-col items-center animate-scale-in">
+                        <div className="relative bg-white p-6 rounded-3xl max-w-sm w-full border border-[#EDD9C8] shadow-2xl text-center flex flex-col items-center animate-scale-in">
+                            <button
+                                onClick={() => setPopupDismissed(true)}
+                                aria-label="Dismiss and browse the menu"
+                                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-[#F7F0E8] hover:bg-[#EDD9C8] flex items-center justify-center text-[#8C6A50] transition active:scale-95"
+                            >
+                                <X size={16} />
+                            </button>
                             {logoUrl ? (
                                 <div className="relative w-16 h-16 rounded-full overflow-hidden bg-white border border-[#EDD9C8] mb-4 shadow-sm">
                                     <Image src={logoUrl} alt={restaurantName} fill className="object-cover" sizes="64px" />
@@ -235,7 +250,12 @@ export default function TablePageClient({
                             <p className="text-[#8C6A50] text-sm font-semibold mb-6 leading-relaxed">
                                 Your waiter will open a session for Table {tableData.label} so you can place orders.
                             </p>
-                            {requestSent ? (
+                            {!selfOrderRequestEnabled ? (
+                                <p className="text-[#C4A882] text-[11px] font-bold flex items-center justify-center gap-1">
+                                    <RefreshCw size={10} className="animate-spin text-[#E85D04]" />
+                                    Waiting for your waiter to open the table...
+                                </p>
+                            ) : requestSent ? (
                                 <div className="w-full bg-[#EBFDF2] border border-[#BFF3D4] rounded-2xl py-3 px-4 flex flex-col items-center justify-center gap-1.5 animate-scale-in">
                                     <span className="text-xl">🔔</span>
                                     <p className="text-green-600 text-xs font-black flex items-center gap-1">
@@ -266,6 +286,19 @@ export default function TablePageClient({
                             )}
                         </div>
                     </div>
+                )}
+
+                {/* Floating re-summon button — shown after the guest dismisses the
+                    popup but still has no session, so they can ring for service. */}
+                {!hasSession && popupDismissed && (
+                    <button
+                        onClick={() => setPopupDismissed(false)}
+                        className="fixed bottom-24 right-4 z-40 flex items-center gap-2 bg-[#E85D04] text-white text-sm font-black pl-4 pr-5 py-3 rounded-full shadow-lg shadow-[#E85D04]/30 active:scale-95 transition animate-scale-in"
+                    >
+                        {requestSent
+                            ? <><Check size={16} className="stroke-[3px]" /> Waiter notified</>
+                            : <><Bell size={16} /> Ring for Service</>}
+                    </button>
                 )}
 
                 <MenuSection
