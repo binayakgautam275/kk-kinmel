@@ -60,6 +60,7 @@ export interface Restaurant {
     max_menu_items: number
     max_tables: number
     physical_menu_urls: string[] | null
+    allowed_ips: string | null
 }
 
 export interface User {

@@ -1,7 +1,7 @@
 'use server'
 
 import { createAdminClient } from '@/lib/supabase/server'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export async function updateRestaurantSettingsAction(restaurantId: string, updates: Record<string, unknown>) {
     const supabase = await createAdminClient()
@@ -20,6 +20,7 @@ export async function updateRestaurantSettingsAction(restaurantId: string, updat
         vat_registered: updates.vat_registered,
         payment_qr_url: updates.payment_qr_url,
         payment_qr_label: updates.payment_qr_label,
+        allowed_ips: updates.allowed_ips,
     }
 
     // Strip undefined values
@@ -37,6 +38,9 @@ export async function updateRestaurantSettingsAction(restaurantId: string, updat
     // Revalidate multiple paths since restaurant settings (like name/logo) 
     // likely affect the whole app layout and public menu pages
     revalidatePath('/', 'layout')
+
+    // Instantly purge the allowed IP cache tag
+    revalidateTag(`restaurant-allowed-ips-${restaurantId}`, 'max')
 
     return { success: true }
 }

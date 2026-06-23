@@ -33,6 +33,7 @@ interface TablePageClientProps {
     menuLayout?: 'grid' | 'list'
     translations: { language_code: string; entity_type: string; entity_id: string; translated_text: string }[]
     supportedLanguages: { code: string; name: string }[]
+    isIpRestricted?: boolean
 }
 
 export default function TablePageClient({
@@ -48,6 +49,7 @@ export default function TablePageClient({
     menuLayout = 'grid',
     translations,
     supportedLanguages,
+    isIpRestricted = false,
 }: TablePageClientProps) {
     // Live session state — updated by Supabase realtime if a waiter opens a session
     const [liveSessionToken, setLiveSessionToken] = useState(sessionToken)
@@ -57,6 +59,38 @@ export default function TablePageClient({
     const [showMenu, setShowMenu] = useState(true)
     const [requestSent, setRequestSent] = useState(false)
     const [requestLoading, setRequestLoading] = useState(false)
+    
+    // WiFi IP restriction states
+    const [isRestricted, setIsRestricted] = useState(isIpRestricted)
+    const [verifyingIp, setVerifyingIp] = useState(false)
+    const [currentIp, setCurrentIp] = useState<string>('')
+
+    const checkIpStatus = async () => {
+        setVerifyingIp(true)
+        try {
+            const res = await fetch(`/api/verify-ip?restaurantId=${encodeURIComponent(tableData.restaurant_id)}&role=customer`, {
+                cache: 'no-store'
+            })
+            if (res.ok) {
+                const data = await res.json()
+                setIsRestricted(!data.allowed)
+                if (data.clientIp) {
+                    setCurrentIp(data.clientIp)
+                }
+            }
+        } catch {
+            // Keep existing state if check fails
+        } finally {
+            setVerifyingIp(false)
+        }
+    }
+
+    // Run a check on mount if restricted to load current IP for display
+    useEffect(() => {
+        if (isIpRestricted) {
+            checkIpStatus()
+        }
+    }, [isIpRestricted])
 
     // Keep the Zustand cart store in sync with the live session so checkout
     // always sees a non-null sessionId regardless of how the session arrived
@@ -98,6 +132,29 @@ export default function TablePageClient({
         }
         return false
     }
+
+    // Handle service requests: Waiters scan QR, but customers can also "Ring for Service"
+    // to ask for waiter/bill/etc. Requires active session UUID.
+    const handleServiceRequest = async (type: 'call_waiter' | 'request_bill') => {
+        if (!liveSessionUUID) return
+        setRequestLoading(true)
+        const success = await requestSessionOpen(liveSessionUUID, type)
+        setRequestLoading(false)
+        if (success) {
+            setRequestSent(true)
+            setTimeout(() => setRequestSent(false), 5000)
+        }
+    }
+
+    // Listen to Supabase Realtime for session updates. If waiter opens/closes a session
+    // from staff panel, the client updates reactively within seconds.
+    useEffect(() => {
+        const fetchAndSubscribe = async () => {
+            const hasActive = await fetchActiveSession()
+            if (hasActive) return
+        }
+        fetchAndSubscribe()
+    }, [tableData.id, tableData.qr_token])
 
     // Polling — runs every 3 s while no session is detected, so the page enables
     // ordering within ~3 s of a waiter opening a session (no refresh needed). This
@@ -244,7 +301,56 @@ export default function TablePageClient({
                 restaurantId={tableData.restaurant_id}
                 onProceed={() => setShowMenu(true)}
             >
-                {({ backToHome }) => showMenu && menuContent(backToHome)}
+                {({ backToHome }) => (
+                    <>
+                        {showMenu && menuContent(backToHome)}
+
+                        {/* Non-dismissible WiFi Required overlay */}
+                        {isRestricted && (
+                            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-[9999] animate-in fade-in duration-300">
+                                <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center space-y-6 shadow-2xl">
+                                    <div className="mx-auto w-14 h-14 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-center justify-center text-rose-500 animate-pulse">
+                                        <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 009 11a13.92 13.92 0 01-2.048-6.978M12 11c0-3.517 1.009-6.799 2.753-9.571m3.44 2.04l-.054.09A13.916 13.916 0 0015 11c0 2.479.643 4.808 1.77 6.824M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <h2 className="text-xl font-bold text-white tracking-tight">Restaurant WiFi Required</h2>
+                                        <p className="text-slate-400 text-xs leading-relaxed">
+                                            To browse our menu and place orders, please connect to the restaurant's local WiFi network.
+                                        </p>
+                                    </div>
+
+                                    {currentIp && (
+                                        <div className="bg-slate-950/40 rounded-xl p-3 border border-slate-800 flex justify-between items-center text-[10px]">
+                                            <span className="text-slate-500">Your Current IP:</span>
+                                            <span className="font-mono text-slate-300 font-medium">{currentIp}</span>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        onClick={checkIpStatus}
+                                        disabled={verifyingIp}
+                                        className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-gradient-to-r from-rose-500 to-indigo-600 hover:from-rose-600 hover:to-indigo-700 text-white rounded-xl text-xs font-semibold transition shadow-lg shadow-rose-500/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {verifyingIp ? (
+                                            <>
+                                                <Loader2 size={13} className="animate-spin" />
+                                                Verifying connection…
+                                            </>
+                                        ) : (
+                                            <>
+                                                <RefreshCw size={13} />
+                                                I am Connected
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
             </HomepageGate>
         </TranslationProvider>
     )
