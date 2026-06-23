@@ -71,7 +71,7 @@ export default async function Home() {
                     {/* Hero Graphic & Floating Elements */}
                     <div className="relative max-w-4xl mx-auto animate-fade-up">
                         <div className="rounded-3xl overflow-hidden shadow-2xl border border-gray-100 bg-gray-100 aspect-video relative">
-                            <Image src="/images/mockups/dashboard_mockup_1782036296571.png" alt="Dashboard Mockup" fill className="object-cover" priority />
+                            <Image src="/images/mockups/dashboard_mockup_1782036296571.png" alt="Dashboard Mockup" fill className="object-cover" priority sizes="(max-width: 1024px) 100vw, 1024px" />
                         </div>
 
                         {/* Floating Left Card */}
@@ -236,7 +236,7 @@ export default async function Home() {
                             </div>
                             <div className="rounded-3xl bg-gray-50 p-6 sm:p-10 border border-gray-100">
                                 <div className="relative rounded-xl overflow-hidden shadow-2xl aspect-video bg-white">
-                                    <Image src="/images/mockups/staff_orders_mockup_1782036323207.png" alt="Manage Orders" fill className="object-cover object-left-top" />
+                                    <Image src="/images/mockups/staff_orders_mockup_1782036323207.png" alt="Manage Orders" fill className="object-cover object-left-top" sizes="(max-width: 768px) 100vw, 50vw" />
                                 </div>
                             </div>
                         </div>
@@ -305,7 +305,7 @@ export default async function Home() {
 
                                 <div className="relative w-full max-w-sm aspect-[3/4] bg-white rounded-[2rem] shadow-2xl border-8 border-gray-900 overflow-hidden mb-8 transform -rotate-2">
                                     <div className="absolute top-0 inset-x-0 h-6 bg-gray-900 rounded-b-xl z-10 w-32 mx-auto"></div>
-                                    <Image src="/images/mockups/dashboard_mockup_1782036296571.png" alt="Mobile View" fill className="object-cover object-left" />
+                                    <Image src="/images/mockups/dashboard_mockup_1782036296571.png" alt="Mobile View" fill className="object-cover object-left" sizes="(max-width: 768px) 80vw, 384px" />
                                 </div>
 
                                 <div className="flex gap-4">

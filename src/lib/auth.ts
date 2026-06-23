@@ -34,9 +34,25 @@ const getCachedRestaurantStatus = unstable_cache(
     { revalidate: 30 }
 )
 
+// getUser() surfaces an AuthApiError (`refresh_token_not_found`, 400) when the
+// refresh token is stale. The proxy/middleware clears the bad cookie; a Server
+// Component can't write cookies, so here we just treat it as logged-out so a
+// stale token can't crash a render or spam the logs on every request.
+async function safeGetUser(
+    supabase: Awaited<ReturnType<typeof createServerClient>>
+) {
+    try {
+        const { data, error } = await supabase.auth.getUser()
+        if (error) return null
+        return data.user
+    } catch {
+        return null
+    }
+}
+
 async function _getCurrentUser(): Promise<CurrentUser> {
     const supabase = await createServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await safeGetUser(supabase)
 
     if (!user) {
         redirect('/login')
@@ -147,7 +163,7 @@ export async function requireRole(...allowedRoles: RoleName[]): Promise<CurrentU
  */
 export async function getOptionalUser(): Promise<CurrentUser | null> {
     const supabase = await createServerClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = await safeGetUser(supabase)
 
     if (!user) return null
 
