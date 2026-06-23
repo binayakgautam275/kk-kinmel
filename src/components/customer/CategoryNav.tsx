@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
+import Image from 'next/image'
 import type { MenuCategory } from '@/types/database'
 import { useTranslation } from '@/lib/contexts/TranslationContext'
 
@@ -47,13 +48,19 @@ export default function CategoryNav({
                             key={id}
                             ref={el => { btnRefs.current[id] = el }}
                             onClick={() => handleClick(id)}
-                            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-[13px] font-medium transition-all duration-200 shrink-0 ${
+                            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full text-[13px] font-medium transition-all duration-200 shrink-0 ${
+                                cat?.image_url ? 'pl-1 pr-4 py-1' : 'px-4 py-1.5'
+                            } ${
                                 isActive
                                     ? 'bg-[var(--color-primary)] text-white shadow-sm shadow-[var(--color-primary)]/30'
                                     : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100 active:scale-95'
                             }`}
                         >
-                            {cat?.emoji && <span className="mr-1">{cat.emoji}</span>}
+                            {cat?.image_url ? (
+                                <Image src={cat.image_url} alt="" width={28} height={28} className="w-7 h-7 rounded-full object-cover shrink-0" />
+                            ) : cat?.emoji ? (
+                                <span>{cat.emoji}</span>
+                            ) : null}
                             {label}
                         </button>
                     )

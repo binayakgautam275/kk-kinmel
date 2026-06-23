@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import Image from 'next/image'
 import CategoryNav from './CategoryNav'
 import MenuItemCard from './MenuItemCard'
 import type { MenuCategory, MenuItem } from '@/types/database'
@@ -157,6 +158,15 @@ export default function MenuSection({
                     >
                         {/* Category heading */}
                         <div className="flex items-center gap-3 mb-4">
+                            {category.image_url && (
+                                <Image
+                                    src={category.image_url}
+                                    alt=""
+                                    width={32}
+                                    height={32}
+                                    className="w-8 h-8 rounded-lg object-cover shrink-0 border border-gray-100"
+                                />
+                            )}
                             <h2 className="text-base font-bold text-gray-900 leading-none">
                                 {t('category_name', category.id, category.name)}
                             </h2>

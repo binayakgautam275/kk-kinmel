@@ -41,6 +41,8 @@ export default function MenuManager({
     const [categoryName, setCategoryName] = useState('')
     const [categorySort, setCategorySort] = useState(0)
     const [categoryVisible, setCategoryVisible] = useState(true)
+    const [categoryImageUrl, setCategoryImageUrl] = useState<string | null>('')
+    const [categoryImageUploading, setCategoryImageUploading] = useState(false)
 
     // Item Modal State
     const [isItemModalOpen, setIsItemModalOpen] = useState(false)
@@ -78,11 +80,13 @@ export default function MenuManager({
             setCategoryName(cat.name)
             setCategorySort(cat.sort_order)
             setCategoryVisible(cat.is_visible)
+            setCategoryImageUrl(cat.image_url ?? '')
         } else {
             setEditingCategory(null)
             setCategoryName('')
             setCategorySort(categories.length * 10)
             setCategoryVisible(true)
+            setCategoryImageUrl('')
         }
         setIsCategoryModalOpen(true)
     }
@@ -95,16 +99,17 @@ export default function MenuManager({
             const res = await updateCategoryAction(editingCategory.id, {
                 name: categoryName,
                 sort_order: categorySort,
-                is_visible: categoryVisible
+                is_visible: categoryVisible,
+                image_url: categoryImageUrl || null
             })
             if (res.success) {
-                setCategories(categories.map(c => c.id === editingCategory.id ? { ...c, name: categoryName, sort_order: categorySort, is_visible: categoryVisible } : c))
+                setCategories(categories.map(c => c.id === editingCategory.id ? { ...c, name: categoryName, sort_order: categorySort, is_visible: categoryVisible, image_url: categoryImageUrl || null } : c))
                 toast.success('Category updated')
             } else {
                 toast.error(res.error || 'Failed to update category')
             }
         } else {
-            const res = await addCategoryAction(restaurantId, categoryName, categorySort, categoryVisible)
+            const res = await addCategoryAction(restaurantId, categoryName, categorySort, categoryVisible, categoryImageUrl || null)
             if (res.data) {
                 setCategories([...categories, res.data])
                 toast.success('Category created')
@@ -168,6 +173,18 @@ export default function MenuManager({
             toast.error(err instanceof Error ? `Upload failed: ${err.message}` : 'Failed to upload image')
         } finally {
             setVariationUploadIdx(null)
+        }
+    }
+
+    const uploadCategoryImage = async (file: File) => {
+        setCategoryImageUploading(true)
+        try {
+            const url = await uploadToStorage(file)
+            setCategoryImageUrl(url)
+        } catch (err) {
+            toast.error(err instanceof Error ? `Upload failed: ${err.message}` : 'Failed to upload image')
+        } finally {
+            setCategoryImageUploading(false)
         }
     }
 
@@ -294,12 +311,19 @@ export default function MenuManager({
                         <ul className="divide-y divide-gray-100 border border-gray-100 rounded-xl overflow-hidden">
                             {categories.sort((a, b) => a.sort_order - b.sort_order).map((cat) => (
                                 <li key={cat.id} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors bg-white">
-                                    <div className="flex items-center gap-4">
-                                        <GripVertical size={16} className="text-gray-300 cursor-grab" />
-                                        <div>
+                                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                        <GripVertical size={16} className="text-gray-300 cursor-grab shrink-0 hidden sm:block" />
+                                        <div className="w-11 h-11 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 border border-gray-200 overflow-hidden">
+                                            {cat.image_url ? (
+                                                <Image src={cat.image_url} alt={cat.name} width={44} height={44} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <ImageIcon size={18} className="text-gray-300" />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
                                             <div className="font-medium text-gray-900 flex items-center gap-2">
-                                                {cat.name}
-                                                {!cat.is_visible && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 uppercase">Hidden</span>}
+                                                <span className="truncate">{cat.name}</span>
+                                                {!cat.is_visible && <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 uppercase shrink-0">Hidden</span>}
                                             </div>
                                             <div className="text-xs text-gray-500 mt-0.5">Sort: {cat.sort_order}</div>
                                         </div>
@@ -446,6 +470,29 @@ export default function MenuManager({
                                     className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border"
                                     placeholder="e.g. Starters"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Category Image (Optional)</label>
+                                {categoryImageUrl ? (
+                                    <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 h-28 group/cat">
+                                        <Image src={categoryImageUrl} alt="Category" fill sizes="400px" className="object-cover" />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/cat:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                            <label className="bg-white text-gray-900 text-xs font-medium px-3 py-1.5 rounded-lg shadow flex items-center gap-1 cursor-pointer">
+                                                <input type="file" accept="image/*" className="hidden" disabled={categoryImageUploading} onChange={e => { const f = e.target.files?.[0]; if (f) uploadCategoryImage(f); e.target.value = '' }} />
+                                                <Upload size={12} /> Change
+                                            </label>
+                                            <button type="button" onClick={() => setCategoryImageUrl('')} className="bg-red-500 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow flex items-center gap-1">
+                                                <X size={12} /> Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <label className="w-full border-2 border-dashed border-gray-200 rounded-xl h-28 flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors cursor-pointer">
+                                        <input type="file" accept="image/*" className="hidden" disabled={categoryImageUploading} onChange={e => { const f = e.target.files?.[0]; if (f) uploadCategoryImage(f); e.target.value = '' }} />
+                                        {categoryImageUploading ? <Loader2 size={20} className="animate-spin" /> : <ImageIcon size={20} />}
+                                        <span className="text-xs font-medium">{categoryImageUploading ? 'Uploading…' : 'Click to upload photo'}</span>
+                                    </label>
+                                )}
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

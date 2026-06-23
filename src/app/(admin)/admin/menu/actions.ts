@@ -3,7 +3,7 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function addCategoryAction(restaurantId: string, name: string, sortOrder: number, isVisible: boolean) {
+export async function addCategoryAction(restaurantId: string, name: string, sortOrder: number, isVisible: boolean, imageUrl?: string | null) {
     const supabase = await createAdminClient()
     const { data, error } = await supabase
         .from('menu_categories')
@@ -11,7 +11,8 @@ export async function addCategoryAction(restaurantId: string, name: string, sort
             restaurant_id: restaurantId,
             name,
             sort_order: sortOrder,
-            is_visible: isVisible
+            is_visible: isVisible,
+            image_url: imageUrl || null
         })
         .select()
         .single()

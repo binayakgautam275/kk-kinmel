@@ -97,6 +97,7 @@ export interface MenuCategory {
     sort_order: number
     is_visible: boolean
     emoji?: string | null
+    image_url?: string | null
 }
 
 export interface MenuItemVariation {
