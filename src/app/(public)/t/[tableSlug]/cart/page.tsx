@@ -1,6 +1,7 @@
 'use client'
 
 import { useCartStore, getCartItemKey } from '@/lib/stores/cart'
+import { useActiveOrders } from '@/lib/stores/activeOrders'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
 import { formatCurrency } from '@/lib/utils'
 import { ChevronLeft, Plus, Minus, Pencil } from 'lucide-react'
@@ -12,7 +13,7 @@ import { toast } from 'react-hot-toast'
 import { playVoice } from '@/lib/voice'
 import OrderConfirmModal from '@/components/customer/OrderConfirmModal'
 import ItemDetailView from '@/components/customer/ItemDetailView'
-import { createClient } from '@/lib/supabase/client'
+import { getMenuItemsForCart } from './actions'
 import type { MenuItem, CartItemModifier } from '@/types/database'
 
 export default function CartPage(props: { params: Promise<{ tableSlug: string }> }) {
@@ -39,18 +40,9 @@ export default function CartPage(props: { params: Promise<{ tableSlug: string }>
 
     useEffect(() => {
         if (!restaurantId) return
-        const supabase = createClient()
-        const loadMenu = async () => {
-            const { data } = await supabase
-                .from('menu_items')
-                .select('*, modifier_groups(*, modifiers(*)), menu_categories(name)')
-                .eq('restaurant_id', restaurantId)
-                .eq('is_available', true)
-            if (data) {
-                setMenuItems(data as any[])
-            }
-        }
-        loadMenu()
+        getMenuItemsForCart(restaurantId)
+            .then(setMenuItems)
+            .catch((err) => console.error('Failed to load menu for cart editing:', err))
     }, [restaurantId])
 
     const storeIdempotencyKey = useHydratedStore(useCartStore, (s) => s.idempotencyKey)
@@ -155,6 +147,7 @@ export default function CartPage(props: { params: Promise<{ tableSlug: string }>
         } else if (res.orderId) {
             toast.success("Order placed successfully!")
             playVoice('customer_order_placed')
+            useActiveOrders.getState().addActiveOrder({ id: res.orderId, type: 'dine_in', slug })
             clearCart()
             router.push(`/t/${slug}/order/${res.orderId}`)
         }
@@ -257,43 +250,47 @@ export default function CartPage(props: { params: Promise<{ tableSlug: string }>
 
                                     {/* Info Panel */}
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="text-sm font-bold text-gray-950 leading-tight">
+                                        <h3 className="text-[15px] font-bold text-gray-950 leading-tight">
                                             {item.name}{item.variationName ? ` – ${item.variationName}` : ''}
                                         </h3>
-                                        <p className="text-[11px] text-gray-400 font-semibold mt-0.5 leading-snug">
-                                            {optionsLabel}
-                                        </p>
+                                        {(modifierNames || varLabel) && (
+                                            <p className="text-xs text-gray-500 font-medium mt-1 leading-snug line-clamp-2">
+                                                {[varLabel, modifierNames].filter(Boolean).join(' · ')}
+                                            </p>
+                                        )}
                                         <button
                                             onClick={() => handleEditCartItem(item)}
-                                            className="text-gray-400 hover:text-gray-600 font-bold text-[10px] flex items-center gap-1.5 mt-2.5 transition active:scale-95"
+                                            className="text-[var(--color-primary)] hover:opacity-80 font-bold text-xs flex items-center gap-1.5 mt-2.5 transition active:scale-95"
                                         >
-                                            <Pencil size={11} /> Edit Item
+                                            <Pencil size={12} /> Edit
                                         </button>
                                     </div>
 
                                     {/* Controls & Price */}
                                     <div className="flex flex-col items-end justify-between min-h-[72px] shrink-0">
                                         {/* Quantity control */}
-                                        <div className="flex items-center gap-2.5 border border-red-500 rounded-xl px-2 py-1 text-red-500 font-bold text-xs bg-white shrink-0">
-                                            <button 
-                                                onClick={() => handleDecrement(cartKey, item.quantity)} 
-                                                className="active:scale-90 transition hover:opacity-80"
+                                        <div className="flex items-center gap-3 rounded-full px-2.5 py-1.5 text-[var(--color-primary)] bg-[var(--color-primary)]/8 border border-[var(--color-primary)]/20 shrink-0">
+                                            <button
+                                                onClick={() => handleDecrement(cartKey, item.quantity)}
+                                                aria-label="Decrease quantity"
+                                                className="active:scale-90 transition hover:opacity-70"
                                             >
-                                                <Minus size={11} strokeWidth={3} />
+                                                <Minus size={13} strokeWidth={3} />
                                             </button>
-                                            <span className="min-w-[12px] text-center tabular-nums text-xs font-black">
+                                            <span className="min-w-[14px] text-center tabular-nums text-sm font-black text-gray-900">
                                                 {item.quantity}
                                             </span>
-                                            <button 
-                                                onClick={() => handleIncrement(cartKey, item.quantity)} 
-                                                className="active:scale-90 transition hover:opacity-80"
+                                            <button
+                                                onClick={() => handleIncrement(cartKey, item.quantity)}
+                                                aria-label="Increase quantity"
+                                                className="active:scale-90 transition hover:opacity-70"
                                             >
-                                                <Plus size={11} strokeWidth={3} />
+                                                <Plus size={13} strokeWidth={3} />
                                             </button>
                                         </div>
 
                                         {/* Price */}
-                                        <span className="text-xs font-black text-gray-950 mt-2">
+                                        <span className="text-sm font-black text-gray-950 mt-2 tabular-nums">
                                             {formatCurrency(lineTotal)}
                                         </span>
                                     </div>
@@ -318,33 +315,42 @@ export default function CartPage(props: { params: Promise<{ tableSlug: string }>
                         </button>
                     </div>
 
-                    {/* Order Summary Total */}
-                    <div className="flex justify-between items-center py-4 border-t border-b border-gray-150 my-6 px-1">
-                        <span className="text-sm font-bold text-gray-800">Total</span>
-                        <span className="text-sm font-black text-gray-950">{formatCurrency(totalAmount)}</span>
+                    {/* Order Summary */}
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm mt-6 p-4 space-y-2.5">
+                        <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500 font-medium">Subtotal · {count} item{count !== 1 ? 's' : ''}</span>
+                            <span className="text-gray-900 font-bold tabular-nums">{formatCurrency(totalAmount)}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2.5 border-t border-gray-100">
+                            <span className="text-base font-bold text-gray-900">Total</span>
+                            <span className="text-lg font-black text-gray-950 tabular-nums">{formatCurrency(totalAmount)}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Sticky Orange Footer PLACE ORDER Bar */}
+            {/* Sticky Footer PLACE ORDER Bar — shows the amount inline */}
             <div
-                className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.06)] px-4 pt-4 border-t border-gray-100"
+                className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md shadow-[0_-8px_30px_rgba(0,0,0,0.06)] px-4 pt-3 border-t border-gray-100"
                 style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 16px) + 12px)' }}
             >
-                <div className="max-w-2xl mx-auto flex flex-col">
-                    <div>
-                        <p className="text-xs font-bold text-gray-900 leading-none">Almost There,</p>
-                        <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
-                            You're all set to place your order
-                        </p>
-                    </div>
+                <div className="max-w-2xl mx-auto">
                     <button
                         onClick={() => setShowConfirm(true)}
                         disabled={isSubmitting || !sessionId}
-                        className="w-full bg-[var(--color-primary)] hover:opacity-90 text-white font-bold py-3.5 rounded-xl text-center text-sm shadow-md active:scale-95 transition-all mt-3"
+                        className="w-full bg-[var(--color-primary)] hover:opacity-90 disabled:opacity-60 text-white font-bold py-4 rounded-2xl flex items-center justify-between px-5 text-sm shadow-md shadow-[var(--color-primary)]/20 active:scale-[0.98] transition-all"
                     >
-                        PLACE ORDER
+                        <span className="flex items-center gap-2">
+                            <span className="bg-white/20 rounded-full px-2 py-0.5 text-xs tabular-nums">{count}</span>
+                            Place Order
+                        </span>
+                        <span className="text-base font-black tabular-nums">{formatCurrency(totalAmount)}</span>
                     </button>
+                    {!sessionId && (
+                        <p className="text-[11px] text-amber-600 font-semibold text-center mt-2">
+                            No active session — scan the table QR again to order.
+                        </p>
+                    )}
                 </div>
             </div>
 

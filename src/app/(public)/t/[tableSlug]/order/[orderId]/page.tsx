@@ -39,7 +39,9 @@ export default async function OrderPage(props: {
         } else {
             fetchError = error;
             if (attempt < 3) {
-                await new Promise(resolve => setTimeout(resolve, 800)); // wait 800ms before retrying
+                // Order is committed via the same (primary) admin client, so attempt 1
+                // almost always succeeds; short backoff only covers rare commit races.
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
         }
     }

@@ -7,6 +7,7 @@ import { updateRestaurantSettingsAction } from '@/app/(admin)/admin/settings/act
 import { updateFeaturesAction } from '@/lib/features'
 import { toast } from 'react-hot-toast'
 import type { Settings } from '@/types/database'
+import { unlockAudio, setCustomNotificationSound, playNewOrder } from '@/lib/audio'
 
 type RestaurantSettings = {
     id: string
@@ -91,6 +92,23 @@ export default function SettingsManager({
         await updateFeaturesAction(formData.id, { notificationSoundUrl: null })
         setFeatures(prev => ({ ...prev, notificationSoundUrl: null }))
         toast.success('Notification sound removed')
+    }
+
+    const [testingSound, setTestingSound] = useState(false)
+    // Play exactly what kitchen/waiter screens will hear: unlock the audio context
+    // (autoplay policy), point the shared player at the chosen sound, then play it.
+    // Surfaces failures instead of swallowing them like the old new Audio().catch().
+    const handleTestSound = async () => {
+        setTestingSound(true)
+        try {
+            await unlockAudio()
+            setCustomNotificationSound(features.notificationSoundUrl ?? null)
+            await playNewOrder()
+        } catch {
+            toast.error('Could not play the sound. Check the file format, or tap the page once and retry.')
+        } finally {
+            setTimeout(() => setTestingSound(false), 600)
+        }
     }
 
     const [features, setFeatures] = useState<Features>(initialFeatures || {
@@ -613,10 +631,11 @@ export default function SettingsManager({
                     <div className="flex items-center gap-3 flex-wrap">
                         <button
                             type="button"
-                            onClick={() => new Audio(features.notificationSoundUrl!).play().catch(() => {})}
-                            className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg hover:bg-green-100 transition"
+                            onClick={handleTestSound}
+                            disabled={testingSound}
+                            className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg hover:bg-green-100 transition disabled:opacity-60"
                         >
-                            <Play size={13} /> Test sound
+                            {testingSound ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Test sound
                         </button>
                         <button
                             type="button"
@@ -631,7 +650,17 @@ export default function SettingsManager({
                 )}
 
                 {!features.notificationSoundUrl && (
-                    <p className="text-sm text-gray-400 py-2">No custom sound — default pip-pip tone will play</p>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={handleTestSound}
+                            disabled={testingSound}
+                            className="flex items-center gap-1.5 text-xs font-medium text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg hover:bg-green-100 transition disabled:opacity-60"
+                        >
+                            {testingSound ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />} Test default tone
+                        </button>
+                        <span className="text-sm text-gray-400">No custom sound — default pip-pip tone will play</span>
+                    </div>
                 )}
             </div>
         </div>
