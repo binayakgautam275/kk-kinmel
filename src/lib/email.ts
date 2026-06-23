@@ -144,6 +144,7 @@ export async function sendOnboardingEmail(
   dashboardUrl: string,
   tempPassword?: string
 ) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://kkkhane.com'
   const html = `
     <!DOCTYPE html>
     <html>
@@ -200,7 +201,7 @@ export async function sendOnboardingEmail(
           
           <div class="footer">
             <p>© 2026 SRMS — Smart Restaurant Management System</p>
-            <p><a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a> | <a href="#">Help Center</a></p>
+            <p><a href="${appUrl}/legal/privacy">Privacy Policy</a> | <a href="${appUrl}/legal/terms">Terms of Service</a> | <a href="${appUrl}/contact">Help Center</a></p>
           </div>
         </div>
       </body>

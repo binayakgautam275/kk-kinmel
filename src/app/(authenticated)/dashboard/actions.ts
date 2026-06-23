@@ -86,6 +86,7 @@ const ROLE_IDS: Record<string, number> = {
     manager: 2,
     kitchen: 3,
     waiter: 4,
+    cashier: 6,
 }
 
 function generateTempPassword(): string {

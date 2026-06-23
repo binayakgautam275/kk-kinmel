@@ -1,7 +1,7 @@
 'use client'
 
 import { ReactNode, useState, useEffect } from 'react'
-import { LogOut, Volume2 } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import Logo from '@/components/shared/Logo'
 import SoundEnableButton from '@/components/shared/SoundEnableButton'
 import { createClient } from '@/lib/supabase/client'
@@ -15,9 +15,12 @@ interface Props {
     restaurantName?: string
     staffName?: string
     notificationSoundUrl?: string | null
+    portalLabel?: string
+    /** Role used to scope the command palette's navigation list. */
+    commandRole?: string
 }
 
-export default function WaiterLayoutClient({ children, restaurantName, staffName, notificationSoundUrl }: Props) {
+export default function WaiterLayoutClient({ children, restaurantName, staffName, notificationSoundUrl, portalLabel = 'Waiter', commandRole = 'waiter' }: Props) {
     const router = useRouter()
     const supabase = createClient()
     const [time, setTime] = useState('')
@@ -49,7 +52,7 @@ export default function WaiterLayoutClient({ children, restaurantName, staffName
                         {restaurantName && (
                             <div className="hidden sm:block">
                                 <p className="text-xs font-bold text-gray-800 leading-none truncate max-w-[160px]">{restaurantName}</p>
-                                <p className="text-[10px] text-gray-400 font-medium tracking-widest uppercase mt-0.5">Waiter</p>
+                                <p className="text-[10px] text-gray-400 font-medium tracking-widest uppercase mt-0.5">{portalLabel}</p>
                             </div>
                         )}
                     </div>
@@ -89,7 +92,7 @@ export default function WaiterLayoutClient({ children, restaurantName, staffName
             <main className="flex-1 w-full max-w-7xl mx-auto p-3 md:p-6">
                 {children}
             </main>
-            <CommandPaletteMount />
+            <CommandPaletteMount role={commandRole} theme="light" />
         </div>
     )
 }

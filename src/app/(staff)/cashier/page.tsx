@@ -1,17 +1,19 @@
 import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
 import CashierClient, { type UnpaidOrder, type ActiveOrder } from '@/components/waiter/CashierClient'
+import { type PaymentClaim } from '@/components/waiter/PaymentVerificationFeed'
 
 export const revalidate = 0
 
 export default async function CashierPage() {
-    const { restaurantId } = await requireRole('waiter', 'manager', 'super_admin')
+    const { id: userId, restaurantId } = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
     const adminSupabase = await createAdminClient()
 
     const [
         { data: unpaidOrders },
         { data: activeOrders },
         { data: tables },
+        { data: paymentClaims },
     ] = await Promise.all([
         // Delivered but not yet paid — ready for cashier
         adminSupabase
@@ -45,13 +47,23 @@ export default async function CashierPage() {
             .eq('restaurant_id', restaurantId)
             .eq('is_active', true)
             .order('label', { ascending: true }),
+
+        // Online payment claims (UPI/card) awaiting staff verification
+        adminSupabase
+            .from('payment_verifications')
+            .select('*')
+            .eq('restaurant_id', restaurantId)
+            .order('created_at', { ascending: false })
+            .limit(20),
     ])
 
     return (
         <CashierClient
             restaurantId={restaurantId}
+            userId={userId}
             initialUnpaid={(unpaidOrders || []) as unknown as UnpaidOrder[]}
             initialActive={(activeOrders || []) as unknown as ActiveOrder[]}
+            initialClaims={(paymentClaims || []) as unknown as PaymentClaim[]}
             tables={(tables || []).map(t => ({ id: t.id, label: t.label, capacity: t.capacity }))}
         />
     )

@@ -75,7 +75,7 @@ export default function KitchenLayoutClient({ children, restaurantName, staffNam
             <main className="flex-1 overflow-hidden">
                 {children}
             </main>
-            <CommandPaletteMount />
+            <CommandPaletteMount role="kitchen" theme="dark" />
         </div>
     )
 }

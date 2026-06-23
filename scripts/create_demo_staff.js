@@ -13,7 +13,8 @@ const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
 const staffAccounts = [
     { email: 'manager@srms.app', name: 'Demo Manager', role_id: 2 },
     { email: 'kitchen@srms.app', name: 'Demo Chef', role_id: 3 },
-    { email: 'waiter@srms.app', name: 'Demo Waiter', role_id: 4 }
+    { email: 'waiter@srms.app', name: 'Demo Waiter', role_id: 4 },
+    { email: 'cashier@srms.app', name: 'Demo Cashier', role_id: 6 }
 ];
 
 async function createStaffAccounts() {
@@ -58,6 +59,7 @@ async function createStaffAccounts() {
     console.log("Manager (Role 2): manager@srms.app")
     console.log("Kitchen (Role 3): kitchen@srms.app")
     console.log("Waiter  (Role 4): waiter@srms.app")
+    console.log("Cashier (Role 6): cashier@srms.app")
     console.log("==================================\n")
 }
 

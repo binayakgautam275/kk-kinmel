@@ -8,18 +8,24 @@ export default async function AdminPricingPage() {
     const { restaurantId: rid } = await getCurrentUser()
     const adminSupabase = await createAdminClient()
 
-    const [{ data: rules }, { data: items }] = await Promise.all([
-        adminSupabase.from('pricing_rules').select('*, menu_items(name)').eq('restaurant_id', rid).order('priority', { ascending: true }),
+    const [{ data: rules }, { data: items }, { data: categories }] = await Promise.all([
+        adminSupabase.from('pricing_rules').select('*, menu_items(name)').eq('restaurant_id', rid).order('priority', { ascending: false }).order('created_at', { ascending: false }),
         adminSupabase.from('menu_items').select('id, name').eq('restaurant_id', rid).eq('is_available', true).order('name'),
+        adminSupabase.from('menu_categories').select('id, name').eq('restaurant_id', rid).order('sort_order'),
     ])
 
     return (
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                 <h1 className="text-2xl font-bold text-gray-900">Dynamic Pricing</h1>
-                <p className="text-gray-500 mt-1">Create time/day-based pricing rules for menu items.</p>
+                <p className="text-gray-500 mt-1">Schedule time-, day- and date-based price changes for items, categories or the whole menu.</p>
             </div>
-            <PricingRulesManager initialRules={rules || []} menuItems={items || []} restaurantId={rid} />
+            <PricingRulesManager
+                initialRules={rules || []}
+                menuItems={items || []}
+                categories={categories || []}
+                restaurantId={rid}
+            />
         </div>
     )
 }

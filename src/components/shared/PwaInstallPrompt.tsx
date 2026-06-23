@@ -14,8 +14,8 @@ export default function PwaInstallPrompt() {
     const [showPrompt, setShowPrompt] = useState(false)
 
     useEffect(() => {
-        // Only show the prompt once per session (if closed)
-        if (sessionStorage.getItem('pwa_prompt_dismissed')) return
+        // Only show the prompt once, ever (persisted after the user dismisses it)
+        if (localStorage.getItem('pwa_prompt_dismissed')) return
 
         const handleBeforeInstallPrompt = (e: Event) => {
             // Prevent the mini-infobar from appearing on mobile
@@ -46,11 +46,12 @@ export default function PwaInstallPrompt() {
         // We've used the prompt, and can't use it again, throw it away
         setDeferredPrompt(null)
         setShowPrompt(false)
+        localStorage.setItem('pwa_prompt_dismissed', 'true')
     }
 
     const dismissPrompt = () => {
         setShowPrompt(false)
-        sessionStorage.setItem('pwa_prompt_dismissed', 'true')
+        localStorage.setItem('pwa_prompt_dismissed', 'true')
     }
 
     if (!showPrompt) return null

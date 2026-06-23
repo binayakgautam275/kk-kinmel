@@ -3,11 +3,13 @@ import { getOptionalUser } from '@/lib/auth'
 import Link from 'next/link'
 import Image from 'next/image'
 import { MarketingNav, MarketingFooter } from '@/components/marketing'
+import AppleLogo from '@/components/shared/AppleLogo'
+import ComingSoonButton from '@/components/shared/ComingSoonButton'
 import {
     QrCode, ArrowRight, Smartphone, BarChart3,
     ShieldCheck, Globe, FileText,
     CheckCircle,
-    Play, Apple,
+    Play,
     Star, Plus,
 } from 'lucide-react'
 
@@ -309,12 +311,12 @@ export default async function Home() {
                                 </div>
 
                                 <div className="flex gap-4">
-                                    <div className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                                    <ComingSoonButton feature="The Google Play app" className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition-colors">
                                         <Play size={16} className="fill-current" /> <span className="text-xs font-bold">Google Play</span>
-                                    </div>
-                                    <div className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                                        <Apple size={16} className="fill-current" /> <span className="text-xs font-bold">App Store</span>
-                                    </div>
+                                    </ComingSoonButton>
+                                    <ComingSoonButton feature="The App Store app" className="bg-black text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition-colors">
+                                        <AppleLogo size={16} /> <span className="text-xs font-bold">App Store</span>
+                                    </ComingSoonButton>
                                 </div>
                             </div>
 

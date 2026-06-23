@@ -200,6 +200,10 @@ body {
 *, *::before, *::after { box-sizing: border-box; }
 ::selection { background: var(--brand-500); color: #fff; }
 :focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; border-radius: 4px; }
+/* The command palette shows focus via its own selected-item highlight, so the
+   global brand-orange focus outline is suppressed inside it (cmdk tags the root
+   with [cmdk-root]). Unlayered + more specific so it overrides the rule above. */
+[cmdk-root]:focus-visible, [cmdk-root] :focus-visible { outline: none; }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(15,23,42,.12); border-radius: 4px; }

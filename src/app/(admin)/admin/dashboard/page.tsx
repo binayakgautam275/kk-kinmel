@@ -3,6 +3,7 @@ import { formatCurrency } from '@/lib/utils'
 import {
     TrendingUp, ShoppingBag, Users, AlertTriangle, Clock, UserCheck, Package,
     ArrowRight, CheckCircle2, ChevronRight, UtensilsCrossed, QrCode, Tag, ClipboardList, Boxes, Inbox,
+    Rocket,
 } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import Link from 'next/link'
@@ -73,13 +74,16 @@ export default async function AdminDashboardPage() {
     }>
 
     const onboardingSteps = [
-        { done: (menuCategoryCount || 0) > 0, label: 'Add a menu category (we added a few to start)', href: '/admin/menu' },
-        { done: (menuItemCount || 0) > 0, label: 'Customize your menu items', href: '/admin/menu' },
-        { done: (tableCount || 0) > 0, label: 'Review tables and print their QR codes', href: '/admin/tables' },
-        { done: (staffCount || 0) > 1, label: 'Invite your staff', href: '/admin/staff' },
-        { done: !!restaurantSettings?.business_hours, label: 'Set business hours & tax', href: '/admin/settings' },
+        { done: (menuCategoryCount || 0) > 0, icon: UtensilsCrossed, label: 'Add a menu category', desc: 'Group your dishes into sections', href: '/admin/menu' },
+        { done: (menuItemCount || 0) > 0, icon: ClipboardList, label: 'Customize your menu items', desc: 'Set names, prices and photos', href: '/admin/menu' },
+        { done: (tableCount || 0) > 0, icon: QrCode, label: 'Review tables & print QR codes', desc: 'Let guests scan to order', href: '/admin/tables' },
+        { done: (staffCount || 0) > 1, icon: Users, label: 'Invite your staff', desc: 'Add waiters, kitchen and cashier', href: '/admin/staff' },
+        { done: !!restaurantSettings?.business_hours, icon: Clock, label: 'Set business hours & tax', desc: 'Configure opening times and rates', href: '/admin/settings' },
     ]
-    const showChecklist = onboardingSteps.some(s => !s.done)
+    const doneSteps = onboardingSteps.filter(s => s.done).length
+    const totalSteps = onboardingSteps.length
+    const progressPct = Math.round((doneSteps / totalSteps) * 100)
+    const showChecklist = doneSteps < totalSteps
 
     const pipelineSteps: { label: string; count: number; tone: Tone }[] = [
         { label: 'Pending', count: pipeline.pending, tone: 'warning' },
@@ -106,22 +110,64 @@ export default async function AdminDashboardPage() {
 
             {/* Onboarding */}
             {showChecklist && (
-                <Card padding={20} className="border-[color-mix(in_srgb,var(--info)_25%,var(--border))]">
-                    <h2 className="text-h3 text-ink mb-4">Get your restaurant ready</h2>
-                    <div className="space-y-3">
-                        {onboardingSteps.map((step, i) => (
-                            <div key={i} className="flex items-center gap-3">
-                                <div className={`grid size-7 place-items-center rounded-full text-caption font-bold shrink-0 ${step.done ? 'bg-success-bg text-success-fg' : 'bg-surface-muted text-ink-muted'}`}>
-                                    {step.done ? <CheckCircle2 size={14} /> : i + 1}
+                <section className="overflow-hidden rounded-[var(--r-lg)] border border-hairline bg-surface shadow-sm">
+                    {/* Header with progress */}
+                    <div className="relative bg-gradient-to-br from-brand-50 to-surface px-5 sm:px-6 pt-5 pb-5 border-b border-hairline">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <span className="grid size-10 place-items-center rounded-[var(--r-md)] bg-brand-500 text-white shadow-sm shrink-0">
+                                    <Rocket size={20} />
+                                </span>
+                                <div className="min-w-0">
+                                    <h2 className="text-h3 text-ink leading-tight">Get your restaurant ready</h2>
+                                    <p className="text-caption text-ink-muted mt-0.5">Finish setup to start taking orders.</p>
                                 </div>
-                                {step.done
-                                    ? <span className="text-body text-ink-subtle line-through">{step.label}</span>
-                                    : <Link href={step.href} className="text-body font-medium text-brand-700 hover:underline flex items-center gap-1">{step.label} <ArrowRight size={13} /></Link>
-                                }
                             </div>
-                        ))}
+                            <div className="text-right shrink-0">
+                                <span className="text-2xl font-extrabold text-ink tabular-nums leading-none">
+                                    {doneSteps}<span className="text-body font-semibold text-ink-subtle">/{totalSteps}</span>
+                                </span>
+                                <p className="text-caption text-ink-muted mt-1">{progressPct}% done</p>
+                            </div>
+                        </div>
+                        <div className="mt-4 h-1.5 w-full rounded-full bg-[color-mix(in_srgb,var(--brand-500)_14%,var(--surface))] overflow-hidden">
+                            <div className="h-full rounded-full bg-brand-500 transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                        </div>
                     </div>
-                </Card>
+
+                    {/* Steps */}
+                    <ul className="divide-y divide-hairline">
+                        {onboardingSteps.map((step, i) => {
+                            const Icon = step.icon
+                            const inner = (
+                                <div className="flex items-center gap-3.5 px-5 sm:px-6 py-3.5">
+                                    <span className={`grid size-10 place-items-center rounded-[var(--r-md)] shrink-0 transition-colors ${step.done ? 'bg-success-bg text-success-fg' : 'bg-brand-50 text-brand-700 group-hover:bg-brand-100'}`}>
+                                        {step.done ? <CheckCircle2 size={18} /> : <Icon size={18} />}
+                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                        <p className={`text-body font-semibold leading-tight ${step.done ? 'text-ink-subtle line-through' : 'text-ink'}`}>{step.label}</p>
+                                        <p className="text-caption text-ink-muted mt-0.5 truncate">{step.desc}</p>
+                                    </div>
+                                    {step.done ? (
+                                        <span className="text-caption font-semibold text-success-fg shrink-0">Done</span>
+                                    ) : (
+                                        <span className="flex items-center gap-1 text-small font-semibold text-brand-700 shrink-0">
+                                            <span className="hidden sm:inline">Set up</span>
+                                            <ChevronRight size={16} className="transition-transform group-hover:translate-x-0.5" />
+                                        </span>
+                                    )}
+                                </div>
+                            )
+                            return (
+                                <li key={i}>
+                                    {step.done
+                                        ? inner
+                                        : <Link href={step.href} className="group block transition-colors hover:bg-surface-muted">{inner}</Link>}
+                                </li>
+                            )
+                        })}
+                    </ul>
+                </section>
             )}
 
             {/* Low stock alert */}

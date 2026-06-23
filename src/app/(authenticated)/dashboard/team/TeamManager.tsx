@@ -20,6 +20,7 @@ const ROLE_COLORS: Record<string, string> = {
     manager:     'bg-blue-100 text-blue-700',
     kitchen:     'bg-orange-100 text-orange-700',
     waiter:      'bg-green-100 text-green-700',
+    cashier:     'bg-emerald-100 text-emerald-700',
 }
 
 export default function TeamManager({ initialStaff }: { initialStaff: StaffMember[] }) {
@@ -118,6 +119,7 @@ export default function TeamManager({ initialStaff }: { initialStaff: StaffMembe
                                 >
                                     <option value="waiter">Waiter</option>
                                     <option value="kitchen">Kitchen</option>
+                                    <option value="cashier">Cashier</option>
                                     <option value="manager">Manager</option>
                                 </select>
                             </div>

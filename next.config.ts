@@ -73,6 +73,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'images.unsplash.com',
       },
+      // Restaurants can paste an arbitrary external image URL for menu items
+      // (MenuManager "URL" mode), so any https host must be allowed. Images are
+      // proxied through the same-origin /_next/image optimizer, so CSP img-src
+      // ('self') still covers the rendered output. https-only to avoid mixed content.
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
     ],
   },
   async headers() {

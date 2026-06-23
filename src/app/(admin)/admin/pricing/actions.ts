@@ -16,6 +16,7 @@ export async function getPricingRulesAction(restaurantId: string) {
 export async function createPricingRuleAction(input: {
     restaurant_id: string
     name: string
+    description?: string | null
     rule_type: string
     value: number
     applies_to_item_id?: string | null

@@ -7,6 +7,7 @@ import { markDeliveredAndCashPaid } from '@/app/(staff)/waiter/order-actions'
 import { formatCurrency } from '@/lib/utils'
 import { toast } from 'react-hot-toast'
 import { Banknote, CheckCircle, ChefHat, Clock, Loader2, CreditCard, Receipt } from 'lucide-react'
+import PaymentVerificationFeed, { type PaymentClaim } from './PaymentVerificationFeed'
 
 type OrderItem = { quantity: number; menu_items: { name: string } | null }
 type TableRef = { label?: string } | null
@@ -33,8 +34,10 @@ export type ActiveOrder = {
 
 interface Props {
     restaurantId: string
+    userId: string
     initialUnpaid: UnpaidOrder[]
     initialActive: ActiveOrder[]
+    initialClaims: PaymentClaim[]
     tables: { id: string; label: string; capacity: number | null }[]
 }
 
@@ -42,10 +45,13 @@ function tableLabel(sessions: { tables: TableRef } | null): string {
     return (sessions?.tables as { label?: string } | null)?.label ?? '?'
 }
 
-export default function CashierClient({ restaurantId, initialUnpaid, initialActive, tables }: Props) {
+export default function CashierClient({ restaurantId, userId, initialUnpaid, initialActive, initialClaims, tables }: Props) {
     const [unpaid, setUnpaid] = useState<UnpaidOrder[]>(initialUnpaid)
     const [active, setActive] = useState<ActiveOrder[]>(initialActive)
     const [processingId, setProcessingId] = useState<string | null>(null)
+    const [pendingClaims, setPendingClaims] = useState(
+        initialClaims.filter(c => !c.staff_verified && !c.staff_rejected).length
+    )
     const supabaseRef = useRef(createClient())
 
     useRestaurantTable(restaurantId, 'orders', async (payload) => {
@@ -133,6 +139,14 @@ export default function CashierClient({ restaurantId, initialUnpaid, initialActi
                     </div>
                 )}
             </div>
+
+            {/* Online payment claims (UPI/card) awaiting verification */}
+            <PaymentVerificationFeed
+                initialClaims={initialClaims}
+                restaurantId={restaurantId}
+                userId={userId}
+                onPendingCountChange={setPendingClaims}
+            />
 
             {/* Unpaid Bills — main cashier action */}
             <div>
@@ -247,7 +261,7 @@ export default function CashierClient({ restaurantId, initialUnpaid, initialActi
                 </div>
             )}
 
-            {unpaid.length === 0 && activePipeline.length === 0 && (
+            {unpaid.length === 0 && activePipeline.length === 0 && pendingClaims === 0 && (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 text-center">
                     <CreditCard size={36} className="mx-auto text-gray-200 mb-3" />
                     <p className="text-base font-semibold text-gray-400">All quiet at the counter</p>

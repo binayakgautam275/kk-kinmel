@@ -43,16 +43,74 @@ export function isAudioLocked(): boolean {
 
 // ─── Custom sound URL ─────────────────────────────────────────────────────────
 
+// Decoded audio buffer cache, keyed by URL. The custom sound plays through the
+// same AudioContext as the synthesised pips so it benefits from the one-time
+// user-gesture unlock — a fresh `new Audio()` element has its OWN autoplay
+// gating that the AudioContext resume does NOT lift, so it would be blocked when
+// fired from a realtime event (no gesture) and silently fall back to the pips.
+let decodedBuffer: AudioBuffer | null = null
+let decodedFor: string | null = null
+let decodePromise: Promise<AudioBuffer | null> | null = null
+
 /**
  * Set a custom notification sound URL (MP3 / WAV).
  * When set, all notification functions play this file instead of synthesised tones.
  */
 export function setCustomNotificationSound(url: string | null) {
-    customSoundUrl = url || '/sounds/kkkhane.mp3'
+    const next = url || '/sounds/kkkhane.mp3'
+    if (next !== customSoundUrl) {
+        // Invalidate the decoded buffer so the new sound is fetched on next play.
+        decodedBuffer = null
+        decodedFor = null
+        decodePromise = null
+    }
+    customSoundUrl = next
+}
+
+async function getDecodedBuffer(c: AudioContext, url: string): Promise<AudioBuffer | null> {
+    if (decodedBuffer && decodedFor === url) return decodedBuffer
+    if (decodePromise && decodedFor === url) return decodePromise
+
+    decodedFor = url
+    decodePromise = (async () => {
+        try {
+            const res = await fetch(url)
+            if (!res.ok) return null
+            const data = await res.arrayBuffer()
+            const buf = await c.decodeAudioData(data)
+            decodedBuffer = buf
+            return buf
+        } catch {
+            return null
+        }
+    })()
+    return decodePromise
 }
 
 async function playCustomSound(): Promise<boolean> {
     if (!customSoundUrl) return false
+
+    // Preferred path: decode + play through the unlocked AudioContext. Works for
+    // realtime-triggered notifications (no user gesture) once audio is unlocked.
+    const c = await runningCtx()
+    if (c) {
+        const buf = await getDecodedBuffer(c, customSoundUrl)
+        if (buf) {
+            try {
+                const src = c.createBufferSource()
+                const gain = c.createGain()
+                gain.gain.setValueAtTime(0.7, c.currentTime)
+                src.buffer = buf
+                src.connect(gain)
+                gain.connect(c.destination)
+                src.start()
+                return true
+            } catch { /* fall through to HTMLAudio */ }
+        }
+    }
+
+    // Fallback: HTMLAudioElement. Only succeeds inside a user gesture (e.g. the
+    // admin "Test sound" button), but harmless to try.
     return new Promise((resolve) => {
         const audio = new Audio(customSoundUrl!)
         audio.volume = 0.7

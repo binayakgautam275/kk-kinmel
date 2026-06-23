@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation'
 import WaiterLayoutClient from '@/components/waiter/WaiterLayoutClient'
 
 export default async function CashierLayout({ children }: { children: ReactNode }) {
-    const { id: userId, restaurantId, role } = await requireRole('waiter', 'manager', 'super_admin')
+    const { id: userId, restaurantId, role } = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
 
     // Enforce WiFi IP check for staff
     const { allowed } = await verifyClientIp(restaurantId, role)
@@ -25,6 +25,8 @@ export default async function CashierLayout({ children }: { children: ReactNode 
             restaurantName={restaurant?.name || undefined}
             staffName={user?.full_name || undefined}
             notificationSoundUrl={null}
+            portalLabel="Cashier"
+            commandRole="cashier"
         >
             {children}
         </WaiterLayoutClient>

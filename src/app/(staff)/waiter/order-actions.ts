@@ -10,7 +10,7 @@ import { requireRole } from '@/lib/auth'
  * Step 7 of the Golden Path: Waiter picks up ready food & delivers.
  */
 export async function markOrderDelivered(orderId: string) {
-    const currentUser = await requireRole('waiter', 'manager', 'super_admin')
+    const currentUser = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
     const adminSupabase = await createAdminClient()
 
     const { data: order, error } = await adminSupabase
@@ -49,7 +49,7 @@ export async function markOrderDelivered(orderId: string) {
 export async function markCashPaid(
     orderId: string
 ): Promise<{ error?: string; success?: boolean; tableClosed?: boolean }> {
-    const currentUser = await requireRole('waiter', 'manager', 'super_admin')
+    const currentUser = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
     const supabase = await createAdminClient()
 
     // 1. Fetch order details
@@ -132,7 +132,7 @@ export async function markCashPaid(
 export async function markDeliveredAndCashPaid(
     orderId: string
 ): Promise<{ error?: string; success?: boolean; tableClosed?: boolean }> {
-    const currentUser = await requireRole('waiter', 'manager', 'super_admin')
+    const currentUser = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
     const supabase = await createAdminClient()
 
     const { data: order, error: fetchError } = await supabase

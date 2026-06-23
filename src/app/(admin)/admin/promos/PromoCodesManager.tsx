@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createPromoCodeAction, updatePromoCodeAction, deletePromoCodeAction } from './actions'
 import type { PromoCode } from '@/types/database'
-import { Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Trash2, ToggleLeft, ToggleRight, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const PROMO_TYPES = [
@@ -19,15 +19,74 @@ export default function PromoCodesManager({ initialPromos, restaurantId }: {
 }) {
     const [promos, setPromos] = useState(initialPromos)
     const [showForm, setShowForm] = useState(false)
+    const [editingId, setEditingId] = useState<string | null>(null)
     const [form, setForm] = useState({
         code: '', promo_type: 'percentage_off', value: '10',
         min_order_amount: '', max_discount_amount: '', max_uses: '', valid_until: '',
     })
     const [saving, setSaving] = useState(false)
 
-    async function handleCreate(e: React.FormEvent) {
+    const emptyForm = { code: '', promo_type: 'percentage_off', value: '10', min_order_amount: '', max_discount_amount: '', max_uses: '', valid_until: '' }
+
+    // Convert a stored ISO timestamp to the local `YYYY-MM-DDTHH:mm` that
+    // <input type="datetime-local"> expects.
+    function toLocalInput(iso: string | null): string {
+        if (!iso) return ''
+        const d = new Date(iso)
+        if (Number.isNaN(d.getTime())) return ''
+        const pad = (n: number) => String(n).padStart(2, '0')
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    }
+
+    function openCreate() {
+        setEditingId(null)
+        setForm(emptyForm)
+        setShowForm(true)
+    }
+
+    function openEdit(promo: PromoCode) {
+        setEditingId(promo.id)
+        setForm({
+            code: promo.code,
+            promo_type: promo.promo_type,
+            value: String(promo.value),
+            min_order_amount: promo.min_order_amount ? String(promo.min_order_amount) : '',
+            max_discount_amount: promo.max_discount_amount != null ? String(promo.max_discount_amount) : '',
+            max_uses: promo.max_uses != null ? String(promo.max_uses) : '',
+            valid_until: toLocalInput(promo.valid_until),
+        })
+        setShowForm(true)
+    }
+
+    function closeForm() {
+        setShowForm(false)
+        setEditingId(null)
+        setForm(emptyForm)
+    }
+
+    async function handleSubmit(e: React.FormEvent) {
         e.preventDefault()
         setSaving(true)
+
+        if (editingId) {
+            const updates = {
+                code: form.code,
+                promo_type: form.promo_type,
+                value: parseFloat(form.value) || 0,
+                min_order_amount: form.min_order_amount ? parseFloat(form.min_order_amount) : 0,
+                max_discount_amount: form.max_discount_amount ? parseFloat(form.max_discount_amount) : null,
+                max_uses: form.max_uses ? parseInt(form.max_uses) : null,
+                valid_until: form.valid_until || null,
+            }
+            const result = await updatePromoCodeAction(editingId, updates)
+            setSaving(false)
+            if (result.error) { toast.error(result.error); return }
+            setPromos(promos.map(p => p.id === editingId ? { ...p, ...updates, code: updates.code.toUpperCase().trim() } as PromoCode : p))
+            closeForm()
+            toast.success('Promo code updated!')
+            return
+        }
+
         const result = await createPromoCodeAction({
             restaurant_id: restaurantId,
             code: form.code,
@@ -42,8 +101,7 @@ export default function PromoCodesManager({ initialPromos, restaurantId }: {
         setSaving(false)
         if (result.error) { toast.error(result.error); return }
         setPromos([result.data, ...promos])
-        setShowForm(false)
-        setForm({ code: '', promo_type: 'percentage_off', value: '10', min_order_amount: '', max_discount_amount: '', max_uses: '', valid_until: '' })
+        closeForm()
         toast.success('Promo code created!')
     }
 
@@ -64,13 +122,14 @@ export default function PromoCodesManager({ initialPromos, restaurantId }: {
     return (
         <div className="space-y-4">
             <div className="flex justify-end">
-                <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
+                <button onClick={openCreate} className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800">
                     <Plus size={16} /> New Promo Code
                 </button>
             </div>
 
             {showForm && (
-                <form onSubmit={handleCreate} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+                    <h2 className="text-base font-bold text-gray-900">{editingId ? 'Edit Promo Code' : 'New Promo Code'}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Code *</label>
@@ -121,9 +180,9 @@ export default function PromoCodesManager({ initialPromos, restaurantId }: {
                         </div>
                     </div>
                     <div className="flex gap-2 justify-end">
-                        <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                        <button type="button" onClick={closeForm} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
                         <button type="submit" disabled={saving} className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-50">
-                            {saving ? 'Creating...' : 'Create Code'}
+                            {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Code'}
                         </button>
                     </div>
                 </form>
@@ -156,9 +215,14 @@ export default function PromoCodesManager({ initialPromos, restaurantId }: {
                                     </button>
                                 </td>
                                 <td className="px-4 py-3 text-right">
-                                    <button onClick={() => handleDelete(promo.id)} className="text-gray-400 hover:text-red-500 p-1">
-                                        <Trash2 size={16} />
-                                    </button>
+                                    <div className="flex gap-1 justify-end">
+                                        <button onClick={() => openEdit(promo)} className="text-gray-400 hover:text-gray-800 p-1" title="Edit promo code">
+                                            <Pencil size={16} />
+                                        </button>
+                                        <button onClick={() => handleDelete(promo.id)} className="text-gray-400 hover:text-red-500 p-1" title="Delete promo code">
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

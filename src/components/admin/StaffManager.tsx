@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Shield, ChefHat, Users, User, Check, AlertTriangle, Loader2, Pencil, Trash2, Eye, EyeOff, QrCode } from 'lucide-react'
+import { Shield, ChefHat, Users, User, Check, AlertTriangle, Loader2, Pencil, Trash2, Eye, EyeOff, QrCode, Banknote } from 'lucide-react'
 import { updateStaffRoleAction, toggleStaffStatusAction, updateStaffNameAction, resetStaffPasswordAction, deleteStaffAction, assignScannedUserAction } from '@/app/(admin)/admin/staff/actions'
 import { toast } from 'react-hot-toast'
 import { useConfirmStore } from '@/lib/stores/confirm'
@@ -248,6 +248,7 @@ export default function StaffManager({
             case 'manager': return <Users size={16} className="text-blue-500" />
             case 'kitchen': return <ChefHat size={16} className="text-orange-500" />
             case 'waiter': return <User size={16} className="text-green-500" />
+            case 'cashier': return <Banknote size={16} className="text-emerald-500" />
             default: return <User size={16} className="text-gray-500" />
         }
     }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { CheckCircle, XCircle, Smartphone, DoorClosed } from 'lucide-react'
 import { verifyPayment, verifyPaymentAndCloseTable } from './payment-verification-actions'
@@ -33,10 +33,13 @@ export default function PaymentVerificationFeed({
     initialClaims,
     restaurantId,
     userId,
+    onPendingCountChange,
 }: {
     initialClaims: PaymentClaim[]
     restaurantId: string
     userId: string
+    /** Reports the live count of pending claims so a parent can adjust its own empty state. */
+    onPendingCountChange?: (count: number) => void
 }) {
     const [claims, setClaims] = useState<PaymentClaim[]>(initialClaims)
     const [loading, setLoading] = useState<string | null>(null)
@@ -78,6 +81,10 @@ export default function PaymentVerificationFeed({
 
     const pendingClaims = claims.filter((c) => claimStatus(c) === 'pending')
     const resolvedClaims = claims.filter((c) => claimStatus(c) !== 'pending')
+
+    useEffect(() => {
+        onPendingCountChange?.(pendingClaims.length)
+    }, [pendingClaims.length, onPendingCountChange])
 
     if (claims.length === 0) return null
 

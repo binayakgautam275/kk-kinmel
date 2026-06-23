@@ -51,7 +51,7 @@ export default function SoundEnableButton({ className = '', variant = 'light' }:
 
     if (justEnabled) {
         return (
-            <span className={`flex items-center gap-1.5 text-caption font-medium px-2.5 py-2 rounded-[var(--r-md)] ${variant === 'dark' ? 'text-green-300' : 'text-green-600'} ${className}`}>
+            <span className={`flex items-center gap-1.5 text-caption font-medium px-2.5 py-2 rounded-(--r-md) ${variant === 'dark' ? 'text-green-300' : 'text-green-600'} ${className}`}>
                 <Volume2 size={13} /> Sounds on
             </span>
         )
@@ -60,7 +60,7 @@ export default function SoundEnableButton({ className = '', variant = 'light' }:
     return (
         <button
             onClick={handleEnable}
-            className={`flex items-center gap-1.5 text-caption font-medium px-2.5 py-2 rounded-[var(--r-md)] border transition ${variant === 'dark' ? darkStyles : lightStyles} ${className}`}
+            className={`flex items-center gap-1.5 text-caption font-medium px-2.5 py-2 rounded-(--r-md) border transition ${variant === 'dark' ? darkStyles : lightStyles} ${className}`}
             title="Click to enable audio notifications"
         >
             <VolumeX size={13} /> Enable sounds

@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import Logo from '@/components/shared/Logo'
+import AppleLogo from '@/components/shared/AppleLogo'
+import ComingSoonButton from '@/components/shared/ComingSoonButton'
 import CopyrightYear from '@/components/shared/CopyrightYear'
 import {
-    Phone, MapPin, Play, Apple, QrCode,
+    Phone, MapPin, Play, QrCode,
     Facebook, Instagram, Youtube, Twitter,
 } from 'lucide-react'
 
@@ -80,20 +82,20 @@ export default function MarketingFooter() {
                             <QrCode size={80} className="text-gray-800" />
                         </div>
                         <div className="flex flex-col gap-3">
-                            <Link href="#" className="flex items-center gap-3 rounded-xl bg-black px-4 py-2.5 text-white shadow-md transition-colors hover:bg-gray-800">
+                            <ComingSoonButton feature="The Google Play app" className="flex items-center gap-3 rounded-xl bg-black px-4 py-2.5 text-white shadow-md transition-colors hover:bg-gray-800">
                                 <Play size={24} className="fill-current" />
                                 <span className="text-left">
                                     <span className="block text-[10px] font-bold uppercase text-gray-400">Get it on</span>
                                     <span className="block text-sm font-bold leading-tight">Google Play</span>
                                 </span>
-                            </Link>
-                            <Link href="#" className="flex items-center gap-3 rounded-xl bg-black px-4 py-2.5 text-white shadow-md transition-colors hover:bg-gray-800">
-                                <Apple size={24} className="fill-current" />
+                            </ComingSoonButton>
+                            <ComingSoonButton feature="The App Store app" className="flex items-center gap-3 rounded-xl bg-black px-4 py-2.5 text-white shadow-md transition-colors hover:bg-gray-800">
+                                <AppleLogo size={24} />
                                 <span className="text-left">
                                     <span className="block text-[10px] font-bold uppercase text-gray-400">Download on the</span>
                                     <span className="block text-sm font-bold leading-tight">App Store</span>
                                 </span>
-                            </Link>
+                            </ComingSoonButton>
                         </div>
                     </div>
                 </div>

@@ -58,7 +58,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                         </span>
                     </div>
                 </header>
-                <CommandPaletteMount />
+                <CommandPaletteMount role={roleNameRaw} theme="light" />
                 <div className="flex-1 overflow-auto p-5 md:p-8">
                     <div className="max-w-6xl mx-auto">
                         {children}
