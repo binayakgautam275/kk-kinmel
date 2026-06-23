@@ -3,9 +3,18 @@ import KitchenLayoutClient from '@/components/kitchen/KitchenLayoutClient'
 import { getCurrentUser } from '@/lib/auth'
 import { getRestaurantFeatures } from '@/lib/features'
 import { createAdminClient } from '@/lib/supabase/server'
+import { verifyClientIp } from '@/lib/ip-check'
+import { redirect } from 'next/navigation'
 
 export default async function KitchenLayout({ children }: { children: ReactNode }) {
-    const { id: userId, restaurantId } = await getCurrentUser()
+    const { id: userId, restaurantId, role } = await getCurrentUser()
+
+    // Enforce WiFi IP check for staff
+    const { allowed } = await verifyClientIp(restaurantId, role)
+    if (!allowed) {
+        redirect('/wifi-required?redirect=/kitchen')
+    }
+
     const adminSupabase = await createAdminClient()
 
     // Run user/restaurant name lookups and features in parallel.

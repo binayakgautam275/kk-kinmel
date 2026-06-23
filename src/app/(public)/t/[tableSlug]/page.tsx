@@ -4,6 +4,7 @@ import { getRestaurantFeatures, getMenuLayout } from '@/lib/features'
 import { getCachedMenuData } from '@/lib/menu-cache'
 import type { MenuItem } from '@/types/database'
 import TablePageClient from './TablePageClient'
+import { verifyClientIp } from '@/lib/ip-check'
 
 import type { Metadata } from 'next'
 
@@ -95,12 +96,16 @@ export default async function CustomerMenuPage(props: {
     const [
         features,
         menuData,
-        menuLayout
+        menuLayout,
+        { allowed: isIpAllowed }
     ] = await Promise.all([
         getRestaurantFeatures(restaurantId),
         getCachedMenuData(restaurantId),
-        getMenuLayout(restaurantId)
+        getMenuLayout(restaurantId),
+        verifyClientIp(restaurantId, 'customer')
     ])
+
+    const isIpRestricted = !isIpAllowed
 
     const { categories, menuItems, translations, supportedLanguages, comboItems } = menuData
 
@@ -132,6 +137,7 @@ export default async function CustomerMenuPage(props: {
             menuLayout={menuLayout}
             translations={translations}
             supportedLanguages={langs}
+            isIpRestricted={isIpRestricted}
         />
     )
 }

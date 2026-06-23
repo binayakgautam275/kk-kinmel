@@ -3,9 +3,18 @@ import WaiterLayoutClient from '@/components/waiter/WaiterLayoutClient'
 import { getCurrentUser } from '@/lib/auth'
 import { getRestaurantFeatures } from '@/lib/features'
 import { createAdminClient } from '@/lib/supabase/server'
+import { verifyClientIp } from '@/lib/ip-check'
+import { redirect } from 'next/navigation'
 
 export default async function WaiterLayout({ children }: { children: ReactNode }) {
-    const { id: userId, restaurantId } = await getCurrentUser()
+    const { id: userId, restaurantId, role } = await getCurrentUser()
+
+    // Enforce WiFi IP check for staff
+    const { allowed } = await verifyClientIp(restaurantId, role)
+    if (!allowed) {
+        redirect('/wifi-required?redirect=/waiter')
+    }
+
     const adminSupabase = await createAdminClient()
 
     // Run user/restaurant name lookups and features in parallel.

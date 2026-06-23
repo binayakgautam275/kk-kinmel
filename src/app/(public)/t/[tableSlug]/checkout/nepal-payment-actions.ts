@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { validateInput } from '@/lib/validation'
 import { checkRateLimit, RATE_LIMIT_RULES } from '@/lib/ratelimit'
 import { z } from 'zod'
+import { verifyClientIp } from '@/lib/ip-check'
 
 const PaymentClaimInputSchema = z.object({
     restaurantId: z.string().uuid('Invalid restaurant ID'),
@@ -29,6 +30,12 @@ export async function submitPaymentClaim(formData: FormData): Promise<{ error?: 
         RATE_LIMIT_RULES.PAYMENT_CLAIM.windowSeconds
     )
     if (rateLimitError) return { error: 'Too many payment attempts. Please wait a few minutes.' }
+
+    // Enforce WiFi IP restriction
+    const { allowed: ipAllowed } = await verifyClientIp(restaurantId, 'customer')
+    if (!ipAllowed) {
+        return { error: 'Your current network IP is not allowed to submit payment claims for this restaurant.' }
+    }
 
     const validation = validateInput(PaymentClaimInputSchema, {
         restaurantId,

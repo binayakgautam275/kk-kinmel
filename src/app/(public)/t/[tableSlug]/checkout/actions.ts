@@ -10,6 +10,7 @@ import { validateInput, OrderItemSchema } from '@/lib/validation'
 import { z } from 'zod'
 import { sendOrderConfirmationSms, sendLoyaltyPointsSms } from '@/lib/sms'
 import { checkAndAlertLowStock } from '@/app/(admin)/admin/ingredients/actions'
+import { verifyClientIp } from '@/lib/ip-check'
 
 type PlaceOrderItemPayload = {
     menu_item_id: string
@@ -124,6 +125,12 @@ export async function placeOrder(
 
     if (sessionError || !sessionData) {
         return { error: 'Your table session has expired or is invalid. Please ask your waiter to reopen.' }
+    }
+
+    // 2b. Enforce WiFi IP restriction
+    const { allowed: ipAllowed } = await verifyClientIp(sessionData.restaurant_id, 'customer')
+    if (!ipAllowed) {
+        return { error: 'Your current network IP is not allowed to place orders for this restaurant.' }
     }
 
     const sessionUuid = sessionData.id

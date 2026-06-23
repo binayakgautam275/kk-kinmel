@@ -23,6 +23,7 @@ type RestaurantSettings = {
     vat_registered: boolean
     payment_qr_url: string | null
     payment_qr_label: string | null
+    allowed_ips: string | null
 }
 
 type Features = Settings['features_v2']
@@ -37,6 +38,25 @@ export default function SettingsManager({
     canEdit: boolean
 }) {
     const [formData, setFormData] = useState<RestaurantSettings>(initialRestaurant)
+    const [features, setFeatures] = useState<Features>(initialFeatures || {
+        loyaltyEnabled: false,
+        promosEnabled: true,
+        takeoutEnabled: false,
+        multiLanguageEnabled: false,
+        serviceRequestsEnabled: true,
+        splitBillingEnabled: true,
+        dynamicPricingEnabled: false,
+        ingredientTrackingEnabled: false,
+        staffShiftsEnabled: false,
+        defaultTaxRate: 13.0,
+        currency: 'NPR',
+        currencySymbol: 'Rs.',
+        nepalPayEnabled: false,
+        vatEnabled: false,
+        phoneOtpEnabled: false,
+        bsDateEnabled: false,
+        feedbackEnabled: true,
+    })
     const [taxRateStr, setTaxRateStr] = useState((initialRestaurant.tax_rate ?? 13).toString())
     const [uploadingField, setUploadingField] = useState<'logo_url' | 'payment_qr_url' | 'notification_sound' | null>(null)
     const logoInputRef = useRef<HTMLInputElement>(null)
@@ -110,26 +130,6 @@ export default function SettingsManager({
             setTimeout(() => setTestingSound(false), 600)
         }
     }
-
-    const [features, setFeatures] = useState<Features>(initialFeatures || {
-        loyaltyEnabled: false,
-        promosEnabled: true,
-        takeoutEnabled: false,
-        multiLanguageEnabled: false,
-        serviceRequestsEnabled: true,
-        splitBillingEnabled: true,
-        dynamicPricingEnabled: false,
-        ingredientTrackingEnabled: false,
-        staffShiftsEnabled: false,
-        defaultTaxRate: 13.0,
-        currency: 'NPR',
-        currencySymbol: 'Rs.',
-        nepalPayEnabled: false,
-        vatEnabled: false,
-        phoneOtpEnabled: false,
-        bsDateEnabled: false,
-        feedbackEnabled: true,
-    })
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isSavingFeatures, setIsSavingFeatures] = useState(false)
     const [isSuccess, setIsSuccess] = useState(false)
@@ -153,15 +153,34 @@ export default function SettingsManager({
         setIsSuccess(false)
 
         const finalTaxRate = taxRateStr === '' ? 0 : Number.parseFloat(taxRateStr)
-        const submissionData = { ...formData, tax_rate: finalTaxRate }
-        const res = await updateRestaurantSettingsAction(formData.id, submissionData)
 
-        if (res.success) {
+        // Save restaurant and features settings in parallel
+        const [resRestaurant, resFeatures] = await Promise.all([
+            updateRestaurantSettingsAction(formData.id, {
+                name: formData.name,
+                contact_phone: formData.contact_phone,
+                contact_email: formData.contact_email,
+                address: formData.address,
+                logo_url: formData.logo_url,
+                pan_number: formData.pan_number,
+                vat_registered: formData.vat_registered,
+                payment_qr_url: formData.payment_qr_url,
+                payment_qr_label: formData.payment_qr_label,
+                allowed_ips: formData.allowed_ips,
+            }),
+            updateFeaturesAction(formData.id, {
+                defaultTaxRate: finalTaxRate,
+                currency: features.currency,
+                currencySymbol: features.currencySymbol,
+            })
+        ])
+
+        if (resRestaurant.success && resFeatures.success) {
             setIsSuccess(true)
             toast.success('Settings saved successfully')
             setTimeout(() => setIsSuccess(false), 3000)
         } else {
-            toast.error(res.error || 'Failed to save settings')
+            toast.error(resRestaurant.error || resFeatures.error || 'Failed to save settings')
         }
 
         setIsSubmitting(false)
@@ -262,6 +281,25 @@ export default function SettingsManager({
                     </div>
 
                     <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                            <Shield size={14} className="text-gray-400" />
+                            Allowed WiFi IP Addresses
+                        </label>
+                        <input
+                            type="text"
+                            name="allowed_ips"
+                            value={formData.allowed_ips || ''}
+                            onChange={handleChange}
+                            disabled={!canEdit || isSubmitting}
+                            className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border disabled:bg-gray-50 disabled:text-gray-500"
+                            placeholder="e.g., 103.10.22.45, 103.10.22.46 (comma-separated)"
+                        />
+                        <p className="mt-1.5 text-xs text-gray-500">
+                            Provide a comma-separated list of allowed public IP addresses. Waiters and customers must be connected to this network to access their panels. Leave blank to disable network restriction. Managers can access from anywhere.
+                        </p>
+                    </div>
+
+                    <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Restaurant Logo</label>
                         <div className="flex items-start gap-4">
                             {/* Current logo preview or placeholder */}
@@ -338,10 +376,6 @@ export default function SettingsManager({
                                         const value = e.target.value
                                         if (/^(\d+(\.\d*)?)?$/.test(value)) {
                                             setTaxRateStr(value)
-                                            setFormData(prev => ({
-                                                ...prev,
-                                                tax_rate: value === '' ? prev.tax_rate : Number.parseFloat(value)
-                                            }))
                                         }
                                     }}
                                     disabled={!canEdit || isSubmitting}
@@ -360,8 +394,11 @@ export default function SettingsManager({
                             <input
                                 type="text"
                                 name="currency"
-                                value={formData.currency}
-                                onChange={handleChange}
+                                value={features.currency || ''}
+                                onChange={e => {
+                                    const value = e.target.value
+                                    setFeatures(prev => ({ ...prev, currency: value }))
+                                }}
                                 disabled={!canEdit || isSubmitting}
                                 maxLength={3}
                                 className="w-full border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2.5 border uppercase disabled:bg-gray-50 disabled:text-gray-500"
@@ -380,8 +417,11 @@ export default function SettingsManager({
                             <input
                                 type="text"
                                 name="currency_symbol"
-                                value={formData.currency_symbol || ''}
-                                onChange={handleChange}
+                                value={features.currencySymbol || ''}
+                                onChange={e => {
+                                    const value = e.target.value
+                                    setFeatures(prev => ({ ...prev, currencySymbol: value }))
+                                }}
                                 disabled={!canEdit || isSubmitting}
                                 maxLength={5}
                                 className="w-full border-gray-300 rounded-lg shadow-sm sm:text-sm p-2.5 border disabled:bg-gray-50 disabled:text-gray-500"
