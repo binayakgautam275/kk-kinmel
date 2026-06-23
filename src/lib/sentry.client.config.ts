@@ -17,15 +17,16 @@ export function initSentryClient() {
     dsn: SENTRY_DSN,
     environment: process.env.NODE_ENV,
 
-    // Performance Monitoring: 10% of transactions in prod, 100% in dev
-    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+    // Performance Monitoring: 10% in prod, 0 in dev (no local tracing overhead).
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0,
 
-    // Show debug info in development
-    debug: process.env.NODE_ENV !== 'production',
+    // Never print Sentry's verbose logger locally (the "Integration installed" /
+    // "[Tracing] …" flood). Opt in explicitly with SENTRY_DEBUG=true.
+    debug: process.env.SENTRY_DEBUG === 'true',
 
-    // Replay configuration
-    replaysSessionSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-    replaysOnErrorSampleRate: 1.0, // Always capture replays for errors
+    // Session replays: only in prod.
+    replaysSessionSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 0,
+    replaysOnErrorSampleRate: process.env.NODE_ENV === 'production' ? 1.0 : 0,
 
     // Security: Don't send personal data
     beforeSend(event) {

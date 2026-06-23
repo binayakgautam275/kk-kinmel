@@ -119,6 +119,9 @@ export default withSentryConfig(pwaConfig, {
   silent: !process.env.CI,
   widenClientFileUpload: true,
   sourcemaps: { deleteSourcemapsAfterUpload: true },
-  disableLogger: true,
-  automaticVercelMonitors: true,
+  // `disableLogger` and `automaticVercelMonitors` are deprecated and are no-ops
+  // under Turbopack — their replacements live under the build-tool plugin options.
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true, // replaces disableLogger (tree-shakes Sentry logs)
+  },
 })

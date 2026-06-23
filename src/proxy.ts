@@ -51,7 +51,7 @@ function getRequestIp(request: NextRequest): string {
     )
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     // Rate-limit public QR/table pages to prevent DoS.
