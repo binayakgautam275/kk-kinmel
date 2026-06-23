@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/server'
 import type { ServiceRequestType } from '@/types/database'
+import { verifyClientIp } from '@/lib/ip-check'
 
 export async function createServiceRequest(
     sessionId: string,
@@ -9,6 +10,11 @@ export async function createServiceRequest(
     requestType: ServiceRequestType,
     message?: string
 ): Promise<{ success: boolean; error?: string }> {
+    const { allowed } = await verifyClientIp(restaurantId, 'customer')
+    if (!allowed) {
+        return { success: false, error: 'Your current network IP is not allowed to send requests for this restaurant.' }
+    }
+
     const supabase = await createAdminClient()
 
     // Rate limit: max 3 pending requests per session
@@ -56,6 +62,11 @@ export async function requestSessionOpen(
     tableId: string,
     restaurantId: string
 ): Promise<{ success: boolean; error?: string }> {
+    const { allowed } = await verifyClientIp(restaurantId, 'customer')
+    if (!allowed) {
+        return { success: false, error: 'Your current network IP is not allowed to send requests for this restaurant.' }
+    }
+
     const supabase = await createAdminClient()
 
     // Rate limit: 1 pending open_session request per table at a time

@@ -2,12 +2,18 @@
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { verifyClientIp } from '@/lib/ip-check'
 
 export async function applyPromoToOrder(
     orderId: string,
     restaurantId: string,
     promoCodeStr: string
 ): Promise<{ success?: boolean; error?: string; discount?: number; total?: number }> {
+    const { allowed } = await verifyClientIp(restaurantId, 'customer')
+    if (!allowed) {
+        return { error: 'Your current network IP is not allowed to modify orders for this restaurant.' }
+    }
+
     const supabase = await createAdminClient()
 
     // 1. Fetch order
@@ -77,12 +83,17 @@ export async function updateOrderPaymentDetails(
 
     const { data: order, error: orderErr } = await supabase
         .from('orders')
-        .select('subtotal_amount, tax_amount')
+        .select('subtotal_amount, tax_amount, restaurant_id')
         .eq('id', orderId)
         .single()
 
     if (orderErr || !order) {
         return { success: false, error: 'Order not found.' }
+    }
+
+    const { allowed } = await verifyClientIp(order.restaurant_id, 'customer')
+    if (!allowed) {
+        return { success: false, error: 'Your current network IP is not allowed to modify orders for this restaurant.' }
     }
 
     const subtotal = Number(order.subtotal_amount || 0)

@@ -9,7 +9,20 @@ export default async function WifiRequiredPage(props: {
     searchParams: Promise<{ redirect?: string }>
 }) {
     const searchParams = await props.searchParams
-    const redirectUrl = searchParams.redirect || '/login'
+    const rawRedirect = searchParams.redirect
+    let redirectUrl = '/login'
+    if (rawRedirect) {
+        try {
+            const decoded = decodeURIComponent(rawRedirect)
+            // Must start with '/' and not '//' to prevent protocol-relative redirects
+            // and must not contain any protocols like http: or javascript:
+            if (decoded.startsWith('/') && !decoded.startsWith('//') && !/^(https?:|javascript:)/i.test(decoded)) {
+                redirectUrl = decoded
+            }
+        } catch {
+            // keep default /login fallback if decoding fails
+        }
+    }
     const reqHeaders = await headers()
     const clientIp = getClientIp(reqHeaders)
 
