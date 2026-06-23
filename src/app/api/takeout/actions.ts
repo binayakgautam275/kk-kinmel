@@ -79,9 +79,13 @@ export async function createTakeoutOrder(
     return { orderId: result.order_id, total: result.total }
 }
 
+// Active (kitchen-relevant) takeout statuses.
+const ACTIVE_TAKEOUT_ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'ready']
+
 export async function getTakeoutOrders(
     restaurantId: string,
-    status?: string
+    status?: string,
+    limit = 100,
 ): Promise<TakeoutOrder[]> {
     const supabase = await createAdminClient()
 
@@ -91,10 +95,15 @@ export async function getTakeoutOrders(
         .eq('restaurant_id', restaurantId)
         .eq('order_type', 'takeout')
         .order('pickup_time', { ascending: true })
+        .limit(limit)
 
     if (status) {
         const mapped = TAKEOUT_STATUS_TO_ORDER[status as keyof typeof TAKEOUT_STATUS_TO_ORDER]
         if (mapped) query = query.eq('status', mapped)
+    } else {
+        // No status filter = the kitchen's live queue: only active orders, never
+        // the entire (unbounded) takeout history.
+        query = query.in('status', ACTIVE_TAKEOUT_ORDER_STATUSES)
     }
 
     const { data } = await query
