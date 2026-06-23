@@ -29,7 +29,7 @@ function resolveRadius(val: string | undefined): string {
 
 function themeToCSS(theme: Partial<Settings['theme']> = {}): string {
     return `:root {
-        --color-primary: ${theme.primaryColor || '#E85D04'};
+        --color-primary: ${theme.primaryColor || '#FB6303'};
         --color-secondary: ${theme.secondaryColor || '#1B263B'};
         --color-accent: ${theme.accentColor || '#EC4899'};
         --font-family: ${FONT_MAP[theme.fontFamily || 'Inter'] || FONT_MAP.Inter};
@@ -209,7 +209,7 @@ export default function ThemeCustomizer({
 
                     <div className="grid grid-cols-2 gap-6">
                         {([
-                            { key: 'primaryColor',   label: 'Primary Color',   def: '#E85D04' },
+                            { key: 'primaryColor',   label: 'Primary Color',   def: '#FB6303' },
                             { key: 'secondaryColor', label: 'Secondary Color', def: '#1B263B' },
                             { key: 'accentColor',    label: 'Accent Color',    def: '#EC4899' },
                         ] as const).map(({ key, label, def }) => {

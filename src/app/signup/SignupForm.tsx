@@ -494,7 +494,7 @@ export default function SignupForm() {
                                     <div className="flex items-end pb-1">
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input type="checkbox" checked={vatRegistered} onChange={(e) => setVatRegistered(e.target.checked)}
-                                                   className="w-4 h-4 rounded accent-[#E85D04]" />
+                                                   className="w-4 h-4 rounded accent-[#FB6303]" />
                                             <span className="text-sm text-gray-700">VAT Registered</span>
                                         </label>
                                     </div>

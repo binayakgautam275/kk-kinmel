@@ -186,7 +186,7 @@ export default function TablePageClient({
                                 </div>
                             ) : (
                                 <div className="w-16 h-16 rounded-full bg-[#FFF0E6] flex items-center justify-center mb-4 border border-[#EDD9C8] shadow-sm">
-                                    <UtensilsCrossed size={28} className="text-[#E85D04]" />
+                                    <UtensilsCrossed size={28} className="text-[#FB6303]" />
                                 </div>
                             )}
                             <h2 className="font-black text-[#1A1006] text-lg mb-2">Welcome to {restaurantName}!</h2>
@@ -195,7 +195,7 @@ export default function TablePageClient({
                             </p>
                             {!selfOrderRequestEnabled ? (
                                 <p className="text-[#C4A882] text-[11px] font-bold flex items-center justify-center gap-1">
-                                    <RefreshCw size={10} className="animate-spin text-[#E85D04]" />
+                                    <RefreshCw size={10} className="animate-spin text-[#FB6303]" />
                                     Waiting for your waiter to open the table...
                                 </p>
                             ) : requestSent ? (
@@ -216,13 +216,13 @@ export default function TablePageClient({
                                             if (res.success || res.error?.includes('already')) setRequestSent(true)
                                         }}
                                         disabled={requestLoading}
-                                        className="w-full flex items-center justify-center gap-2 text-sm font-black bg-[#E85D04] text-white py-3.5 rounded-2xl active:scale-95 transition disabled:opacity-60 shadow-md shadow-[#E85D04]/15"
+                                        className="w-full flex items-center justify-center gap-2 text-sm font-black bg-[#FB6303] text-white py-3.5 rounded-2xl active:scale-95 transition disabled:opacity-60 shadow-md shadow-[#FB6303]/15"
                                     >
                                         {requestLoading ? <Loader2 size={16} className="animate-spin" /> : <Bell size={16} />}
                                         Ring for Service
                                     </button>
                                     <p className="text-[#C4A882] text-[11px] font-bold flex items-center justify-center gap-1">
-                                        <RefreshCw size={10} className="animate-spin text-[#E85D04]" />
+                                        <RefreshCw size={10} className="animate-spin text-[#FB6303]" />
                                         Waiting for session to open...
                                     </p>
                                 </div>
@@ -236,7 +236,7 @@ export default function TablePageClient({
                 {!hasSession && popupDismissed && (
                     <button
                         onClick={() => setPopupDismissed(false)}
-                        className="fixed bottom-24 right-4 z-40 flex items-center gap-2 bg-[#E85D04] text-white text-sm font-black pl-4 pr-5 py-3 rounded-full shadow-lg shadow-[#E85D04]/30 active:scale-95 transition animate-scale-in"
+                        className="fixed bottom-24 right-4 z-40 flex items-center gap-2 bg-[#FB6303] text-white text-sm font-black pl-4 pr-5 py-3 rounded-full shadow-lg shadow-[#FB6303]/30 active:scale-95 transition animate-scale-in"
                     >
                         {requestSent
                             ? <><Check size={16} className="stroke-[3px]" /> Waiter notified</>

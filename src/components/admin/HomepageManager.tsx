@@ -21,7 +21,7 @@ const DEFAULT_CONFIG: HomepageConfig = {
     hero_image_url: null,
     hero_video_url: null,
     hero_cta_text: 'View Menu',
-    theme_primary: '#E85D04',
+    theme_primary: '#FB6303',
     theme_secondary: '#1B263B',
     theme_accent: '#EC4899',
     logo_url: null,
@@ -512,7 +512,7 @@ export default function HomepageManager({ restaurantId }: HomepageManagerProps) 
                         <p className="text-sm text-gray-500 -mt-2">These colors apply to the homepage only. The app-wide brand colors are set in <strong>Brand &amp; Theme</strong>.</p>
                         <div className="space-y-4">
                             {([
-                                { key: 'theme_primary' as const, label: 'Primary', default: '#E85D04' },
+                                { key: 'theme_primary' as const, label: 'Primary', default: '#FB6303' },
                                 { key: 'theme_secondary' as const, label: 'Secondary', default: '#1B263B' },
                                 { key: 'theme_accent' as const, label: 'Accent', default: '#EC4899' },
                             ]).map(({ key, label, default: def }) => {

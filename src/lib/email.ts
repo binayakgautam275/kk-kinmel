@@ -63,7 +63,7 @@ export async function sendVerificationEmail(email: string, verificationLink: str
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .button { display: inline-block; padding: 12px 24px; background: #E85D04; color: white; text-decoration: none; border-radius: 8px; margin: 20px 0; }
+          .button { display: inline-block; padding: 12px 24px; background: #FB6303; color: white; text-decoration: none; border-radius: 8px; margin: 20px 0; }
           .footer { color: #666; font-size: 12px; margin-top: 40px; }
         </style>
       </head>
@@ -103,7 +103,7 @@ export async function sendPasswordResetEmail(email: string, resetLink: string, r
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .button { display: inline-block; padding: 12px 24px; background: #E85D04; color: white; text-decoration: none; border-radius: 8px; margin: 20px 0; }
+          .button { display: inline-block; padding: 12px 24px; background: #FB6303; color: white; text-decoration: none; border-radius: 8px; margin: 20px 0; }
           .footer { color: #666; font-size: 12px; margin-top: 40px; }
           .warning { background: #fff3cd; padding: 15px; border-radius: 6px; margin: 20px 0; }
         </style>
@@ -152,12 +152,12 @@ export async function sendOnboardingEmail(
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .button { display: inline-block; padding: 12px 24px; background: #E85D04; color: white; text-decoration: none; border-radius: 8px; margin: 20px 0; }
+          .button { display: inline-block; padding: 12px 24px; background: #FB6303; color: white; text-decoration: none; border-radius: 8px; margin: 20px 0; }
           .credentials { background: #f5f5f5; padding: 15px; border-radius: 6px; font-family: monospace; margin: 20px 0; }
           .footer { color: #666; font-size: 12px; margin-top: 40px; }
           .feature-list { list-style: none; padding: 0; }
           .feature-list li { padding: 8px 0; padding-left: 25px; position: relative; }
-          .feature-list li:before { content: "✓"; position: absolute; left: 0; color: #E85D04; font-weight: bold; }
+          .feature-list li:before { content: "✓"; position: absolute; left: 0; color: #FB6303; font-weight: bold; }
         </style>
       </head>
       <body>
@@ -314,7 +314,7 @@ export async function sendStaffInviteEmail(
     <p style="margin:0 0 16px;font-size:13px;color:#6b7280">
       Please log in and change your password immediately. This temporary password will work until you update it.
     </p>
-    <a href="${loginUrl}" style="display:inline-block;background:#E85D04;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Log In Now →</a>
+    <a href="${loginUrl}" style="display:inline-block;background:#FB6303;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">Log In Now →</a>
     <p style="margin:20px 0 0;font-size:12px;color:#9ca3af">If you did not expect this invitation, please ignore this email.</p>
   </div>
 </div></body></html>`

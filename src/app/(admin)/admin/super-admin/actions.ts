@@ -71,7 +71,7 @@ const TIER_FEATURES: Record<'free' | 'basic' | 'pro' | 'enterprise', {
 }
 
 const DEFAULT_THEME = {
-    primaryColor: '#E85D04',
+    primaryColor: '#FB6303',
     secondaryColor: '#1B263B',
     fontFamily: 'Inter',
     borderRadius: '12px',

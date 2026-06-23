@@ -140,7 +140,7 @@ export default function PaymentPageClient({
                                             </p>
                                         )}
                                     </div>
-                                    <span className="font-black text-[#E85D04] text-sm shrink-0">
+                                    <span className="font-black text-[#FB6303] text-sm shrink-0">
                                         {formatCurrency((item.unit_price + modTotal) * item.quantity)}
                                     </span>
                                 </li>
@@ -190,9 +190,9 @@ export default function PaymentPageClient({
                         )}
                         <div className="flex justify-between items-center pt-2.5 border-t border-[#F5EDE6]">
                             <span className="text-[#1A1006] font-black text-sm uppercase tracking-wider">Total to pay</span>
-                            <span className="text-xl font-black text-[#E85D04] tabular-nums">
+                            <span className="text-xl font-black text-[#FB6303] tabular-nums">
                                 {isUpdating ? (
-                                    <Loader2 size={18} className="animate-spin inline text-[#E85D04]" />
+                                    <Loader2 size={18} className="animate-spin inline text-[#FB6303]" />
                                 ) : (
                                     formatCurrency(total)
                                 )}
@@ -217,7 +217,7 @@ export default function PaymentPageClient({
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setShowSplit(true)}
-                                    className="w-full border-2 border-[#E85D04] text-[#E85D04] hover:bg-[#FFF0E6] font-black rounded-2xl py-3.5 text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm"
+                                    className="w-full border-2 border-[#FB6303] text-[#FB6303] hover:bg-[#FFF0E6] font-black rounded-2xl py-3.5 text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shadow-sm"
                                 >
                                     Split Bill Options
                                 </button>

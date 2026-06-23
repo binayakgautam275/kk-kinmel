@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-const CONFETTI_COLORS = ["#E85D04", "#FFBA08", "#22C55E", "#3B82F6", "#EC4899", "#A855F7", "#F97316"]
+const CONFETTI_COLORS = ["#FB6303", "#FFBA08", "#22C55E", "#3B82F6", "#EC4899", "#A855F7", "#F97316"]
 
 interface Particle {
     id: number

@@ -79,7 +79,7 @@ export default function FeedbackPrompt({ orderId }: { orderId: string }) {
             <button
                 onClick={handleSubmit}
                 disabled={loading || rating === 0}
-                className="w-full py-2.5 px-4 bg-[#E85D04] text-white font-semibold rounded-xl hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                className="w-full py-2.5 px-4 bg-[#FB6303] text-white font-semibold rounded-xl hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
             >
                 {loading ? 'Submitting…' : 'Submit Feedback'}
             </button>

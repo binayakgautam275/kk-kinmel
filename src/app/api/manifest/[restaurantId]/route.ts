@@ -26,7 +26,7 @@ export async function GET(
         .limit(1)
         .maybeSingle()
         
-    const themeColor = theme?.theme?.primaryColor || '#E85D04'
+    const themeColor = theme?.theme?.primaryColor || '#FB6303'
     const name = restaurant?.name || 'kkkhane'
     const shortName = name.length > 12 ? name.substring(0, 12) : name
     const logoUrl = restaurant?.logo_url || '/icons/icon-512x512.png'

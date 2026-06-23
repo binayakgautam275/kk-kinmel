@@ -221,7 +221,7 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
                 </div>
                 <BarChart
                     data={chartData}
-                    color={chartMetric === 'revenue' ? '#E85D04' : '#10b981'}
+                    color={chartMetric === 'revenue' ? '#FB6303' : '#10b981'}
                     fmtVal={chartMetric === 'revenue' ? fmt : (n) => String(n)}
                 />
             </div>
@@ -244,7 +244,7 @@ export default function AnalyticsDashboard({ daily, hourly, topItems, cancelled,
                             const textColor = intensity > 0.55
                                 ? 'white'
                                 : intensity > 0.15
-                                    ? '#E85D04'
+                                    ? '#FB6303'
                                     : '#9ca3af'
                             return (
                                 <div key={h.hour} className="flex flex-col items-center gap-1">

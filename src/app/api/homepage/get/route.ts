@@ -8,7 +8,7 @@ const DEFAULT_HOMEPAGE = {
     hero_image_url: null,
     hero_video_url: null,
     hero_cta_text: 'View Menu',
-    theme_primary: '#E85D04',
+    theme_primary: '#FB6303',
     theme_secondary: '#1B263B',
     theme_accent: '#EC4899',
     logo_url: null,

@@ -111,13 +111,13 @@ export default function OrderTracker({
                 {showConfetti && <Confetti />}
 
                 {/* Top Orange Section */}
-                <div className="bg-[#E85D04] pt-12 pb-16 px-4 text-white text-center relative overflow-hidden shrink-0 rounded-b-[40px] shadow-lg">
+                <div className="bg-[#FB6303] pt-12 pb-16 px-4 text-white text-center relative overflow-hidden shrink-0 rounded-b-[40px] shadow-lg">
                     <div className="absolute top-0 right-0 w-36 h-36 rounded-full bg-white/10 -translate-y-1/2 translate-x-1/2" />
                     
                     {/* Circle Checkmark Icon */}
                     <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg mx-auto mb-4 animate-scale-in">
-                        <div className="w-16 h-16 rounded-full border-4 border-[#E85D04] flex items-center justify-center">
-                            <CheckCircle size={28} className="text-[#E85D04] fill-white" />
+                        <div className="w-16 h-16 rounded-full border-4 border-[#FB6303] flex items-center justify-center">
+                            <CheckCircle size={28} className="text-[#FB6303] fill-white" />
                         </div>
                     </div>
 
@@ -160,7 +160,7 @@ export default function OrderTracker({
                                             </div>
                                         )}
                                     </div>
-                                    <span className="font-black text-[#E85D04] tabular-nums">
+                                    <span className="font-black text-[#FB6303] tabular-nums">
                                         {formatCurrency(item.unit_price * item.quantity)}
                                     </span>
                                 </div>
@@ -170,14 +170,14 @@ export default function OrderTracker({
                         {/* Total amount */}
                         <div className="flex justify-between items-center border-t border-[#EDD9C8] pt-4 mt-3">
                             <span className="text-sm font-bold text-[#8C6A50]">Total Amount</span>
-                            <span className="font-black text-lg text-[#E85D04] tabular-nums">
+                            <span className="font-black text-lg text-[#FB6303] tabular-nums">
                                 {formatCurrency(order.total_amount)}
                             </span>
                         </div>
 
                         {/* Estimated time callout */}
                         <div className="mt-5 bg-[#FFF0E6] rounded-2xl p-3 border border-[#EDD9C8] flex items-center gap-3">
-                            <div className="text-[#E85D04] shrink-0 bg-white size-8 rounded-full flex items-center justify-center shadow-sm">
+                            <div className="text-[#FB6303] shrink-0 bg-white size-8 rounded-full flex items-center justify-center shadow-sm">
                                 <Clock size={16} />
                             </div>
                             <div>
@@ -193,7 +193,7 @@ export default function OrderTracker({
                     <div className="mt-8">
                         <button
                             onClick={() => setShowSuccessScreen(false)}
-                            className="w-full bg-[#E85D04] text-white font-black text-sm py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-md shadow-[#E85D04]/15 flex items-center justify-center gap-2"
+                            className="w-full bg-[#FB6303] text-white font-black text-sm py-4 rounded-2xl active:scale-[0.98] transition-transform shadow-md shadow-[#FB6303]/15 flex items-center justify-center gap-2"
                         >
                             <MapPin size={16} />
                             Track Your Order
@@ -209,7 +209,7 @@ export default function OrderTracker({
             {showConfetti && <Confetti />}
 
             {/* Tracking Header */}
-            <div className="bg-[#E85D04] pt-6 pb-8 px-4 relative overflow-hidden shrink-0">
+            <div className="bg-[#FB6303] pt-6 pb-8 px-4 relative overflow-hidden shrink-0">
                 <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white/10 -translate-y-1/2 translate-x-1/2" />
                 <button
                     onClick={() => setShowSuccessScreen(true)}
@@ -262,8 +262,8 @@ export default function OrderTracker({
                                         <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 shrink-0 z-10 transition-all duration-500 ${
                                             isDone
                                                 ? isActive
-                                                    ? "bg-[#E85D04] border-[#E85D04] shadow-md shadow-[#E85D04]/20 animate-pulse"
-                                                    : "bg-[#E85D04] border-[#E85D04]"
+                                                    ? "bg-[#FB6303] border-[#FB6303] shadow-md shadow-[#FB6303]/20 animate-pulse"
+                                                    : "bg-[#FB6303] border-[#FB6303]"
                                                 : "bg-white border-[#EDD9C8]"
                                         }`}
                                             style={isActive ? { boxShadow: "0 0 0 6px rgba(232,93,4,0.15)" } : {}}
@@ -272,7 +272,7 @@ export default function OrderTracker({
                                         </div>
                                         {i < STEPS.length - 1 && (
                                             <div className={`w-0.5 h-10 transition-all duration-700 ${
-                                                i < currentStepIndex ? "bg-[#E85D04]" : "bg-[#EDD9C8]"
+                                                i < currentStepIndex ? "bg-[#FB6303]" : "bg-[#EDD9C8]"
                                             }`} />
                                         )}
                                     </div>
@@ -313,7 +313,7 @@ export default function OrderTracker({
                                         </div>
                                     )}
                                 </div>
-                                <span className="text-xs font-black text-[#E85D04] tabular-nums shrink-0">
+                                <span className="text-xs font-black text-[#FB6303] tabular-nums shrink-0">
                                     {formatCurrency(item.unit_price * item.quantity)}
                                 </span>
                             </div>
@@ -340,7 +340,7 @@ export default function OrderTracker({
                         ) : (
                             <button
                                 onClick={() => router.push(`/t/${tableSlug}/order/${orderId}/payment`)}
-                                className="w-full bg-[#E85D04] text-white font-black text-sm py-3.5 rounded-2xl active:scale-[0.98] transition-transform shadow-md shadow-[#E85D04]/15 flex items-center justify-center gap-2"
+                                className="w-full bg-[#FB6303] text-white font-black text-sm py-3.5 rounded-2xl active:scale-[0.98] transition-transform shadow-md shadow-[#FB6303]/15 flex items-center justify-center gap-2"
                             >
                                 Pay Now
                             </button>

@@ -27,7 +27,7 @@ export default function CartSummary({ sessionId, tableSlug }: { sessionId?: stri
                 <div 
                     className="flex items-center justify-between w-full px-4 py-3 rounded-2xl text-white shadow-lg shadow-orange-950/20"
                     style={{
-                        background: '#E85D04',
+                        background: '#FB6303',
                     }}
                 >
                     {/* Left: Close + Thumbnail + Count */}

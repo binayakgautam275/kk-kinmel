@@ -12,6 +12,7 @@
 // true transactional atomicity — tracked as optional hardening in
 // docs/FLOW_INTEGRATION_PLAN.md.)
 
+import { randomBytes } from 'crypto'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase/server'
 import {
@@ -204,10 +205,13 @@ async function seedStarterData(
     const { error: itemError } = await supabase.from('menu_items').insert(itemRows)
     if (itemError) throw new Error(`Seed menu items failed: ${itemError.message}`)
 
-    // Tables — qr_token auto-generates via DB default (encode(gen_random_bytes(24),'base64url'))
+    // Generate qr_token in JS — the DB default uses encode(...,'base64url'), which
+    // this Postgres version rejects ("unrecognized encoding: base64url"). Node's
+    // base64url is fine; this matches how addTableAction supplies the token.
     const tableRows = Array.from({ length: tableCount }, (_, i) => ({
         restaurant_id: restaurantId,
         label: `T${i + 1}`,
+        qr_token: randomBytes(18).toString('base64url'),
     }))
     const { error: tableError } = await supabase.from('tables').insert(tableRows)
     if (tableError) throw new Error(`Seed tables failed: ${tableError.message}`)

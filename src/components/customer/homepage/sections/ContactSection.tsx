@@ -75,7 +75,7 @@ export default function ContactSection({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg text-white font-semibold w-fit hover:opacity-90 transition"
-                                style={{ backgroundColor: primary || '#E85D04' }}
+                                style={{ backgroundColor: primary || '#FB6303' }}
                             >
                                 <Star size={18} fill="currentColor" />
                                 Leave a Review

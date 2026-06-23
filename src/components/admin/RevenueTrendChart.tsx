@@ -57,7 +57,7 @@ export default function RevenueTrendChart({ days }: { days: DayData[] }) {
                                 width={barW}
                                 height={isEmpty ? 2 : barH}
                                 rx="2"
-                                fill={isEmpty ? '#e5e7eb' : '#E85D04'}
+                                fill={isEmpty ? '#e5e7eb' : '#FB6303'}
                                 opacity={isEmpty ? 0.5 : 0.9}
                             />
                             {/* Day label */}

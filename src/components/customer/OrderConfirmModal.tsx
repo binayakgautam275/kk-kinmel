@@ -29,7 +29,7 @@ export default function OrderConfirmModal({
             {/* Modal */}
             <div className="relative bg-white rounded-3xl max-w-sm w-full border border-[#EDD9C8] shadow-2xl overflow-hidden animate-scale-in">
                 {/* Header */}
-                <div className="bg-gradient-to-br from-[#E85D04] to-[#D14E00] px-6 pt-6 pb-8 text-center text-white relative">
+                <div className="bg-gradient-to-br from-[#FB6303] to-[#D14E00] px-6 pt-6 pb-8 text-center text-white relative">
                     {!isPlacing && (
                         <button
                             onClick={onCancel}
@@ -55,7 +55,7 @@ export default function OrderConfirmModal({
                     </div>
                     <div className="flex items-center justify-between py-3">
                         <span className="text-sm text-[#8C6A50] font-semibold">Total</span>
-                        <span className="text-lg font-black text-[#E85D04] tabular-nums">{formatCurrency(totalAmount)}</span>
+                        <span className="text-lg font-black text-[#FB6303] tabular-nums">{formatCurrency(totalAmount)}</span>
                     </div>
                 </div>
 
@@ -71,7 +71,7 @@ export default function OrderConfirmModal({
                     <button
                         onClick={onConfirm}
                         disabled={isPlacing}
-                        className="flex-1 py-3.5 rounded-2xl bg-[#E85D04] text-white font-bold text-sm active:scale-95 transition shadow-md shadow-[#E85D04]/20 disabled:opacity-70 flex items-center justify-center gap-2"
+                        className="flex-1 py-3.5 rounded-2xl bg-[#FB6303] text-white font-bold text-sm active:scale-95 transition shadow-md shadow-[#FB6303]/20 disabled:opacity-70 flex items-center justify-center gap-2"
                     >
                         {isPlacing ? (
                             <>
