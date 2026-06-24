@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { getRestaurantFeatures } from '@/lib/features'
 import { notFound } from 'next/navigation'
 import PrintButton from './PrintButton'
 
@@ -26,11 +27,19 @@ export default async function ReceiptPage(props: {
 
     if (!order || !order.invoice_number) return notFound()
 
-    const { data: restaurant } = await adminSupabase
-        .from('restaurants')
-        .select('name, address, pan_number, vat_registered, contact_phone')
-        .eq('id', order.restaurant_id)
-        .single()
+    const [{ data: restaurant }, features] = await Promise.all([
+        adminSupabase
+            .from('restaurants')
+            .select('name, address, pan_number, vat_registered, contact_phone')
+            .eq('id', order.restaurant_id)
+            .single(),
+        getRestaurantFeatures(order.restaurant_id),
+    ])
+
+    // Currency symbol from settings — keeps the printed receipt in the
+    // restaurant's configured currency (no hardcoded Rs.).
+    const sym = features?.currencySymbol?.trim()
+        || (features?.currency && features.currency !== 'NPR' ? features.currency : 'Rs.')
 
     const subtotal = order.subtotal_amount ?? order.total_amount
     const discount = order.discount_amount ?? 0
@@ -74,13 +83,13 @@ export default async function ReceiptPage(props: {
                             <div className="flex justify-between">
                                 <span className="flex-1 pr-1">{name}</span>
                                 <span className="w-6 text-center">{item.quantity}</span>
-                                <span className="w-16 text-right">Rs.{lineTotal.toFixed(0)}</span>
+                                <span className="w-16 text-right">{sym}{lineTotal.toFixed(0)}</span>
                             </div>
                             {mods?.map((mod, mi) => (
                                 <div key={mi} className="flex justify-between pl-3 text-gray-500">
                                     <span className="flex-1">+ {mod.modifier_name}</span>
                                     <span className="w-6 text-center">{item.quantity}</span>
-                                    <span className="w-16 text-right">Rs.{(mod.price_adjustment * item.quantity).toFixed(0)}</span>
+                                    <span className="w-16 text-right">{sym}{(mod.price_adjustment * item.quantity).toFixed(0)}</span>
                                 </div>
                             ))}
                         </div>
@@ -89,13 +98,13 @@ export default async function ReceiptPage(props: {
 
                 <div className="border-t border-dashed border-gray-400 my-3" />
 
-                <div className="flex justify-between"><span>Subtotal</span><span>Rs. {subtotal.toFixed(2)}</span></div>
-                {discount > 0 && <div className="flex justify-between"><span>Discount</span><span>-Rs. {discount.toFixed(2)}</span></div>}
-                {tax > 0 && <div className="flex justify-between"><span>VAT (13%)</span><span>Rs. {tax.toFixed(2)}</span></div>}
+                <div className="flex justify-between"><span>Subtotal</span><span>{sym} {subtotal.toFixed(2)}</span></div>
+                {discount > 0 && <div className="flex justify-between"><span>Discount</span><span>-{sym} {discount.toFixed(2)}</span></div>}
+                {tax > 0 && <div className="flex justify-between"><span>VAT (13%)</span><span>{sym} {tax.toFixed(2)}</span></div>}
                 <div className="border-t border-dashed border-gray-400 my-1" />
                 <div className="flex justify-between font-bold text-sm">
                     <span>TOTAL</span>
-                    <span>Rs. {total.toFixed(2)}</span>
+                    <span>{sym} {total.toFixed(2)}</span>
                 </div>
                 {order.payment_status === 'paid' && (
                     <div className="flex justify-between mt-1"><span>Status</span><span className="font-bold">PAID ✓</span></div>

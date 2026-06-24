@@ -6,6 +6,70 @@ import { logAudit } from '@/lib/audit'
 import { requireRole } from '@/lib/auth'
 
 /**
+ * Soft-claim a ready order ("On my way"). Advisory only — it doesn't block
+ * another waiter from delivering, but it lets the floor see who's handling it.
+ * The claim is atomic: it succeeds only if the order is still `ready` AND
+ * unclaimed, so two waiters tapping at once can't both win.
+ */
+export async function claimOrder(
+    orderId: string
+): Promise<{ success?: boolean; error?: string; conflict?: boolean; claimedById?: string }> {
+    const currentUser = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
+    const supabase = await createAdminClient()
+
+    const { data: rows, error } = await supabase
+        .from('orders')
+        .update({ claimed_by: currentUser.id, claimed_at: new Date().toISOString() })
+        .eq('id', orderId)
+        .eq('status', 'ready')
+        .is('claimed_by', null)
+        .select('id')
+
+    if (error) {
+        console.error('Failed to claim order:', error)
+        return { error: error.message }
+    }
+    if (!rows || rows.length === 0) {
+        // Someone already claimed it (or it left the ready state). Report who.
+        const { data: current } = await supabase
+            .from('orders')
+            .select('claimed_by')
+            .eq('id', orderId)
+            .single()
+        return { conflict: true, error: 'Already claimed', claimedById: current?.claimed_by ?? undefined }
+    }
+
+    revalidatePath('/waiter')
+    return { success: true, claimedById: currentUser.id }
+}
+
+/**
+ * Release a claim you hold (or that any manager wants to free up), so another
+ * waiter can pick the order up. Only clears the claim if the order is still
+ * ready — once delivered it leaves the feed anyway.
+ */
+export async function releaseOrder(
+    orderId: string
+): Promise<{ success?: boolean; error?: string }> {
+    await requireRole('cashier', 'waiter', 'manager', 'super_admin')
+    const supabase = await createAdminClient()
+
+    const { error } = await supabase
+        .from('orders')
+        .update({ claimed_by: null, claimed_at: null })
+        .eq('id', orderId)
+        .eq('status', 'ready')
+
+    if (error) {
+        console.error('Failed to release order:', error)
+        return { error: error.message }
+    }
+
+    revalidatePath('/waiter')
+    return { success: true }
+}
+
+/**
  * Waiter marks an order as delivered.
  * Step 7 of the Golden Path: Waiter picks up ready food & delivers.
  */
@@ -13,20 +77,27 @@ export async function markOrderDelivered(orderId: string) {
     const currentUser = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
     const adminSupabase = await createAdminClient()
 
-    const { data: order, error } = await adminSupabase
+    // Only a 'ready' order can be delivered. Guarding on the prior status means
+    // two waiters racing to deliver the same order — or a stale screen acting on
+    // an order already delivered/cancelled — don't both write delivered_at.
+    const { data: rows, error } = await adminSupabase
         .from('orders')
         .update({
             status: 'delivered',
             delivered_at: new Date().toISOString(),
         })
         .eq('id', orderId)
+        .eq('status', 'ready')
         .select('restaurant_id')
-        .single()
 
     if (error) {
         console.error('Failed to mark order delivered:', error)
         return { error: error.message }
     }
+    if (!rows || rows.length === 0) {
+        return { conflict: true, error: 'Order is no longer awaiting delivery' }
+    }
+    const order = rows[0]
 
     void logAudit({
         restaurantId: order.restaurant_id,
@@ -62,13 +133,22 @@ export async function markCashPaid(
     if (orderFetchError || !order) return { error: 'Order not found' }
     if (order.payment_status === 'paid') return { error: 'Order is already marked as paid' }
 
-    // 2. Mark the order as paid
-    const { error: updateError } = await supabase
+    // 2. Mark the order as paid. The fetch above is a check-then-act TOCTOU:
+    // two staff collecting the same cash could both pass it. The `.neq` makes
+    // the flip atomic — only the call that actually changes the row proceeds to
+    // record a payment (otherwise we'd double-count revenue + audit).
+    const { data: paidRows, error: updateError } = await supabase
         .from('orders')
         .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
         .eq('id', orderId)
+        .neq('payment_status', 'paid')
+        .select('id')
 
     if (updateError) return { error: updateError.message }
+    if (!paidRows || paidRows.length === 0) {
+        // Lost the race — another staff member already settled this order.
+        return { error: 'Order is already marked as paid' }
+    }
 
     // 3. Insert a verified cash payment_verification record
     await supabase.from('payment_verifications').insert({
@@ -146,12 +226,19 @@ export async function markDeliveredAndCashPaid(
 
     const now = new Date().toISOString()
 
-    const { error: updateError } = await supabase
+    // Atomic paid-flip (see markCashPaid) — guards against two waiters taking
+    // cash for the same order at once, which would double-count revenue.
+    const { data: paidRows, error: updateError } = await supabase
         .from('orders')
         .update({ status: 'delivered', delivered_at: now, payment_status: 'paid', paid_at: now })
         .eq('id', orderId)
+        .neq('payment_status', 'paid')
+        .select('id')
 
     if (updateError) return { error: updateError.message }
+    if (!paidRows || paidRows.length === 0) {
+        return { error: 'Order is already marked as paid' }
+    }
 
     await supabase.from('payment_verifications').insert({
         restaurant_id: order.restaurant_id,
@@ -204,115 +291,4 @@ export async function markDeliveredAndCashPaid(
 
     revalidatePath('/waiter')
     return { success: true, tableClosed }
-}
-
-/**
- * Combined action: Verify payment claim → Mark orders paid → Close session.
- * Step 9 of the Golden Path: "Verify Payment & Close Table"
- *
- * Flow:
- * 1. Verify the payment claim (status → 'verified')
- * 2. Mark the associated order as paid
- * 3. Check if ALL orders in the session are now paid
- * 4. If all paid, close the session → table turns green (available)
- */
-export async function verifyPaymentAndCloseTable(
-    claimId: string,
-    userId: string
-): Promise<{ error?: string; success?: boolean; tableClosed?: boolean }> {
-    const supabase = await createAdminClient()
-
-    // 1. Verify the payment claim and get order_id + restaurant_id
-    const { data: claim, error: claimError } = await supabase
-        .from('payment_verifications')
-        .update({
-            status: 'verified',
-            verified_by: userId,
-            verified_at: new Date().toISOString(),
-        })
-        .eq('id', claimId)
-        .select('order_id, restaurant_id')
-        .single()
-
-    if (claimError || !claim) {
-        console.error('Payment verification update failed:', claimError)
-        return { error: 'Failed to verify payment' }
-    }
-
-    if (!claim.order_id) {
-        void logAudit({
-            restaurantId: claim.restaurant_id,
-            userId,
-            action: 'payment_verified',
-            entityType: 'payment',
-            entityId: claimId,
-        })
-        revalidatePath('/waiter')
-        return { success: true, tableClosed: false }
-    }
-
-    // 2. Mark the associated order as paid
-    const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .update({
-            payment_status: 'paid',
-            paid_at: new Date().toISOString(),
-        })
-        .eq('id', claim.order_id)
-        .select('session_id, restaurant_id')
-        .single()
-
-    if (orderError || !order) {
-        console.error('Failed to update order payment:', orderError)
-        revalidatePath('/waiter')
-        return { success: true, tableClosed: false }
-    }
-
-    void logAudit({
-        restaurantId: order.restaurant_id,
-        userId,
-        action: 'payment_verified',
-        entityType: 'payment',
-        entityId: claimId,
-        newValue: { order_id: claim.order_id, payment_status: 'paid' },
-    })
-
-    // 3. Check if ALL orders in this session are paid
-    const { count: unpaidCount } = await supabase
-        .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('session_id', order.session_id)
-        .neq('payment_status', 'paid')
-        .neq('status', 'cancelled')
-
-    if (unpaidCount === 0) {
-        // 4. All orders paid — close the session
-        const { error: sessionError } = await supabase
-            .from('sessions')
-            .update({
-                status: 'closed',
-                closed_at: new Date().toISOString(),
-            })
-            .eq('id', order.session_id)
-            .eq('status', 'active')
-
-        if (sessionError) {
-            console.error('Failed to close session:', sessionError)
-        }
-
-        void logAudit({
-            restaurantId: order.restaurant_id,
-            userId,
-            action: 'session_closed',
-            entityType: 'session',
-            entityId: order.session_id,
-            newValue: { reason: 'all_orders_paid' },
-        })
-
-        revalidatePath('/waiter')
-        return { success: true, tableClosed: true }
-    }
-
-    revalidatePath('/waiter')
-    return { success: true, tableClosed: false }
 }

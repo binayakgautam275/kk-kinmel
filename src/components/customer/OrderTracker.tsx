@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { playStatusUpdate } from '@/lib/audio'
 import { playVoice } from '@/lib/voice'
 import { toast } from 'react-hot-toast'
-import { formatCurrency, timeAgo } from '@/lib/utils'
+import { timeAgo } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import { CheckCircle, Clock, ChefHat, Package, PartyPopper, ChevronLeft, MapPin } from 'lucide-react'
 import type { Order, OrderItem, MenuItem, OrderItemModifier } from '@/types/database'
 import Confetti from '@/components/customer/Confetti'
@@ -53,6 +54,7 @@ export default function OrderTracker({
     tableSlug: string
 }) {
     const [order, setOrder] = useState<OrderWithItems>(initialOrder)
+    const money = useCurrency()
     const [showConfetti, setShowConfetti] = useState(() => ['pending', 'confirmed'].includes(initialOrder.status))
     const [showSuccessScreen, setShowSuccessScreen] = useState(true)
     const [showPayment, setShowPayment] = useState(false)
@@ -161,7 +163,7 @@ export default function OrderTracker({
                                         )}
                                     </div>
                                     <span className="font-black text-[#FB6303] tabular-nums">
-                                        {formatCurrency(item.unit_price * item.quantity)}
+                                        {money(item.unit_price * item.quantity)}
                                     </span>
                                 </div>
                             ))}
@@ -171,7 +173,7 @@ export default function OrderTracker({
                         <div className="flex justify-between items-center border-t border-[#EDD9C8] pt-4 mt-3">
                             <span className="text-sm font-bold text-[#8C6A50]">Total Amount</span>
                             <span className="font-black text-lg text-[#FB6303] tabular-nums">
-                                {formatCurrency(order.total_amount)}
+                                {money(order.total_amount)}
                             </span>
                         </div>
 
@@ -220,7 +222,7 @@ export default function OrderTracker({
                 <p className="text-white/70 text-xs font-semibold tracking-widest uppercase mb-1">Live Tracking</p>
                 <h1 className="text-2xl font-black text-white">Order #{orderId.substring(0, 6).toUpperCase()}</h1>
                 <p className="text-white/80 text-sm font-semibold mt-1">
-                    Table {tableLabel} • {formatCurrency(order.total_amount)}
+                    Table {tableLabel} • {money(order.total_amount)}
                 </p>
             </div>
 
@@ -314,7 +316,7 @@ export default function OrderTracker({
                                     )}
                                 </div>
                                 <span className="text-xs font-black text-[#FB6303] tabular-nums shrink-0">
-                                    {formatCurrency(item.unit_price * item.quantity)}
+                                    {money(item.unit_price * item.quantity)}
                                 </span>
                             </div>
                         ))}

@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { updateTakeoutStatusAction } from './actions'
-import { Clock, Phone, User, CheckCircle, XCircle } from 'lucide-react'
+import { Clock, Phone, User, CheckCircle, XCircle, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import type { TakeoutOrder } from '@/types/database'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -28,6 +28,17 @@ export default function TakeoutDashboard({ initialOrders }: {
     restaurantId: string
 }) {
     const [orders, setOrders] = useState(initialOrders)
+    const money = useCurrency()
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState('all')
+
+    const filteredOrders = orders.filter(o => {
+        const matchesSearch = o.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              o.customer_phone?.includes(searchQuery) ||
+                              o.id.includes(searchQuery.toLowerCase())
+        const matchesStatus = statusFilter === 'all' || o.status === statusFilter
+        return matchesSearch && matchesStatus
+    })
 
     async function advance(order: TakeoutOrder) {
         const next = NEXT_STATUS[order.status]
@@ -49,12 +60,36 @@ export default function TakeoutDashboard({ initialOrders }: {
 
     return (
         <div className="space-y-3">
-            {orders.length === 0 && (
+            {/* Filters */}
+            <div className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border border-gray-200">
+                <div className="relative flex-1">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search by name, phone or ID..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    />
+                </div>
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 w-full sm:w-48 capitalize"
+                >
+                    <option value="all">All Statuses</option>
+                    {Object.keys(STATUS_COLORS).map(s => (
+                        <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+                    ))}
+                </select>
+            </div>
+
+            {filteredOrders.length === 0 && (
                 <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
                     No active takeout orders.
                 </div>
             )}
-            {orders.map(order => (
+            {filteredOrders.map(order => (
                 <div key={order.id} className="bg-white rounded-xl border border-gray-200 p-5">
                     <div className="flex items-start justify-between gap-4 mb-3">
                         <div>
@@ -71,7 +106,7 @@ export default function TakeoutDashboard({ initialOrders }: {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="font-semibold text-gray-900">{formatCurrency(order.total_amount)}</p>
+                            <p className="font-semibold text-gray-900">{money(order.total_amount)}</p>
                             <p className="text-xs text-gray-400">#{order.id.slice(0, 8)}</p>
                         </div>
                     </div>
@@ -82,7 +117,7 @@ export default function TakeoutDashboard({ initialOrders }: {
                             {order.items.map((item, i) => (
                                 <li key={i} className="flex justify-between">
                                     <span>{item.quantity}× {item.name}</span>
-                                    <span className="text-gray-500">{formatCurrency(item.price * item.quantity)}</span>
+                                    <span className="text-gray-500">{money(item.price * item.quantity)}</span>
                                 </li>
                             ))}
                         </ul>

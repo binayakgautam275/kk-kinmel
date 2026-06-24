@@ -2,9 +2,9 @@
 
 import { useState } from 'react'
 import { createPricingRuleAction, updatePricingRuleAction, deletePricingRuleAction } from './actions'
-import { Plus, Trash2, Power, Pencil, CalendarClock } from 'lucide-react'
+import { Plus, Trash2, Power, Pencil, CalendarClock, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const RULE_TYPES = [
@@ -76,10 +76,21 @@ export default function PricingRulesManager({ initialRules, menuItems, categorie
     restaurantId: string
 }) {
     const [rules, setRules] = useState<Rule[]>(initialRules)
+    const money = useCurrency()
     const [showForm, setShowForm] = useState(false)
     const [editingId, setEditingId] = useState<string | null>(null)
     const [form, setForm] = useState<FormState>(EMPTY_FORM)
     const [saving, setSaving] = useState(false)
+
+    const [searchQuery, setSearchQuery] = useState('')
+    const [statusFilter, setStatusFilter] = useState('all')
+
+    const filteredRules = rules.filter(r => {
+        const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesStatus = statusFilter === 'all' || 
+                              (statusFilter === 'active' ? r.is_active : !r.is_active)
+        return matchesSearch && matchesStatus
+    })
 
     const categoryName = (id: string | null) => categories.find(c => c.id === id)?.name
 
@@ -90,7 +101,7 @@ export default function PricingRulesManager({ initialRules, menuItems, categorie
     }
 
     function valueLabel(r: Rule): string {
-        return r.rule_type === 'percentage_off' ? `${r.value}% off` : formatCurrency(r.value)
+        return r.rule_type === 'percentage_off' ? `${r.value}% off` : money(r.value)
     }
 
     function toggleDay(d: number) {
@@ -340,10 +351,33 @@ export default function PricingRulesManager({ initialRules, menuItems, categorie
                     </div>
                 </div>
             ) : (
-                <button onClick={openCreate}
-                    className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium">
-                    <Plus size={16} /> Add Rule
-                </button>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 rounded-xl border border-gray-200">
+                    <div className="flex flex-1 gap-3 w-full sm:w-auto">
+                        <div className="relative flex-1 sm:max-w-xs">
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search pricing rules..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                            />
+                        </div>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 w-32"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <button onClick={openCreate}
+                        className="flex items-center justify-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-medium w-full sm:w-auto shrink-0 shadow-sm transition hover:bg-primary/90">
+                        <Plus size={16} /> Add Rule
+                    </button>
+                </div>
             )}
 
             {/* Rules Table */}
@@ -362,7 +396,7 @@ export default function PricingRulesManager({ initialRules, menuItems, categorie
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {rules.map(r => {
+                        {filteredRules.map(r => {
                             const status = ruleStatus(r)
                             return (
                                 <tr key={r.id} className="hover:bg-gray-50 align-top">
@@ -395,8 +429,8 @@ export default function PricingRulesManager({ initialRules, menuItems, categorie
                                 </tr>
                             )
                         })}
-                        {rules.length === 0 && (
-                            <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No pricing rules yet.</td></tr>
+                        {filteredRules.length === 0 && (
+                            <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No pricing rules found.</td></tr>
                         )}
                     </tbody>
                 </table>

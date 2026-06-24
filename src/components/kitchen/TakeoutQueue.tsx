@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { updateTakeoutStatus, getTakeoutOrders } from '@/app/api/takeout/actions'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import type { TakeoutOrder } from '@/types/database'
 import { Phone, User, CheckCircle2, XCircle, Timer, Package } from 'lucide-react'
 import { playKitchenPing } from '@/lib/audio'
@@ -55,6 +55,7 @@ function CountdownBadge({ pickupTime }: { pickupTime: string }) {
 
 export default function TakeoutQueue({ restaurantId, initialOrders }: TakeoutQueueProps) {
     const [orders, setOrders] = useState<TakeoutOrder[]>(initialOrders)
+    const money = useCurrency()
     const [loading, setLoading] = useState<string | null>(null)
 
     // Takeout now lives in the unified `orders` table. On any takeout-order
@@ -130,7 +131,7 @@ export default function TakeoutQueue({ restaurantId, initialOrders }: TakeoutQue
                                 </ul>
 
                                 <div className="text-right text-h3 text-dark-ink tabular">
-                                    {formatCurrency(order.total_amount)}
+                                    {money(order.total_amount)}
                                 </div>
                             </div>
 

@@ -1,14 +1,22 @@
 'use client'
 
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
-import { playNewOrder } from '@/lib/audio'
+import { playNewOrder, setCustomNotificationSound } from '@/lib/audio'
 import { toast } from 'react-hot-toast'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency, useFeatures } from '@/lib/contexts/FeatureContext'
 
 export default function AdminOrderNotifier({ restaurantId }: { restaurantId: string }) {
     const supabaseRef = useRef(createClient())
+    const money = useCurrency()
+
+    // Apply the restaurant's configured notification sound so the admin/manager
+    // dashboard rings with the same sound as the kitchen/waiter/cashier screens.
+    const soundUrl = useFeatures().notificationSoundUrl ?? null
+    useEffect(() => {
+        setCustomNotificationSound(soundUrl)
+    }, [soundUrl])
 
     useRestaurantTable(restaurantId, 'orders', async (payload) => {
         if (payload.eventType !== 'INSERT') return
@@ -27,7 +35,7 @@ export default function AdminOrderNotifier({ restaurantId }: { restaurantId: str
                 <div className="min-w-0">
                     <p className="font-bold text-sm text-orange-700">New Order!</p>
                     <p className="text-xs text-gray-500 mt-0.5 truncate">
-                        {tableLabel ? `Table ${tableLabel}` : 'Takeout'} · {formatCurrency(amount)}
+                        {tableLabel ? `Table ${tableLabel}` : 'Takeout'} · {money(amount)}
                     </p>
                 </div>
             </div>

@@ -7,6 +7,8 @@ import { CommandHint } from '@/components/ui/CommandHint'
 import CommandPaletteMount from '@/components/ui/CommandPaletteMount'
 import { requireRole } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
+import { getRestaurantFeatures } from '@/lib/features'
+import { FeatureProvider } from '@/lib/contexts/FeatureContext'
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
     // requireRole() uses the React.cache-wrapped getCurrentUser — no duplicate DB call
@@ -21,19 +23,26 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
     const isSuperAdmin = roleNameRaw === 'super_admin'
 
-    // Fetch restaurant name for the manager sidebar — only needed for manager role
+    // Fetch restaurant name + currency features for the manager sidebar/app —
+    // only needed for manager role (super_admin operates across tenants).
     let restaurantName: string | undefined
+    let features: Awaited<ReturnType<typeof getRestaurantFeatures>> = null
     if (!isSuperAdmin && currentUser.restaurantId) {
         const adminSupabase = await createAdminClient()
-        const { data } = await adminSupabase
-            .from('restaurants')
-            .select('name')
-            .eq('id', currentUser.restaurantId)
-            .single()
+        const [{ data }, restaurantFeatures] = await Promise.all([
+            adminSupabase
+                .from('restaurants')
+                .select('name')
+                .eq('id', currentUser.restaurantId)
+                .single(),
+            getRestaurantFeatures(currentUser.restaurantId),
+        ])
         restaurantName = data?.name || undefined
+        features = restaurantFeatures
     }
 
     return (
+        <FeatureProvider features={features}>
         <div className="min-h-screen bg-canvas flex">
             {isSuperAdmin ? <SuperAdminSidebar /> : <AdminSidebar userRole={roleNameRaw} restaurantName={restaurantName} />}
             {!isSuperAdmin && currentUser.restaurantId && (
@@ -66,5 +75,6 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 </div>
             </main>
         </div>
+        </FeatureProvider>
     )
 }

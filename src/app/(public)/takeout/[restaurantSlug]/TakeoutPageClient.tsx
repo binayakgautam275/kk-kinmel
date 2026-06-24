@@ -7,8 +7,9 @@ import TakeoutForm from '@/components/customer/TakeoutForm'
 import ActiveOrderPill from '@/components/customer/ActiveOrderPill'
 import { useCartStore } from '@/lib/stores/cart'
 import { Plus, Minus, ShoppingBag } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
 import { TranslationProvider, useTranslation } from '@/lib/contexts/TranslationContext'
+import { FeatureProvider, useCurrency } from '@/lib/contexts/FeatureContext'
+import type { Settings } from '@/types/database'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
 
 interface MenuItem {
@@ -25,13 +26,16 @@ interface Props {
     menuItems: MenuItem[]
     translations: TranslationRow[]
     supportedLanguages: { code: string; name: string }[]
+    features: Settings['features_v2'] | null
 }
 
-export default function TakeoutPageClient({ restaurant, categories, menuItems, translations, supportedLanguages }: Props) {
+export default function TakeoutPageClient({ restaurant, categories, menuItems, translations, supportedLanguages, features }: Props) {
     return (
-        <TranslationProvider translations={translations} supportedLanguages={supportedLanguages} restaurantId={restaurant.id}>
-            <TakeoutMenu restaurant={restaurant} categories={categories} menuItems={menuItems} />
-        </TranslationProvider>
+        <FeatureProvider features={features}>
+            <TranslationProvider translations={translations} supportedLanguages={supportedLanguages} restaurantId={restaurant.id}>
+                <TakeoutMenu restaurant={restaurant} categories={categories} menuItems={menuItems} />
+            </TranslationProvider>
+        </FeatureProvider>
     )
 }
 
@@ -39,6 +43,7 @@ function TakeoutMenu({ restaurant, categories, menuItems }: {
     restaurant: Restaurant; categories: Category[]; menuItems: MenuItem[]
 }) {
     const { t } = useTranslation()
+    const money = useCurrency()
     const [activeCategory, setActiveCategory] = useState(categories[0]?.id || '')
     const [showCheckout, setShowCheckout] = useState(false)
     const addItem = useCartStore(s => s.addItem)
@@ -83,7 +88,7 @@ function TakeoutMenu({ restaurant, categories, menuItems }: {
                             className="flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium">
                             <ShoppingBag size={16} />
                             <span>{items.reduce((s, i) => s + i.quantity, 0)}</span>
-                            <span>{formatCurrency(totalAmount())}</span>
+                            <span>{money(totalAmount())}</span>
                         </button>
                     )}
                 </div>
@@ -123,7 +128,7 @@ function TakeoutMenu({ restaurant, categories, menuItems }: {
                                         <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{displayDesc}</p>
                                     )}
                                     <div className="flex items-center justify-between mt-2">
-                                        <span className="font-semibold text-gray-900">{formatCurrency(item.price)}</span>
+                                        <span className="font-semibold text-gray-900">{money(item.price)}</span>
                                         {qty === 0 ? (
                                             <button onClick={() => addItem({
                                                 menuItemId: item.id,
@@ -166,7 +171,7 @@ function TakeoutMenu({ restaurant, categories, menuItems }: {
                     <button onClick={() => setShowCheckout(true)}
                         className="w-full bg-gray-900 text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2">
                         <ShoppingBag size={18} />
-                        Checkout ({items.reduce((s, i) => s + i.quantity, 0)} items) — {formatCurrency(totalAmount())}
+                        Checkout ({items.reduce((s, i) => s + i.quantity, 0)} items) — {money(totalAmount())}
                     </button>
                 </div>
             )}

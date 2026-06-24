@@ -5,6 +5,7 @@ import { getCachedMenuData } from '@/lib/menu-cache'
 import type { MenuItem } from '@/types/database'
 import TablePageClient from './TablePageClient'
 import { verifyClientIp } from '@/lib/ip-check'
+import { getOrCreateActiveSession } from '@/lib/sessions'
 
 import type { Metadata } from 'next'
 
@@ -44,7 +45,7 @@ export default async function CustomerMenuPage(props: {
     // Find the table and restaurant ID
     const { data: tableData } = await supabase
         .from('tables')
-        .select('id, restaurant_id, label, restaurants(name, logo_url, physical_menu_urls)')
+        .select('id, restaurant_id, label, restaurants(name, slug, logo_url, physical_menu_urls)')
         .eq('qr_token', tableToken)
         .single()
 
@@ -90,8 +91,6 @@ export default async function CustomerMenuPage(props: {
         }
     }
 
-    const isValidSession = !!sessionToken
-
     // 2. Fetch Menu Data + Feature Flags in parallel
     const [
         features,
@@ -106,6 +105,18 @@ export default async function CustomerMenuPage(props: {
     ])
 
     const isIpRestricted = !isIpAllowed
+
+    // Self-service ordering: if there's no active session yet and the guest's IP
+    // is allowed, auto-open one so they can order immediately — no waiter needed.
+    if (!sessionToken && isIpAllowed) {
+        const session = await getOrCreateActiveSession(supabase, tableData.id, restaurantId)
+        if (session) {
+            sessionToken = session.session_token
+            sessionUUID = session.id
+        }
+    }
+
+    const isValidSession = !!sessionToken
 
     const { categories, menuItems, translations, supportedLanguages, comboItems } = menuData
 
@@ -123,7 +134,7 @@ export default async function CustomerMenuPage(props: {
                 restaurant_id: tableData.restaurant_id,
                 restaurants: Array.isArray(tableData.restaurants)
                     ? tableData.restaurants[0] || null
-                    : (tableData.restaurants as unknown as { name: string; logo_url: string | null; physical_menu_urls: string[] | null } | null),
+                    : (tableData.restaurants as unknown as { name: string; slug: string | null; logo_url: string | null; physical_menu_urls: string[] | null } | null),
             }}
             categories={categories || []}
             menuItems={menuItems}

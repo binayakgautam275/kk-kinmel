@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { CreditCard, ChevronDown, ChevronUp } from 'lucide-react'
 import NepalPaymentPanel from './NepalPaymentPanel'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import type { PaymentStatus } from '@/types/database'
 
 interface OrderPaymentSectionProps {
@@ -30,6 +31,7 @@ export default function OrderPaymentSection({
     paymentQrLabel,
 }: OrderPaymentSectionProps) {
     const [isExpanded, setIsExpanded] = useState(paymentStatus === 'unpaid')
+    const money = useCurrency()
 
     if (paymentStatus === 'paid') {
         return (
@@ -61,7 +63,7 @@ export default function OrderPaymentSection({
                     <CreditCard size={20} className="text-green-600" />
                     <span className="font-semibold text-gray-900">Pay Now</span>
                     <span className="text-sm text-green-600 font-medium">
-                        Rs. {totalAmount.toFixed(2)}
+                        {money(totalAmount)}
                     </span>
                 </div>
                 {isExpanded ? (

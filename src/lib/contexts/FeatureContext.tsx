@@ -1,7 +1,8 @@
 'use client'
 
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import type { Settings } from '@/types/database'
+import { formatCurrency } from '@/lib/utils'
 
 type Features = Settings['features_v2']
 
@@ -46,4 +47,21 @@ export function useFeatures(): Features {
 export function useFeatureEnabled(key: keyof Omit<Features, 'defaultTaxRate' | 'currency' | 'currencySymbol'>): boolean {
     const features = useFeatures()
     return !!features[key]
+}
+
+/**
+ * Currency formatter bound to the restaurant's configured currency/symbol.
+ * Use this everywhere a price is shown so the whole app reflects the single
+ * currency set in admin settings (no Rs./$ mix).
+ *
+ * Usage:
+ *   const money = useCurrency()
+ *   <span>{money(order.total_amount)}</span>
+ */
+export function useCurrency(): (amount: number) => string {
+    const { currency, currencySymbol } = useFeatures()
+    return useMemo(
+        () => (amount: number) => formatCurrency(amount, currency, currencySymbol),
+        [currency, currencySymbol],
+    )
 }

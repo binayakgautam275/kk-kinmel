@@ -4,12 +4,13 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
-import { markOrderDelivered, markDeliveredAndCashPaid } from '@/app/(staff)/waiter/order-actions'
+import { markOrderDelivered, markDeliveredAndCashPaid, claimOrder, releaseOrder } from '@/app/(staff)/waiter/order-actions'
 import { playOrderReady, playNewOrder } from '@/lib/audio'
 import { playVoice } from '@/lib/voice'
 import { toast } from 'react-hot-toast'
-import { timeAgo, formatCurrency } from '@/lib/utils'
-import { Package, ChefHat, Banknote, Truck, Clock } from 'lucide-react'
+import { timeAgo } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
+import { Package, ChefHat, Banknote, Truck, Clock, Footprints, X } from 'lucide-react'
 import { Card, Button, Badge, StatusBadge, TableChip, FeedSection, EmptyState } from '@/components/ui'
 import type { Order, OrderItem, MenuItem, Session, Table, OrderStatus } from '@/types/database'
 
@@ -20,6 +21,7 @@ export type WaiterOrder = Order & {
 
 const ORDER_SELECT = `
   id, status, total_amount, placed_at, ready_at, customer_note, payment_status, session_id,
+  claimed_by, claimed_at,
   sessions ( id, tables ( label ) ),
   order_items ( id, quantity, menu_items ( name ) )
 ` as const
@@ -31,13 +33,17 @@ function tableLabel(order: WaiterOrder) {
 const STATUS_ORDER: Record<string, number> = { ready: 3, preparing: 2, confirmed: 1, pending: 1 }
 const STALE_MS = 15 * 60 * 1000
 
-export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
+export default function WaiterOrderFeed({ initialOrders, restaurantId, userId, staffNames = {} }: {
     initialOrders: WaiterOrder[]
     restaurantId: string
+    userId: string
+    staffNames?: Record<string, string>
 }) {
     const [orders, setOrders] = useState<WaiterOrder[]>(initialOrders)
+    const money = useCurrency()
     const ordersRef = useRef(orders)
     const [processingId, setProcessingId] = useState<string | null>(null)
+    const [claimingId, setClaimingId] = useState<string | null>(null)
     const [cashProcessingId, setCashProcessingId] = useState<string | null>(null)
     const [now, setNow] = useState(() => Date.now())
     const supabaseRef = useRef(createClient())
@@ -64,7 +70,7 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                         <span className="text-xl mt-0.5">🛎️</span>
                         <div>
                             <p className="font-bold text-sm text-amber-700">New Order</p>
-                            <p className="text-xs text-ink-subtle mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
+                            <p className="text-xs text-ink-subtle mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {money(order.total_amount)}</p>
                         </div>
                     </div>
                 ), { duration: 5000, position: 'top-right' })
@@ -72,6 +78,10 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
         } else if (payload.eventType === 'UPDATE') {
             const newStatus = payload.new.status as OrderStatus
             const isTerminal = newStatus === 'delivered' || newStatus === 'cancelled'
+            // Did this UPDATE actually move the order INTO 'ready'? Claims/releases
+            // also fire UPDATEs while status stays 'ready' — those must not re-alert.
+            const prevStatus = ordersRef.current.find(o => o.id === payload.new.id)?.status
+            const becameReady = newStatus === 'ready' && prevStatus !== 'ready'
 
             // The UPDATE may be for an order we never received (created before
             // mount, or a missed INSERT). If it's still active, fetch + insert
@@ -85,7 +95,7 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                 }
             }
 
-            if (newStatus === 'ready') {
+            if (becameReady) {
                 playOrderReady().catch(() => {})
                 playVoice('waiter_order_ready')
                 navigator.vibrate?.([200, 100, 200])
@@ -96,23 +106,52 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                         <span className="text-xl mt-0.5">✅</span>
                         <div>
                             <p className="font-bold text-sm text-emerald-700">Ready for Pickup!</p>
-                            <p className="text-xs text-ink-subtle mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(payload.new.total_amount)}</p>
+                            <p className="text-xs text-ink-subtle mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {money(payload.new.total_amount)}</p>
                         </div>
                     </div>
                 ), { duration: 8000, position: 'top-right' })
             }
             setOrders(prev =>
                 prev
-                    .map(o => o.id === payload.new.id ? { ...o, status: newStatus, payment_status: payload.new.payment_status } : o)
+                    .map(o => o.id === payload.new.id
+                        ? { ...o, status: newStatus, payment_status: payload.new.payment_status, claimed_by: payload.new.claimed_by ?? null, claimed_at: payload.new.claimed_at ?? null }
+                        : o)
                     .filter(o => !['delivered', 'cancelled'].includes(o.status))
             )
         }
     })
 
+    const handleClaim = async (orderId: string) => {
+        setClaimingId(orderId)
+        // Optimistically show it as mine; realtime + server reconcile the truth.
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, claimed_by: userId, claimed_at: new Date().toISOString() } : o))
+        const res = await claimOrder(orderId)
+        if (res?.error) {
+            // Lost the claim — reflect who actually has it.
+            const winner = res.claimedById ?? null
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, claimed_by: winner } : o))
+            const name = winner ? staffNames[winner] : undefined
+            toast.error(name ? `${name} already claimed this order` : 'This order was already claimed')
+        }
+        setClaimingId(null)
+    }
+
+    const handleRelease = async (orderId: string) => {
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, claimed_by: null, claimed_at: null } : o))
+        const res = await releaseOrder(orderId)
+        if (res?.error) toast.error('Could not release order')
+    }
+
     const handleMarkDelivered = async (orderId: string) => {
         setProcessingId(orderId)
+        const removed = ordersRef.current.find(o => o.id === orderId)
         setOrders(prev => prev.filter(o => o.id !== orderId))
-        await markOrderDelivered(orderId)
+        const res = await markOrderDelivered(orderId)
+        if (res?.error) {
+            // Restore the card so the waiter sees it's still in play.
+            if (removed) setOrders(prev => prev.some(o => o.id === orderId) ? prev : [removed, ...prev])
+            toast.error(res.conflict ? 'Another waiter already handled this order' : 'Could not mark delivered')
+        }
         setProcessingId(null)
     }
 
@@ -161,9 +200,13 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                     const isReady = order.status === 'ready'
                     const ts = (order as unknown as { ready_at?: string | null }).ready_at || order.placed_at
                     const isStale = now - new Date(ts).getTime() > STALE_MS
+                    const claimedBy = order.claimed_by
+                    const mineClaim = claimedBy === userId
+                    const claimedByOther = !!claimedBy && !mineClaim
+                    const claimerName = claimedBy ? staffNames[claimedBy] : undefined
 
                     return (
-                        <Card key={order.id} padding={false} className={isReady ? 'border-success/30' : undefined}>
+                        <Card key={order.id} padding={false} className={`${isReady ? 'border-success/30' : ''} ${claimedByOther ? 'opacity-60' : ''}`.trim() || undefined}>
                             <div className="p-4 md:p-5">
                                 <div className="flex justify-between items-start mb-4">
                                     <div>
@@ -177,7 +220,7 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <span className="text-display block text-ink">{formatCurrency(order.total_amount)}</span>
+                                        <span className="text-display block text-ink">{money(order.total_amount)}</span>
                                         <span className="text-caption text-ink-muted">{order.payment_status}</span>
                                     </div>
                                 </div>
@@ -201,30 +244,69 @@ export default function WaiterOrderFeed({ initialOrders, restaurantId }: {
                                     </div>
                                 )}
 
-                                {isReady && (
-                                    <div className="flex gap-3 pt-2">
+                                {isReady && claimedByOther && (
+                                    <div className="flex items-center justify-between gap-2 pt-2">
+                                        <span className="text-small text-ink-subtle flex items-center gap-1.5">
+                                            <Footprints size={14} /> {claimerName || 'A colleague'} is on the way
+                                        </span>
                                         <Button
                                             variant="secondary"
-                                            size="lg"
-                                            block
-                                            onClick={() => handleCashAndDeliver(order.id)}
-                                            disabled={!!cashProcessingId || !!processingId}
-                                            loading={cashProcessingId === order.id}
-                                            icon={Banknote}
+                                            size="sm"
+                                            onClick={() => handleClaim(order.id)}
+                                            loading={claimingId === order.id}
                                         >
-                                            Take Cash
+                                            Take over
                                         </Button>
+                                    </div>
+                                )}
+
+                                {isReady && !claimedBy && (
+                                    <div className="pt-2">
                                         <Button
                                             variant="primary"
                                             size="lg"
                                             block
-                                            onClick={() => handleMarkDelivered(order.id)}
-                                            disabled={!!processingId || !!cashProcessingId}
-                                            loading={processingId === order.id}
-                                            icon={Truck}
+                                            onClick={() => handleClaim(order.id)}
+                                            loading={claimingId === order.id}
+                                            icon={Footprints}
                                         >
-                                            Deliver
+                                            On my way
                                         </Button>
+                                    </div>
+                                )}
+
+                                {isReady && mineClaim && (
+                                    <div className="pt-2 space-y-2">
+                                        <div className="flex gap-3">
+                                            <Button
+                                                variant="secondary"
+                                                size="lg"
+                                                block
+                                                onClick={() => handleCashAndDeliver(order.id)}
+                                                disabled={!!cashProcessingId || !!processingId}
+                                                loading={cashProcessingId === order.id}
+                                                icon={Banknote}
+                                            >
+                                                Take Cash
+                                            </Button>
+                                            <Button
+                                                variant="primary"
+                                                size="lg"
+                                                block
+                                                onClick={() => handleMarkDelivered(order.id)}
+                                                disabled={!!processingId || !!cashProcessingId}
+                                                loading={processingId === order.id}
+                                                icon={Truck}
+                                            >
+                                                Deliver
+                                            </Button>
+                                        </div>
+                                        <button
+                                            onClick={() => handleRelease(order.id)}
+                                            className="text-caption text-ink-muted hover:text-ink flex items-center gap-1 mx-auto"
+                                        >
+                                            <X size={12} /> Release claim
+                                        </button>
                                     </div>
                                 )}
                             </div>

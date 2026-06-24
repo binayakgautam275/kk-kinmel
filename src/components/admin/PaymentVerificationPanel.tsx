@@ -3,9 +3,10 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
-import { CheckCircle, XCircle, Clock, Banknote, ScanLine, Loader2, ExternalLink } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Banknote, ScanLine, Loader2, ExternalLink, Search } from 'lucide-react'
 import { verifyPayment, verifyPaymentAndCloseTable } from '@/components/waiter/payment-verification-actions'
 import { toast } from 'react-hot-toast'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 
 interface PaymentClaim {
     id: string
@@ -49,8 +50,10 @@ export default function PaymentVerificationPanel({
     userId: string
 }) {
     const [claims, setClaims] = useState<PaymentClaim[]>(initialClaims)
+    const money = useCurrency()
     const [loading, setLoading] = useState<string | null>(null)
     const [filter, setFilter] = useState<'pending' | 'verified' | 'rejected' | 'all'>('pending')
+    const [searchQuery, setSearchQuery] = useState('')
 
     useRestaurantTable(restaurantId, 'payment_verifications', (payload) => {
         if (payload.eventType === 'INSERT') {
@@ -65,7 +68,7 @@ export default function PaymentVerificationPanel({
 
     const handleVerify = async (claimId: string, action: 'verified' | 'rejected') => {
         setLoading(claimId)
-        const res = await verifyPayment(claimId, action, userId)
+        const res = await verifyPayment(claimId, action)
         if (res.error) {
             toast.error(res.error)
         } else {
@@ -83,7 +86,7 @@ export default function PaymentVerificationPanel({
 
     const handleVerifyAndClose = async (claimId: string) => {
         setLoading(claimId)
-        const res = await verifyPaymentAndCloseTable(claimId, userId)
+        const res = await verifyPaymentAndCloseTable(claimId)
         if (res.error) {
             toast.error(res.error)
         } else {
@@ -99,7 +102,12 @@ export default function PaymentVerificationPanel({
         setLoading(null)
     }
 
-    const filtered = claims.filter((c) => filter === 'all' ? true : claimStatus(c) === filter)
+    const filtered = claims.filter((c) => {
+        const matchesStatus = filter === 'all' ? true : claimStatus(c) === filter
+        const matchesSearch = c.reference_code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                              c.amount.toString().includes(searchQuery.toLowerCase())
+        return matchesStatus && matchesSearch
+    })
     const pendingCount = claims.filter((c) => claimStatus(c) === 'pending').length
 
     return (
@@ -123,6 +131,18 @@ export default function PaymentVerificationPanel({
                 ))}
             </div>
 
+            {/* Search Bar */}
+            <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                    type="text"
+                    placeholder="Search by amount or reference..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                />
+            </div>
+
             {filtered.length === 0 && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
                     <Clock size={32} className="mx-auto text-gray-300 mb-2" />
@@ -144,7 +164,7 @@ export default function PaymentVerificationPanel({
                                 <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${method.bg}`}>
                                     {method.icon} {method.label}
                                 </span>
-                                <span className="text-lg font-extrabold text-gray-900">Rs. {claim.amount.toFixed(2)}</span>
+                                <span className="text-lg font-extrabold text-gray-900">{money(claim.amount)}</span>
                                 {claim.reference_code && (
                                     <span className="text-xs text-gray-500">· {claim.reference_code}</span>
                                 )}

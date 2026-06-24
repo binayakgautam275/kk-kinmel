@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { requestSessionOpen } from '@/app/api/service-requests/actions'
-import { UtensilsCrossed, ArrowRight, Loader2, Check } from 'lucide-react'
+import { UtensilsCrossed, ArrowRight, Loader2, Check, ShoppingBag } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 interface RestaurantMainClientProps {
@@ -106,12 +106,13 @@ export default function RestaurantMainClient({ restaurant, tables, restaurantSlu
                     <PhysicalMenuGallery images={restaurant.physical_menu_urls} restaurantName={restaurant.name} />
                 )}
 
-                {/* View Digital Menu Link (Takeout View) */}
+                {/* Takeout / pickup self-order entry point */}
                 <button
                     onClick={() => router.push(`/takeout/${restaurantSlug}`)}
-                    className="w-full py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-medium shadow-sm hover:bg-gray-50 transition"
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-gray-200 text-gray-800 rounded-xl font-semibold shadow-sm hover:bg-gray-50 transition"
                 >
-                    Browse Digital Menu Only
+                    <ShoppingBag size={18} />
+                    Order Takeout / Pickup
                 </button>
             </div>
         </div>

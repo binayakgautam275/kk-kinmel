@@ -1,7 +1,7 @@
 'use client'
 
 import { X, ShoppingBag, Loader2 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 
 interface OrderConfirmModalProps {
     itemCount: number
@@ -18,6 +18,7 @@ export default function OrderConfirmModal({
     onConfirm,
     onCancel,
 }: OrderConfirmModalProps) {
+    const money = useCurrency()
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-fade-in">
             {/* Backdrop */}
@@ -55,7 +56,7 @@ export default function OrderConfirmModal({
                     </div>
                     <div className="flex items-center justify-between py-3">
                         <span className="text-sm text-[#8C6A50] font-semibold">Total</span>
-                        <span className="text-lg font-black text-[#FB6303] tabular-nums">{formatCurrency(totalAmount)}</span>
+                        <span className="text-lg font-black text-[#FB6303] tabular-nums">{money(totalAmount)}</span>
                     </div>
                 </div>
 

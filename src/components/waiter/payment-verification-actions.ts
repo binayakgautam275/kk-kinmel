@@ -3,12 +3,15 @@
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logAudit } from '@/lib/audit'
+import { requireRole } from '@/lib/auth'
 
 export async function verifyPayment(
     claimId: string,
-    action: 'verified' | 'rejected',
-    userId: string
+    action: 'verified' | 'rejected'
 ): Promise<{ error?: string; success?: boolean }> {
+    // Identity is derived server-side, never trusted from the client — the
+    // caller can't stamp someone else's id on a verification.
+    const { id: userId } = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
     const supabase = await createAdminClient()
 
     const { data: claim, error } = await supabase
@@ -46,9 +49,9 @@ export async function verifyPayment(
  * Step 9 of Golden Path: "Verify Payment & Close Table"
  */
 export async function verifyPaymentAndCloseTable(
-    claimId: string,
-    userId: string
+    claimId: string
 ): Promise<{ error?: string; success?: boolean; tableClosed?: boolean }> {
+    const { id: userId } = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
     const supabase = await createAdminClient()
 
     // 1. Verify the payment claim and get associated order_id

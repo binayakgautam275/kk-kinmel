@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Building2, ShoppingBag, Crown, Ban, CheckCircle, Loader2, ChevronDown, Plus, X, Store, UserRound, Mail, KeyRound, Phone, MapPin, Check, CreditCard, AlertTriangle } from 'lucide-react'
+import { Building2, ShoppingBag, Crown, Ban, CheckCircle, Loader2, ChevronDown, Plus, X, Store, UserRound, Mail, KeyRound, Phone, MapPin, Check, CreditCard, AlertTriangle, Search, Filter } from 'lucide-react'
 import { createTenantWithOwner, suspendRestaurant, updateSubscriptionTier, sendPasswordResetEmail, updateOwnerContact, recordSubscriptionPayment } from './actions'
 import { toast } from 'react-hot-toast'
 
@@ -74,6 +74,20 @@ export default function SuperAdminDashboard({
         subscriptionTier: 'free' as 'free' | 'basic' | 'pro' | 'enterprise',
     })
     const router = useRouter()
+
+    const [searchQuery, setSearchQuery] = useState('')
+    const [tierFilter, setTierFilter] = useState<'all' | 'free' | 'basic' | 'pro' | 'enterprise'>('all')
+    const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'suspended'>('all')
+
+    const filteredItems = useMemo(() => {
+        return items.filter(r => {
+            const matchesSearch = r.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                  (r.users?.email || '').toLowerCase().includes(searchQuery.toLowerCase())
+            const matchesTier = tierFilter === 'all' || r.subscription_tier === tierFilter
+            const matchesStatus = statusFilter === 'all' || (statusFilter === 'suspended' ? r.is_suspended : !r.is_suspended)
+            return matchesSearch && matchesTier && matchesStatus
+        })
+    }, [items, searchQuery, tierFilter, statusFilter])
 
     const handleCreateFormChange = (field: keyof typeof createForm, value: string) => {
         setCreateForm(prev => {
@@ -322,8 +336,44 @@ export default function SuperAdminDashboard({
                     </button>
                 </div>
 
+                {/* Filters */}
+                <div className="px-5 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3 bg-white">
+                    <div className="relative flex-1">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search by name or owner email..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        />
+                    </div>
+                    <div className="flex gap-3">
+                        <select
+                            value={tierFilter}
+                            onChange={(e) => setTierFilter(e.target.value as any)}
+                            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 w-full sm:w-auto"
+                        >
+                            <option value="all">All Tiers</option>
+                            <option value="free">Free</option>
+                            <option value="basic">Basic</option>
+                            <option value="pro">Pro</option>
+                            <option value="enterprise">Enterprise</option>
+                        </select>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                            className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 w-full sm:w-auto"
+                        >
+                            <option value="all">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div className="divide-y divide-gray-100">
-                    {items.map((restaurant) => (
+                    {filteredItems.map((restaurant) => (
                         <div
                             key={restaurant.id}
                             className={`p-4 md:p-6 flex flex-col md:flex-row md:items-center gap-4 ${
@@ -422,7 +472,7 @@ export default function SuperAdminDashboard({
                     ))}
                 </div>
 
-                {items.length === 0 && (
+                {filteredItems.length === 0 && (
                     <div className="p-12 text-center text-gray-400">
                         <Building2 size={40} className="mx-auto mb-3" />
                         <p>No restaurants registered yet</p>
@@ -556,7 +606,7 @@ export default function SuperAdminDashboard({
                         </div>
 
                         <div className="grid gap-6 px-6 py-6 md:grid-cols-2">
-                            <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
+                            <div className="space-y-4 rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
                                 <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                                     <Store size={16} className="text-primary" />
                                     Restaurant Profile
@@ -613,7 +663,7 @@ export default function SuperAdminDashboard({
                                 </Field>
                             </div>
 
-                            <div className="space-y-4 rounded-2xl border border-gray-200 bg-gray-50/70 p-4">
+                            <div className="space-y-4 rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
                                 <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
                                     <UserRound size={16} className="text-primary" />
                                     Owner Account
@@ -648,13 +698,13 @@ export default function SuperAdminDashboard({
                                     />
                                 </Field>
 
-                                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                                <div className="rounded-2xl border border-orange-200 bg-orange-50/50 p-4 text-sm text-orange-900">
                                     This creates the auth account, links the owner as the manager, and seeds default theme, tax, currency, and feature flags.
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex flex-col-reverse gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-4 md:flex-row md:items-center md:justify-between">
+                        <div className="flex flex-col-reverse gap-3 border-t border-gray-100 bg-white px-6 py-4 md:flex-row md:items-center md:justify-between">
                             <p className="text-xs text-gray-500">The new owner can sign in immediately with the email and temporary password above.</p>
                             <div className="flex items-center gap-3">
                                 <button

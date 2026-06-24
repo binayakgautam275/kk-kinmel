@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { verifyClientIp } from '@/lib/ip-check'
 import { redirect } from 'next/navigation'
 import WaiterLayoutClient from '@/components/waiter/WaiterLayoutClient'
+import { getRestaurantFeatures } from '@/lib/features'
+import { FeatureProvider } from '@/lib/contexts/FeatureContext'
 
 export default async function CashierLayout({ children }: { children: ReactNode }) {
     const { id: userId, restaurantId, role } = await requireRole('cashier', 'waiter', 'manager', 'super_admin')
@@ -15,20 +17,25 @@ export default async function CashierLayout({ children }: { children: ReactNode 
     }
     const adminSupabase = await createAdminClient()
 
-    const [{ data: user }, { data: restaurant }] = await Promise.all([
+    const [{ data: user }, { data: restaurant }, features] = await Promise.all([
         adminSupabase.from('users').select('full_name').eq('id', userId).single(),
         adminSupabase.from('restaurants').select('name').eq('id', restaurantId).single(),
+        getRestaurantFeatures(restaurantId),
     ])
 
+    const notificationSoundUrl = (features as Record<string, unknown> | null)?.notificationSoundUrl as string | null | undefined
+
     return (
-        <WaiterLayoutClient
-            restaurantName={restaurant?.name || undefined}
-            staffName={user?.full_name || undefined}
-            notificationSoundUrl={null}
-            portalLabel="Cashier"
-            commandRole="cashier"
-        >
-            {children}
-        </WaiterLayoutClient>
+        <FeatureProvider features={features}>
+            <WaiterLayoutClient
+                restaurantName={restaurant?.name || undefined}
+                staffName={user?.full_name || undefined}
+                notificationSoundUrl={notificationSoundUrl || null}
+                portalLabel="Cashier"
+                commandRole="cashier"
+            >
+                {children}
+            </WaiterLayoutClient>
+        </FeatureProvider>
     )
 }

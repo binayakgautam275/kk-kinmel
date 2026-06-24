@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import HomepageGate from '@/components/customer/HomepageGate'
 import type { MenuItem, MenuCategory } from '@/types/database'
 import MenuSection from '@/components/customer/MenuSection'
@@ -10,10 +11,11 @@ import Logo from '@/components/shared/Logo'
 import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
 import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
-import { UtensilsCrossed, RefreshCw, Bell, Check, Loader2, Home, X } from 'lucide-react'
+import { UtensilsCrossed, RefreshCw, Bell, Check, Loader2, Home, X, ShoppingBag } from 'lucide-react'
 import { useCartStore } from '@/lib/stores/cart'
 import { requestSessionOpen } from '@/app/api/service-requests/actions'
 import ActiveOrderPill from '@/components/customer/ActiveOrderPill'
+import ServiceRequestPanel from '@/components/customer/ServiceRequestPanel'
 
 interface TablePageClientProps {
     tableData: {
@@ -21,7 +23,7 @@ interface TablePageClientProps {
         label: string
         qr_token: string
         restaurant_id: string
-        restaurants: { name: string; logo_url: string | null; physical_menu_urls: string[] | null } | null
+        restaurants: { name: string; slug?: string | null; logo_url: string | null; physical_menu_urls: string[] | null } | null
     }
     categories: MenuCategory[]
     menuItems: MenuItem[]
@@ -177,6 +179,7 @@ export default function TablePageClient({
 
     const restaurantName = tableData.restaurants?.name || 'Restaurant'
     const logoUrl = tableData.restaurants?.logo_url
+    const restaurantSlug = tableData.restaurants?.slug
 
     const menuContent = (onBackToHome: (() => void) | null) => (
         <div className="min-h-screen bg-gray-50 pb-28">
@@ -284,6 +287,22 @@ export default function TablePageClient({
                                     </p>
                                 </div>
                             )}
+
+                            {/* Takeout / pickup escape hatch — lets a guest who
+                                scanned the table QR self-order for pickup instead of
+                                waiting for a dine-in session. Single QR, two flows. */}
+                            {restaurantSlug && (
+                                <div className="w-full mt-5 pt-5 border-t border-[#EDD9C8]">
+                                    <p className="text-[#C4A882] text-[11px] font-bold mb-3">Not dining in?</p>
+                                    <Link
+                                        href={`/takeout/${restaurantSlug}`}
+                                        className="w-full flex items-center justify-center gap-2 text-sm font-black bg-white text-[#FB6303] border-2 border-[#FB6303] py-3.5 rounded-2xl active:scale-95 transition"
+                                    >
+                                        <ShoppingBag size={16} />
+                                        Order Takeout / Pickup
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -319,6 +338,15 @@ export default function TablePageClient({
 
 
 
+            {/* Floating service-request panel — lets seated guests ring for water,
+                a clean table, the bill, etc. once a session is open (no order required). */}
+            {hasSession && liveSessionUUID && serviceRequestsEnabled && (
+                <ServiceRequestPanel
+                    sessionId={liveSessionUUID}
+                    restaurantId={tableData.restaurant_id}
+                />
+            )}
+
             {/* Sticky cart bar */}
             <CartSummary sessionId={liveSessionToken} tableSlug={tableData.qr_token} />
         </div>
@@ -333,6 +361,7 @@ export default function TablePageClient({
             <HomepageGate
                 restaurantId={tableData.restaurant_id}
                 onProceed={() => setShowMenu(true)}
+                takeoutHref={restaurantSlug ? `/takeout/${restaurantSlug}` : null}
             >
                 {({ backToHome }) => (
                     <>

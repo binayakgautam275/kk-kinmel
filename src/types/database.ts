@@ -207,6 +207,8 @@ export interface Order {
     delivered_at: string | null
     paid_at: string | null
     seat_id: string | null
+    claimed_by: string | null
+    claimed_at: string | null
     // Joined fields
     order_items?: OrderItem[]
     sessions?: Session
@@ -277,9 +279,17 @@ export interface Settings {
         // Notification
         notificationSoundUrl?: string | null
     }
-    business_hours: Record<string, unknown> | null
+    business_hours: BusinessHours | null
     updated_at: string
 }
+
+// Per-day opening hours. Keys are lowercase weekday names (monday…sunday).
+export interface DayHours {
+    open: string   // "HH:MM" 24h
+    close: string  // "HH:MM" 24h
+    closed: boolean
+}
+export type BusinessHours = Record<string, DayHours>
 
 // ============================================================
 // Dynamic Pricing & Happy Hours

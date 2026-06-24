@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import WaiterLayoutClient from '@/components/waiter/WaiterLayoutClient'
 import { getCurrentUser } from '@/lib/auth'
 import { getRestaurantFeatures } from '@/lib/features'
+import { FeatureProvider } from '@/lib/contexts/FeatureContext'
 import { createAdminClient } from '@/lib/supabase/server'
 import { verifyClientIp } from '@/lib/ip-check'
 import { redirect } from 'next/navigation'
@@ -28,12 +29,14 @@ export default async function WaiterLayout({ children }: { children: ReactNode }
     const notificationSoundUrl = (features as Record<string, unknown> | null)?.notificationSoundUrl as string | null | undefined
 
     return (
-        <WaiterLayoutClient
-            restaurantName={restaurant?.name || undefined}
-            staffName={user?.full_name || undefined}
-            notificationSoundUrl={notificationSoundUrl || null}
-        >
-            {children}
-        </WaiterLayoutClient>
+        <FeatureProvider features={features}>
+            <WaiterLayoutClient
+                restaurantName={restaurant?.name || undefined}
+                staffName={user?.full_name || undefined}
+                notificationSoundUrl={notificationSoundUrl || null}
+            >
+                {children}
+            </WaiterLayoutClient>
+        </FeatureProvider>
     )
 }

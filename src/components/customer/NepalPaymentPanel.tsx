@@ -5,6 +5,7 @@ import { Upload, CheckCircle, Loader2, Banknote, ScanLine, Camera, X } from 'luc
 import { submitPaymentClaim } from '@/app/(public)/t/[tableSlug]/checkout/nepal-payment-actions'
 import Image from 'next/image'
 import { toast } from 'react-hot-toast'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 
 interface NepalPaymentPanelProps {
     restaurantId: string
@@ -38,6 +39,7 @@ export default function NepalPaymentPanel({
     orderId,
 }: NepalPaymentPanelProps) {
     const [mode, setMode] = useState<PaymentMode>('qr')
+    const money = useCurrency()
     const [phone, setPhone] = useState('')
     const [screenshot, setScreenshot] = useState<File | null>(null)
     const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -153,7 +155,7 @@ export default function NepalPaymentPanel({
                                 Scan &amp; Pay with {providerLabel}
                             </p>
                             <p className="text-2xl font-bold text-gray-900 mb-3">
-                                Rs. {totalAmount.toFixed(2)}
+                                {money(totalAmount)}
                             </p>
                             <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
                                 <Image
@@ -240,7 +242,7 @@ export default function NepalPaymentPanel({
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
                         <Banknote size={36} className="text-amber-500 mx-auto mb-2" />
                         <p className="text-base font-bold text-amber-900">
-                            Rs. {totalAmount.toFixed(2)}
+                            {money(totalAmount)}
                         </p>
                         <p className="text-sm text-amber-700 mt-1">
                             Pay in cash — your waiter will collect at the table.
@@ -294,7 +296,7 @@ export default function NepalPaymentPanel({
                 ) : mode === 'cash' ? (
                     <><Banknote size={18} /> Notify Waiter — Pay Cash</>
                 ) : (
-                    <><CheckCircle size={18} /> Confirm Payment — Rs. {totalAmount.toFixed(2)}</>
+                    <><CheckCircle size={18} /> Confirm Payment — {money(totalAmount)}</>
                 )}
             </button>
         </div>

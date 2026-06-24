@@ -6,7 +6,7 @@ import { createTakeoutOrder } from '@/app/api/takeout/actions'
 import { useCartStore } from '@/lib/stores/cart'
 import { useActiveOrders } from '@/lib/stores/activeOrders'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import PromoCodeInput from '@/components/customer/PromoCodeInput'
 import type { PromoCode } from '@/types/database'
 import { ArrowLeft, Clock, Loader2, ShoppingBag } from 'lucide-react'
@@ -20,6 +20,7 @@ interface TakeoutFormProps {
 
 export default function TakeoutForm({ restaurantId, restaurantName, restaurantSlug }: TakeoutFormProps) {
     const items = useHydratedStore(useCartStore, (s) => s.items)
+    const money = useCurrency()
     const totalAmount = useCartStore((s) => s.totalAmount)
     const clearCart = useCartStore((s) => s.clearCart)
 
@@ -122,7 +123,7 @@ export default function TakeoutForm({ restaurantId, restaurantName, restaurantSl
                                     {item.quantity}× {item.name}
                                 </span>
                                 <span className="font-medium">
-                                    {formatCurrency(item.price * item.quantity)}
+                                    {money(item.price * item.quantity)}
                                 </span>
                             </li>
                         ))}
@@ -217,17 +218,17 @@ export default function TakeoutForm({ restaurantId, restaurantName, restaurantSl
                     <div className="space-y-1 mb-3">
                         <div className="flex justify-between text-sm text-gray-500">
                             <span>Subtotal</span>
-                            <span>{formatCurrency(totalAmount())}</span>
+                            <span>{money(totalAmount())}</span>
                         </div>
                         {promoDiscount > 0 && (
                             <div className="flex justify-between text-sm text-green-600">
                                 <span>Discount</span>
-                                <span>-{formatCurrency(promoDiscount)}</span>
+                                <span>-{money(promoDiscount)}</span>
                             </div>
                         )}
                         <div className="flex justify-between items-center pt-1 border-t border-gray-100">
                             <span className="font-medium text-gray-700">Total</span>
-                            <span className="text-xl font-bold text-gray-900">{formatCurrency(finalTotal)}</span>
+                            <span className="text-xl font-bold text-gray-900">{money(finalTotal)}</span>
                         </div>
                     </div>
                     <button

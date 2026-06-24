@@ -3,11 +3,16 @@
 import { useState, useEffect } from 'react'
 import { HomepageConfig } from '@/types/database'
 import HomepageRenderer from '@/components/customer/homepage/HomepageRenderer'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, ShoppingBag } from 'lucide-react'
+import Link from 'next/link'
 
 interface HomepageGateProps {
     restaurantId: string
     onProceed: () => void
+    // When set, the homepage shows a secondary "Order Takeout / Pickup" action so a
+    // guest who scanned the table QR can self-order for pickup without first tapping
+    // "View Menu" to reach the no-session modal. Null hides it (e.g. no slug).
+    takeoutHref?: string | null
     // Function-as-child: receives a `backToHome` callback (null when there is
     // no homepage to return to) so the menu can offer a "back to homepage" action.
     children: (opts: { backToHome: (() => void) | null }) => React.ReactNode
@@ -48,7 +53,7 @@ function LoadingSkeleton() {
     )
 }
 
-export default function HomepageGate({ restaurantId, onProceed, children }: HomepageGateProps) {
+export default function HomepageGate({ restaurantId, onProceed, takeoutHref, children }: HomepageGateProps) {
     const [homepageConfig, setHomepageConfig] = useState<HomepageConfig | null>(null)
     const [isLoading, setIsLoading] = useState(true)
     const [showHomepage, setShowHomepage] = useState(true)
@@ -91,8 +96,17 @@ export default function HomepageGate({ restaurantId, onProceed, children }: Home
                     onProceed()
                 }}
             />
-            {/* Floating CTA — elevated above cart bar */}
-            <div className="fixed bottom-6 right-4 z-50">
+            {/* Floating CTAs — elevated above cart bar */}
+            <div className="fixed bottom-6 right-4 z-50 flex flex-col items-end gap-2">
+                {takeoutHref && (
+                    <Link
+                        href={takeoutHref}
+                        className="px-5 py-2.5 bg-white text-primary border border-primary rounded-full shadow-lg hover:bg-primary/5 flex items-center gap-2 font-semibold text-sm"
+                    >
+                        <ShoppingBag size={16} />
+                        Takeout / Pickup
+                    </Link>
+                )}
                 <button
                     onClick={() => {
                         setShowHomepage(false)

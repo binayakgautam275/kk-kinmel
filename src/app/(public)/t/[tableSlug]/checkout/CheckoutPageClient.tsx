@@ -2,7 +2,6 @@
 
 import { useCartStore, getCartItemKey } from '@/lib/stores/cart'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
-import { formatCurrency } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { placeOrder } from './actions'
 import { useState, useRef } from 'react'
@@ -10,13 +9,14 @@ import { ArrowLeft, Trash2, Plus, Minus, Loader2 } from 'lucide-react'
 import PromoCodeInput from '@/components/customer/PromoCodeInput'
 import LoyaltyPanel from '@/components/customer/LoyaltyPanel'
 import SplitBillModal from '@/components/customer/SplitBillModal'
-import { useFeatures } from '@/lib/contexts/FeatureContext'
+import { useFeatures, useCurrency } from '@/lib/contexts/FeatureContext'
 import { useParams } from 'next/navigation'
 import { toast } from 'react-hot-toast'
 import { playVoice } from '@/lib/voice'
 
 export default function CheckoutPageClient() {
     const params = useParams<{ tableSlug: string }>()
+    const money = useCurrency()
     const features = useFeatures()
     const items = useHydratedStore(useCartStore, (s) => s.items)
     const sessionId = useHydratedStore(useCartStore, (s) => s.sessionId)
@@ -141,7 +141,7 @@ export default function CheckoutPageClient() {
                                         </p>
                                     )}
                                     <div className="text-[var(--color-primary)] font-medium mt-1">
-                                        {formatCurrency((item.price + modTotal) * item.quantity)}
+                                        {money((item.price + modTotal) * item.quantity)}
                                     </div>
                                 </div>
 
@@ -214,23 +214,23 @@ export default function CheckoutPageClient() {
                     <div className="space-y-1 mb-4">
                         <div className="flex justify-between text-sm text-gray-500">
                             <span>Subtotal</span>
-                            <span>{formatCurrency(totalAmount())}</span>
+                            <span>{money(totalAmount())}</span>
                         </div>
                         {promoDiscount > 0 && (
                             <div className="flex justify-between text-sm text-green-600">
                                 <span>Promo ({promoCode?.code})</span>
-                                <span>-{formatCurrency(promoDiscount)}</span>
+                                <span>-{money(promoDiscount)}</span>
                             </div>
                         )}
                         {loyaltyDiscount > 0 && (
                             <div className="flex justify-between text-sm text-indigo-600">
                                 <span>Loyalty Reward</span>
-                                <span>-{formatCurrency(loyaltyDiscount)}</span>
+                                <span>-{money(loyaltyDiscount)}</span>
                             </div>
                         )}
                         <div className="flex justify-between items-center pt-1 border-t border-gray-100">
                             <span className="text-gray-600 font-medium">Total to pay</span>
-                            <span className="text-2xl font-bold text-gray-900">{formatCurrency(finalTotal())}</span>
+                            <span className="text-2xl font-bold text-gray-900">{money(finalTotal())}</span>
                         </div>
                     </div>
 

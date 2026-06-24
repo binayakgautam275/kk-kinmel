@@ -2,11 +2,11 @@
 
 import { useState, useRef } from 'react'
 import Image from 'next/image'
-import { Save, Store, Mail, Phone, MapPin, Building, Percent, Check, Loader2, QrCode, Shield, ToggleLeft, ToggleRight, Upload, X, Bell, Play } from 'lucide-react'
-import { updateRestaurantSettingsAction } from '@/app/(admin)/admin/settings/actions'
+import { Save, Store, Mail, Phone, MapPin, Building, Percent, Check, Loader2, QrCode, Shield, ToggleLeft, ToggleRight, Upload, X, Bell, Play, Clock } from 'lucide-react'
+import { updateRestaurantSettingsAction, updateBusinessHoursAction } from '@/app/(admin)/admin/settings/actions'
 import { updateFeaturesAction } from '@/lib/features'
 import { toast } from 'react-hot-toast'
-import type { Settings } from '@/types/database'
+import type { Settings, BusinessHours, DayHours } from '@/types/database'
 import { unlockAudio, setCustomNotificationSound, playNewOrder } from '@/lib/audio'
 
 type RestaurantSettings = {
@@ -28,13 +28,33 @@ type RestaurantSettings = {
 
 type Features = Settings['features_v2']
 
+const WEEKDAYS: { key: string; label: string }[] = [
+    { key: 'monday', label: 'Monday' },
+    { key: 'tuesday', label: 'Tuesday' },
+    { key: 'wednesday', label: 'Wednesday' },
+    { key: 'thursday', label: 'Thursday' },
+    { key: 'friday', label: 'Friday' },
+    { key: 'saturday', label: 'Saturday' },
+    { key: 'sunday', label: 'Sunday' },
+]
+
+const DEFAULT_DAY: DayHours = { open: '09:00', close: '22:00', closed: false }
+
+function buildBusinessHours(initial: BusinessHours | null): BusinessHours {
+    return Object.fromEntries(
+        WEEKDAYS.map(({ key }) => [key, { ...DEFAULT_DAY, ...(initial?.[key] ?? {}) }])
+    )
+}
+
 export default function SettingsManager({
     initialRestaurant,
     initialFeatures,
+    initialBusinessHours,
     canEdit
 }: {
     initialRestaurant: RestaurantSettings
     initialFeatures: Features | null
+    initialBusinessHours: BusinessHours | null
     canEdit: boolean
 }) {
     const [formData, setFormData] = useState<RestaurantSettings>(initialRestaurant)
@@ -58,6 +78,11 @@ export default function SettingsManager({
         feedbackEnabled: true,
     })
     const [taxRateStr, setTaxRateStr] = useState((initialRestaurant.tax_rate ?? 13).toString())
+    const [businessHours, setBusinessHours] = useState<BusinessHours>(() => buildBusinessHours(initialBusinessHours))
+
+    const updateDayHours = (day: string, patch: Partial<DayHours>) => {
+        setBusinessHours(prev => ({ ...prev, [day]: { ...prev[day], ...patch } }))
+    }
     const [uploadingField, setUploadingField] = useState<'logo_url' | 'payment_qr_url' | 'notification_sound' | null>(null)
     const logoInputRef = useRef<HTMLInputElement>(null)
     const qrInputRef = useRef<HTMLInputElement>(null)
@@ -154,8 +179,8 @@ export default function SettingsManager({
 
         const finalTaxRate = taxRateStr === '' ? 0 : Number.parseFloat(taxRateStr)
 
-        // Save restaurant and features settings in parallel
-        const [resRestaurant, resFeatures] = await Promise.all([
+        // Save restaurant, features and business hours in parallel
+        const [resRestaurant, resFeatures, resHours] = await Promise.all([
             updateRestaurantSettingsAction(formData.id, {
                 name: formData.name,
                 contact_phone: formData.contact_phone,
@@ -172,15 +197,16 @@ export default function SettingsManager({
                 defaultTaxRate: finalTaxRate,
                 currency: features.currency,
                 currencySymbol: features.currencySymbol,
-            })
+            }),
+            updateBusinessHoursAction(formData.id, businessHours),
         ])
 
-        if (resRestaurant.success && resFeatures.success) {
+        if (resRestaurant.success && resFeatures.success && resHours.success) {
             setIsSuccess(true)
             toast.success('Settings saved successfully')
             setTimeout(() => setIsSuccess(false), 3000)
         } else {
-            toast.error(resRestaurant.error || resFeatures.error || 'Failed to save settings')
+            toast.error(resRestaurant.error || resFeatures.error || resHours.error || 'Failed to save settings')
         }
 
         setIsSubmitting(false)
@@ -429,6 +455,61 @@ export default function SettingsManager({
                             />
                         </div>
                     </div>
+                </div>
+            </div>
+
+            {/* Business Hours */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
+                    <div className="p-2 bg-sky-100 text-sky-600 rounded-lg">
+                        <Clock size={20} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold text-gray-800">Business Hours</h3>
+                        <p className="text-sm text-gray-500">Opening times shown to customers, by day of week</p>
+                    </div>
+                </div>
+
+                <div className="p-6 space-y-3">
+                    {WEEKDAYS.map(({ key, label }) => {
+                        const day = businessHours[key]
+                        return (
+                            <div key={key} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                <span className="w-28 text-sm font-medium text-gray-700 shrink-0">{label}</span>
+                                {day.closed ? (
+                                    <span className="text-sm text-gray-400 flex-1">Closed</span>
+                                ) : (
+                                    <div className="flex items-center gap-2 flex-1">
+                                        <input
+                                            type="time"
+                                            value={day.open}
+                                            onChange={e => updateDayHours(key, { open: e.target.value })}
+                                            disabled={!canEdit || isSubmitting}
+                                            className="border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2 border disabled:bg-gray-50 disabled:text-gray-500"
+                                        />
+                                        <span className="text-gray-400 text-sm">to</span>
+                                        <input
+                                            type="time"
+                                            value={day.close}
+                                            onChange={e => updateDayHours(key, { close: e.target.value })}
+                                            disabled={!canEdit || isSubmitting}
+                                            className="border-gray-300 rounded-lg shadow-sm focus:border-[var(--color-primary)] focus:ring-[var(--color-primary)] sm:text-sm p-2 border disabled:bg-gray-50 disabled:text-gray-500"
+                                        />
+                                    </div>
+                                )}
+                                <label className="flex items-center gap-2 cursor-pointer shrink-0 sm:ml-auto">
+                                    <input
+                                        type="checkbox"
+                                        checked={day.closed}
+                                        onChange={e => updateDayHours(key, { closed: e.target.checked })}
+                                        disabled={!canEdit || isSubmitting}
+                                        className="h-4 w-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                    />
+                                    <span className="text-sm text-gray-600">Closed</span>
+                                </label>
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
 

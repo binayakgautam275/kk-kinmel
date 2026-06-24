@@ -4,7 +4,7 @@ import { useRef, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { markDeliveredAndCashPaid } from '@/app/(staff)/waiter/order-actions'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import { toast } from 'react-hot-toast'
 import { Banknote, CheckCircle, ChefHat, Clock, Loader2, CreditCard, Receipt } from 'lucide-react'
 import PaymentVerificationFeed, { type PaymentClaim } from './PaymentVerificationFeed'
@@ -47,6 +47,7 @@ function tableLabel(sessions: { tables: TableRef } | null): string {
 
 export default function CashierClient({ restaurantId, userId, initialUnpaid, initialActive, initialClaims, tables }: Props) {
     const [unpaid, setUnpaid] = useState<UnpaidOrder[]>(initialUnpaid)
+    const money = useCurrency()
     const [active, setActive] = useState<ActiveOrder[]>(initialActive)
     const [processingId, setProcessingId] = useState<string | null>(null)
     const [pendingClaims, setPendingClaims] = useState(
@@ -135,7 +136,7 @@ export default function CashierClient({ restaurantId, userId, initialUnpaid, ini
                 {unpaid.length > 0 && (
                     <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-right">
                         <p className="text-xs text-red-500 font-semibold">{unpaid.length} unpaid bill{unpaid.length !== 1 ? 's' : ''}</p>
-                        <p className="text-lg font-extrabold text-red-700 tabular-nums">{formatCurrency(totalUnpaid)}</p>
+                        <p className="text-lg font-extrabold text-red-700 tabular-nums">{money(totalUnpaid)}</p>
                     </div>
                 )}
             </div>
@@ -173,7 +174,7 @@ export default function CashierClient({ restaurantId, userId, initialUnpaid, ini
                                         <div className="w-2 h-2 rounded-full bg-red-400" />
                                         <span className="font-bold text-sm text-red-800">Table {label}</span>
                                     </div>
-                                    <span className="text-base font-bold text-red-700 tabular-nums">{formatCurrency(total)}</span>
+                                    <span className="text-base font-bold text-red-700 tabular-nums">{money(total)}</span>
                                 </div>
 
                                 <div className="px-4 py-3 space-y-3">
@@ -191,7 +192,7 @@ export default function CashierClient({ restaurantId, userId, initialUnpaid, ini
                                                 </ul>
                                             </div>
                                             <div className="flex flex-col items-end gap-2 shrink-0">
-                                                <span className="text-sm font-semibold text-gray-800 tabular-nums">{formatCurrency(order.total_amount)}</span>
+                                                <span className="text-sm font-semibold text-gray-800 tabular-nums">{money(order.total_amount)}</span>
                                                 <button
                                                     onClick={() => handleCashPay(order.id)}
                                                     disabled={processingId === order.id}
@@ -208,7 +209,7 @@ export default function CashierClient({ restaurantId, userId, initialUnpaid, ini
                                 {tableOrders.length > 1 && (
                                     <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
                                         <span className="text-xs text-gray-400">{tableOrders.length} orders · table total</span>
-                                        <span className="text-sm font-bold text-gray-900 tabular-nums">{formatCurrency(total)}</span>
+                                        <span className="text-sm font-bold text-gray-900 tabular-nums">{money(total)}</span>
                                     </div>
                                 )}
                             </div>
@@ -251,7 +252,7 @@ export default function CashierClient({ restaurantId, userId, initialUnpaid, ini
                                                 {tableOrders.length} order{tableOrders.length !== 1 ? 's' : ''}
                                             </p>
                                         </div>
-                                        <span className="text-sm font-semibold text-gray-700 tabular-nums shrink-0">{formatCurrency(total)}</span>
+                                        <span className="text-sm font-semibold text-gray-700 tabular-nums shrink-0">{money(total)}</span>
                                         <Clock size={13} className="text-gray-300 shrink-0" />
                                     </div>
                                 )

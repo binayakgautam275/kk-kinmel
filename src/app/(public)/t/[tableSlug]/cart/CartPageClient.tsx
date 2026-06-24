@@ -3,7 +3,7 @@
 import { useCartStore, getCartItemKey } from '@/lib/stores/cart'
 import { useActiveOrders } from '@/lib/stores/activeOrders'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import { ChevronLeft, Plus, Minus, Pencil } from 'lucide-react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -18,6 +18,7 @@ import type { MenuItem, CartItemModifier } from '@/types/database'
 
 export default function CartPageClient({ params }: { params: { tableSlug: string } }) {
     const router = useRouter()
+    const money = useCurrency()
     const items = useHydratedStore(useCartStore, (s) => s.items) || []
     const sessionId = useHydratedStore(useCartStore, (s) => s.sessionId)
     const storeSlug = useHydratedStore(useCartStore, (s) => s.restaurantSlug)
@@ -290,7 +291,7 @@ export default function CartPageClient({ params }: { params: { tableSlug: string
 
                                         {/* Price */}
                                         <span className="text-sm font-black text-gray-950 mt-2 tabular-nums">
-                                            {formatCurrency(lineTotal)}
+                                            {money(lineTotal)}
                                         </span>
                                     </div>
                                 </div>
@@ -318,11 +319,11 @@ export default function CartPageClient({ params }: { params: { tableSlug: string
                     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm mt-6 p-4 space-y-2.5">
                         <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-500 font-medium">Subtotal · {count} item{count !== 1 ? 's' : ''}</span>
-                            <span className="text-gray-900 font-bold tabular-nums">{formatCurrency(totalAmount)}</span>
+                            <span className="text-gray-900 font-bold tabular-nums">{money(totalAmount)}</span>
                         </div>
                         <div className="flex justify-between items-center pt-2.5 border-t border-gray-100">
                             <span className="text-base font-bold text-gray-900">Total</span>
-                            <span className="text-lg font-black text-gray-950 tabular-nums">{formatCurrency(totalAmount)}</span>
+                            <span className="text-lg font-black text-gray-950 tabular-nums">{money(totalAmount)}</span>
                         </div>
                     </div>
                 </div>
@@ -343,7 +344,7 @@ export default function CartPageClient({ params }: { params: { tableSlug: string
                             <span className="bg-white/20 rounded-full px-2 py-0.5 text-xs tabular-nums">{count}</span>
                             Place Order
                         </span>
-                        <span className="text-base font-black tabular-nums">{formatCurrency(totalAmount)}</span>
+                        <span className="text-base font-black tabular-nums">{money(totalAmount)}</span>
                     </button>
                     {!sessionId && (
                         <p className="text-[11px] text-amber-600 font-semibold text-center mt-2">

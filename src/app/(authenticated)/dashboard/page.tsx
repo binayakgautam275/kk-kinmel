@@ -1,5 +1,6 @@
 import { getCurrentUser } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/server'
+import { getRestaurantFeatures } from '@/lib/features'
 import { formatCurrency, timeAgo } from '@/lib/utils'
 import Link from 'next/link'
 import { ShoppingBag, TrendingUp, Users, UtensilsCrossed, ArrowRight, CheckCircle2, Circle } from 'lucide-react'
@@ -45,6 +46,7 @@ export default async function DashboardPage() {
         { data: restaurant },
         { count: menuCount },
         { count: tableCount },
+        features,
     ] = await Promise.all([
         adminSupabase.from('orders').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
         adminSupabase.from('orders').select('total_amount').eq('restaurant_id', restaurantId)
@@ -59,7 +61,11 @@ export default async function DashboardPage() {
         adminSupabase.from('menu_items').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
         adminSupabase.from('tables').select('id', { count: 'exact', head: true })
             .eq('restaurant_id', restaurantId).eq('is_active', true),
+        getRestaurantFeatures(restaurantId),
     ])
+
+    // Format restaurant order amounts in the configured currency.
+    const money = (amount: number) => formatCurrency(amount, features?.currency, features?.currencySymbol)
 
     const monthRevenue = (monthOrderRows || []).reduce((sum, o) => sum + (o.total_amount || 0), 0)
     const tier = (restaurant?.subscription_tier || 'free') as string
@@ -117,7 +123,7 @@ export default async function DashboardPage() {
             {/* KPI cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <KpiCard icon={ShoppingBag} label="Total Orders" value={String(totalOrders ?? 0)} color="blue" />
-                <KpiCard icon={TrendingUp} label="Month Revenue" value={formatCurrency(monthRevenue)} color="green" />
+                <KpiCard icon={TrendingUp} label="Month Revenue" value={money(monthRevenue)} color="green" />
                 <KpiCard icon={Users} label="Staff Members" value={String(staffCount ?? 0)} color="purple" />
                 <KpiCard icon={UtensilsCrossed} label="Menu Items" value={String(menuCount ?? 0)} color="orange" />
             </div>
@@ -158,7 +164,7 @@ export default async function DashboardPage() {
                                                     {order.status}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right text-gray-700">{formatCurrency(order.total_amount || 0)}</td>
+                                            <td className="px-4 py-3 text-right text-gray-700">{money(order.total_amount || 0)}</td>
                                             <td className="px-4 py-3 text-right text-gray-400 hidden sm:table-cell">{timeAgo(order.placed_at)}</td>
                                         </tr>
                                     )

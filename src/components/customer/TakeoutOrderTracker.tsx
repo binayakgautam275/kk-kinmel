@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import type { TakeoutOrder, TakeoutStatus } from '@/types/database'
 import { ORDER_STATUS_TO_TAKEOUT, type OrderStatus } from '@/lib/takeout'
 import {
@@ -64,6 +64,7 @@ function CountdownDisplay({ pickupTime }: { pickupTime: string }) {
 
 export default function TakeoutOrderTracker({ orderId, initialOrder, restaurantSlug }: Props) {
     const [order, setOrder] = useState<TakeoutOrder>(initialOrder)
+    const money = useCurrency()
     const currentStep = STATUS_INDEX[order.status] ?? -1
 
     // Realtime subscription for status updates
@@ -198,7 +199,7 @@ export default function TakeoutOrderTracker({ orderId, initialOrder, restaurantS
                         <li key={idx} className="py-2 flex justify-between text-sm">
                             <span className="text-gray-700">{item.quantity}× {item.name}</span>
                             <span className="font-medium text-gray-900">
-                                {formatCurrency((item.unit_price || item.price || 0) * item.quantity)}
+                                {money((item.unit_price || item.price || 0) * item.quantity)}
                             </span>
                         </li>
                     ))}
@@ -207,23 +208,23 @@ export default function TakeoutOrderTracker({ orderId, initialOrder, restaurantS
                 <div className="mt-3 pt-3 border-t border-gray-100 space-y-1">
                     <div className="flex justify-between text-sm text-gray-500">
                         <span>Subtotal</span>
-                        <span>{formatCurrency(order.subtotal_amount)}</span>
+                        <span>{money(order.subtotal_amount)}</span>
                     </div>
                     {order.discount_amount > 0 && (
                         <div className="flex justify-between text-sm text-green-600">
                             <span>Discount</span>
-                            <span>-{formatCurrency(order.discount_amount)}</span>
+                            <span>-{money(order.discount_amount)}</span>
                         </div>
                     )}
                     {order.tax_amount > 0 && (
                         <div className="flex justify-between text-sm text-gray-500">
                             <span>Tax</span>
-                            <span>{formatCurrency(order.tax_amount)}</span>
+                            <span>{money(order.tax_amount)}</span>
                         </div>
                     )}
                     <div className="flex justify-between items-center pt-2 border-t border-gray-100">
                         <span className="font-medium text-gray-700">Total</span>
-                        <span className="text-lg font-bold text-gray-900">{formatCurrency(order.total_amount)}</span>
+                        <span className="text-lg font-bold text-gray-900">{money(order.total_amount)}</span>
                     </div>
                 </div>
             </div>

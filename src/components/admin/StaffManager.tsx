@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { Shield, ChefHat, Users, User, Check, AlertTriangle, Loader2, Pencil, Trash2, Eye, EyeOff, QrCode, Banknote } from 'lucide-react'
+import { Shield, ChefHat, Users, User, Check, AlertTriangle, Loader2, Pencil, Trash2, Eye, EyeOff, QrCode, Banknote, Search } from 'lucide-react'
 import { updateStaffRoleAction, toggleStaffStatusAction, updateStaffNameAction, resetStaffPasswordAction, deleteStaffAction, assignScannedUserAction } from '@/app/(admin)/admin/staff/actions'
 import { toast } from 'react-hot-toast'
 import { useConfirmStore } from '@/lib/stores/confirm'
@@ -41,6 +41,15 @@ export default function StaffManager({
     const [staff, setStaff] = useState<StaffMember[]>(initialStaff)
     const [submittingId, setSubmittingId] = useState<string | null>(null)
     const { confirm } = useConfirmStore()
+
+    const [searchQuery, setSearchQuery] = useState('')
+    const [roleFilter, setRoleFilter] = useState('all')
+
+    const filteredStaff = staff.filter(user => {
+        const matchesSearch = user.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+        const matchesRole = roleFilter === 'all' || user.role_id.toString() === roleFilter
+        return matchesSearch && matchesRole
+    })
 
     // Modals
     const [changeRoleModal, setChangeRoleModal] = useState<{ isOpen: boolean, user: StaffMember | null, newRoleId: number }>({
@@ -329,6 +338,30 @@ export default function StaffManager({
                 </div>
             </div>
 
+            {/* Filters */}
+            <div className="px-4 md:px-6 py-3 border-b border-gray-100 flex flex-col sm:flex-row gap-3 bg-white">
+                <div className="relative flex-1">
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                        type="text"
+                        placeholder="Search staff by name..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                    />
+                </div>
+                <select
+                    value={roleFilter}
+                    onChange={(e) => setRoleFilter(e.target.value)}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 sm:w-48"
+                >
+                    <option value="all">All Roles</option>
+                    {roles.map(r => (
+                        <option key={r.id} value={r.id.toString()}>{formatRoleName(r.name)}</option>
+                    ))}
+                </select>
+            </div>
+
             {/* Desktop Table — hidden on mobile */}
             <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
@@ -341,7 +374,7 @@ export default function StaffManager({
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                        {staff.map((user) => {
+                        {filteredStaff.map((user) => {
                             const isMe = user.id === currentUserId
                             const roleObj = Array.isArray(user.roles) ? user.roles[0] : user.roles
                             const roleName = roleObj?.name || ''
@@ -401,7 +434,7 @@ export default function StaffManager({
                                 </tr>
                             )
                         })}
-                        {staff.length === 0 && (
+                        {filteredStaff.length === 0 && (
                             <tr><td colSpan={4} className="p-8 text-center text-gray-500">No staff members found.</td></tr>
                         )}
                     </tbody>
@@ -410,7 +443,7 @@ export default function StaffManager({
 
             {/* Mobile Card List — visible only on small screens */}
             <div className="md:hidden divide-y divide-gray-100">
-                {staff.map((user) => {
+                {filteredStaff.map((user) => {
                     const isMe = user.id === currentUserId
                     const roleObj = Array.isArray(user.roles) ? user.roles[0] : user.roles
                     const roleName = roleObj?.name || ''
@@ -458,7 +491,7 @@ export default function StaffManager({
                         </div>
                     )
                 })}
-                {staff.length === 0 && (
+                {filteredStaff.length === 0 && (
                     <div className="p-8 text-center text-gray-500">No staff members found.</div>
                 )}
             </div>

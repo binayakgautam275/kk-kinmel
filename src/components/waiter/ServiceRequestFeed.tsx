@@ -43,10 +43,12 @@ export default function ServiceRequestFeed({
     initialRequests,
     restaurantId,
     userId,
+    staffNames = {},
 }: {
     initialRequests: ServiceRequestWithTable[]
     restaurantId: string
     userId: string
+    staffNames?: Record<string, string>
 }) {
     const [requests, setRequests] = useState<ServiceRequestWithTable[]>(initialRequests)
     const [openingSession, setOpeningSession] = useState<string | null>(null)
@@ -94,8 +96,9 @@ export default function ServiceRequestFeed({
     })
 
     const handleAcknowledge = async (id: string) => {
-        setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'acknowledged' as const } : r)))
-        await acknowledgeServiceRequest(id, userId)
+        setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: 'acknowledged' as const, acknowledged_by: userId } : r)))
+        const res = await acknowledgeServiceRequest(id, userId)
+        if (!res.success) toast.error('Someone else already took this request')
     }
 
     const handleComplete = async (id: string) => {
@@ -178,6 +181,11 @@ export default function ServiceRequestFeed({
                         meta={
                             <>
                                 <span>{timeAgo(req.created_at)}</span>
+                                {req.acknowledged_by && (
+                                    <span className="text-ink-muted">
+                                        — {req.acknowledged_by === userId ? 'You are' : `${staffNames[req.acknowledged_by] || 'A colleague'} is`} on it
+                                    </span>
+                                )}
                                 {req.message && <span className="text-ink-muted truncate">— {req.message}</span>}
                             </>
                         }

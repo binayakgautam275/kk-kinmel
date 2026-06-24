@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, CheckCircle, CreditCard, ShoppingBag, Loader2 } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import PromoCodeInput from './PromoCodeInput'
 import LoyaltyPanel from './LoyaltyPanel'
 import OrderPaymentSection from './OrderPaymentSection'
@@ -27,6 +27,7 @@ export default function PaymentPageClient({
     tableSlug,
 }: PaymentPageClientProps) {
     const router = useRouter()
+    const money = useCurrency()
     const [order, setOrder] = useState(initialOrder)
     const [isUpdating, setIsUpdating] = useState(false)
     const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null)
@@ -141,7 +142,7 @@ export default function PaymentPageClient({
                                         )}
                                     </div>
                                     <span className="font-black text-[#FB6303] text-sm shrink-0">
-                                        {formatCurrency((item.unit_price + modTotal) * item.quantity)}
+                                        {money((item.unit_price + modTotal) * item.quantity)}
                                     </span>
                                 </li>
                             )
@@ -180,12 +181,12 @@ export default function PaymentPageClient({
                     <div className="space-y-2">
                         <div className="flex justify-between text-xs text-[#8C6A50] font-semibold">
                             <span>Subtotal</span>
-                            <span>{formatCurrency(subtotal)}</span>
+                            <span>{money(subtotal)}</span>
                         </div>
                         {discount > 0 && (
                             <div className="flex justify-between text-xs text-green-600 font-bold">
                                 <span>Discount</span>
-                                <span>-{formatCurrency(discount)}</span>
+                                <span>-{money(discount)}</span>
                             </div>
                         )}
                         <div className="flex justify-between items-center pt-2.5 border-t border-[#F5EDE6]">
@@ -194,7 +195,7 @@ export default function PaymentPageClient({
                                 {isUpdating ? (
                                     <Loader2 size={18} className="animate-spin inline text-[#FB6303]" />
                                 ) : (
-                                    formatCurrency(total)
+                                    money(total)
                                 )}
                             </span>
                         </div>

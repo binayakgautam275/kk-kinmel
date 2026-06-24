@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useCartStore, getCartItemKey } from '@/lib/stores/cart'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import { Plus, Minus, X, Check, Clock, Flame, Leaf, Sparkles } from 'lucide-react'
 import Image from 'next/image'
 import type { MenuItem, CartItemModifier } from '@/types/database'
@@ -37,6 +37,7 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
     restaurantId?: string
 }) {
     const { t } = useTranslation()
+    const money = useCurrency()
     const displayName = t('menu_item_name', item.id, item.name)
     const displayDesc = item.description ? t('menu_item_description', item.id, item.description) : null
 
@@ -188,8 +189,8 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
                     </h3>
                     <span className="font-bold text-[13px] text-[var(--color-primary)] tabular-nums block mt-0.5">
                         {hasVariations && item.variations!.length > 0
-                            ? `${formatCurrency(Math.min(...item.variations!.map(v => v.price)))} – ${formatCurrency(Math.max(...item.variations!.map(v => v.price)))}`
-                            : formatCurrency(item.price)
+                            ? `${money(Math.min(...item.variations!.map(v => v.price)))} – ${money(Math.max(...item.variations!.map(v => v.price)))}`
+                            : money(item.price)
                         }
                     </span>
                 </div>
@@ -333,7 +334,7 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
                                                         </span>
                                                     </div>
                                                     <span className={`text-sm tabular-nums ${isSelected ? 'text-[var(--color-primary)] font-semibold' : 'text-gray-400'}`}>
-                                                        {mod.price_adjustment > 0 ? `+${formatCurrency(mod.price_adjustment)}` : mod.price_adjustment < 0 ? formatCurrency(mod.price_adjustment) : 'Free'}
+                                                        {mod.price_adjustment > 0 ? `+${money(mod.price_adjustment)}` : mod.price_adjustment < 0 ? money(mod.price_adjustment) : 'Free'}
                                                     </span>
                                                 </button>
                                             )
@@ -349,7 +350,7 @@ export default function MenuItemCard({ item, comboItems = [], menuItems = [], se
                             onClick={handleConfirmModifiers}
                             className="w-full bg-[var(--color-primary)] text-white py-3.5 rounded-xl font-semibold text-sm active:scale-[0.98] transition-all shadow-lg shadow-[var(--color-primary)]/20"
                         >
-                            Add to Cart — {formatCurrency(item.price + modTotal)}
+                            Add to Cart — {money(item.price + modTotal)}
                         </button>
                     </div>
                 </div>

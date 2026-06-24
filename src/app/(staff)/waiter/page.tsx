@@ -92,6 +92,7 @@ export default async function WaiterPage() {
             .from('orders')
             .select(`
                 id, status, total_amount, placed_at, ready_at, customer_note, payment_status, session_id,
+                claimed_by, claimed_at,
                 sessions ( id, tables ( label ) ),
                 order_items ( id, quantity, menu_items ( name ) )
             `)
@@ -120,6 +121,17 @@ export default async function WaiterPage() {
             .order('delivered_at', { ascending: true })
             .limit(30),
     ])
+
+    // Map of staff id → name so feeds can show who claimed/acknowledged work
+    // (realtime payloads only carry the claimer's UUID, not their name).
+    const { data: staffRows } = await adminSupabase
+        .from('users')
+        .select('id, full_name')
+        .eq('restaurant_id', restaurantId)
+        .eq('is_active', true)
+    const staffNames: Record<string, string> = Object.fromEntries(
+        (staffRows || []).map(u => [u.id, u.full_name])
+    )
 
     // Floor stats for the top bar
     const occupiedTables = mappedTables.filter(t => t.activeSession).length
@@ -174,6 +186,7 @@ export default async function WaiterPage() {
                     initialRequests={(serviceRequests || []) as unknown as ServiceRequestWithTable[]}
                     restaurantId={restaurantId}
                     userId={userId}
+                    staffNames={staffNames}
                 />
             )}
 
@@ -181,6 +194,8 @@ export default async function WaiterPage() {
             <WaiterOrderFeed
                 initialOrders={(activeOrders || []) as unknown as WaiterOrder[]}
                 restaurantId={restaurantId}
+                userId={userId}
+                staffNames={staffNames}
             />
 
             {/* 3. Cash Payment Quick-Actions — delivered orders awaiting cash collection */}

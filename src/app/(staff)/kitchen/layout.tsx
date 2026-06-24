@@ -2,6 +2,7 @@ import { ReactNode } from 'react'
 import KitchenLayoutClient from '@/components/kitchen/KitchenLayoutClient'
 import { getCurrentUser } from '@/lib/auth'
 import { getRestaurantFeatures } from '@/lib/features'
+import { FeatureProvider } from '@/lib/contexts/FeatureContext'
 import { createAdminClient } from '@/lib/supabase/server'
 import { verifyClientIp } from '@/lib/ip-check'
 import { redirect } from 'next/navigation'
@@ -28,12 +29,14 @@ export default async function KitchenLayout({ children }: { children: ReactNode 
     const notificationSoundUrl = (features as Record<string, unknown> | null)?.notificationSoundUrl as string | null | undefined
 
     return (
-        <KitchenLayoutClient
-            restaurantName={restaurant?.name || undefined}
-            staffName={user?.full_name || undefined}
-            notificationSoundUrl={notificationSoundUrl || null}
-        >
-            {children}
-        </KitchenLayoutClient>
+        <FeatureProvider features={features}>
+            <KitchenLayoutClient
+                restaurantName={restaurant?.name || undefined}
+                staffName={user?.full_name || undefined}
+                notificationSoundUrl={notificationSoundUrl || null}
+            >
+                {children}
+            </KitchenLayoutClient>
+        </FeatureProvider>
     )
 }

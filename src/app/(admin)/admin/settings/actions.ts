@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/lib/supabase/server'
 import { revalidatePath, revalidateTag } from 'next/cache'
+import type { BusinessHours } from '@/types/database'
 
 export async function updateRestaurantSettingsAction(restaurantId: string, updates: Record<string, unknown>) {
     const supabase = await createAdminClient()
@@ -63,5 +64,18 @@ export async function updateRestaurantSettingsAction(restaurantId: string, updat
     // Instantly purge the allowed IP cache tag
     revalidateTag(`restaurant-allowed-ips-${restaurantId}`, 'max')
 
+    return { success: true }
+}
+
+export async function updateBusinessHoursAction(restaurantId: string, businessHours: BusinessHours) {
+    const supabase = await createAdminClient()
+
+    const { error } = await supabase
+        .from('settings')
+        .update({ business_hours: businessHours })
+        .eq('restaurant_id', restaurantId)
+    if (error) return { error: error.message }
+
+    revalidatePath('/', 'layout')
     return { success: true }
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Users, Divide, Loader2, Check } from 'lucide-react'
 import { createBillSplit } from '@/app/api/billing/actions'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import type { SplitType } from '@/types/database'
 import { toast } from 'react-hot-toast'
 
@@ -17,6 +17,7 @@ export default function SplitBillModal({
     onClose: () => void
 }) {
     const [step, setStep] = useState<'choose' | 'count' | 'result'>('choose')
+    const money = useCurrency()
     const [splitType, setSplitType] = useState<SplitType>('even')
     const [splitCount, setSplitCount] = useState(2)
     const [loading, setLoading] = useState(false)
@@ -50,7 +51,7 @@ export default function SplitBillModal({
                     {/* Total */}
                     <div className="text-center mb-5">
                         <p className="text-sm text-gray-500">Total Bill</p>
-                        <p className="text-3xl font-bold text-gray-900">{formatCurrency(totalAmount)}</p>
+                        <p className="text-3xl font-bold text-gray-900">{money(totalAmount)}</p>
                     </div>
 
                     {step === 'choose' && (
@@ -102,7 +103,7 @@ export default function SplitBillModal({
                                 </button>
                             </div>
                             <p className="text-center text-lg text-gray-700">
-                                {formatCurrency(totalAmount / splitCount)} per person
+                                {money(totalAmount / splitCount)} per person
                             </p>
                             <button
                                 onClick={handleSplit}
@@ -125,7 +126,7 @@ export default function SplitBillModal({
                                         </div>
                                         <span className="font-medium text-gray-800">{split.label}</span>
                                     </div>
-                                    <span className="font-bold text-gray-900">{formatCurrency(split.total)}</span>
+                                    <span className="font-bold text-gray-900">{money(split.total)}</span>
                                 </div>
                             ))}
                             <button

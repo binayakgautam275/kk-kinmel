@@ -7,7 +7,7 @@ import {
     getLoyaltyConfig,
     redeemLoyaltyPoints,
 } from '@/app/api/loyalty/actions'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import type { LoyaltyMember, LoyaltyConfig } from '@/types/database'
 import { toast } from 'react-hot-toast'
 
@@ -32,6 +32,7 @@ export default function LoyaltyPanel({
     activeMember,
 }: LoyaltyPanelProps) {
     const [phone, setPhone] = useState('')
+    const money = useCurrency()
     const [mode, setMode] = useState<'lookup' | 'signup'>('lookup')
     const [displayName, setDisplayName] = useState('')
     const [email, setEmail] = useState('')
@@ -78,7 +79,7 @@ export default function LoyaltyPanel({
         const result = await redeemLoyaltyPoints(activeMember.id, restaurantId)
         if (result.discount > 0) {
             onRedeemDiscount(result.discount)
-            toast.success(`${formatCurrency(result.discount)} discount applied!`)
+            toast.success(`${money(result.discount)} discount applied!`)
             // Refresh member data
             const updated = await lookupLoyaltyMember(restaurantId, activeMember.phone || '')
             if (updated.member) onMemberSet(updated.member)
@@ -138,7 +139,7 @@ export default function LoyaltyPanel({
                             disabled={loading}
                             className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                         >
-                            Redeem {config.redemption_threshold} pts → {formatCurrency(config.redemption_value)} off
+                            Redeem {config.redemption_threshold} pts → {money(config.redemption_value)} off
                         </button>
                     )}
                 </div>

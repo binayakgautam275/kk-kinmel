@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/server'
+import { getRestaurantFeatures } from '@/lib/features'
 import { notFound } from 'next/navigation'
 import TakeoutPageClient from './TakeoutPageClient'
 
@@ -36,8 +37,8 @@ export default async function TakeoutPage({ params }: { params: Promise<{ restau
 
     if (!restaurant) notFound()
 
-    // Get menu categories, items, and translations in parallel
-    const [{ data: categories }, { data: items }, { data: rawTranslations }, { data: rawLangs }] = await Promise.all([
+    // Get menu categories, items, translations, and currency features in parallel
+    const [{ data: categories }, { data: items }, { data: rawTranslations }, { data: rawLangs }, features] = await Promise.all([
         supabase
             .from('menu_categories')
             .select('id, name, sort_order')
@@ -60,6 +61,7 @@ export default async function TakeoutPage({ params }: { params: Promise<{ restau
             .eq('restaurant_id', restaurant.id)
             .eq('is_active', true)
             .order('sort_order'),
+        getRestaurantFeatures(restaurant.id),
     ])
 
     const translations = (rawTranslations || []) as { language_code: string; entity_type: string; entity_id: string; translated_text: string }[]
@@ -75,6 +77,7 @@ export default async function TakeoutPage({ params }: { params: Promise<{ restau
             menuItems={items || []}
             translations={translations}
             supportedLanguages={langs}
+            features={features}
         />
     )
 }

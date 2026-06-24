@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { Clock, ShoppingBag, UtensilsCrossed } from 'lucide-react'
 import { OrderCard, FeedSection } from '@/components/ui'
-import { timeAgo, formatCurrency } from '@/lib/utils'
+import { timeAgo } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 
 export interface ActiveTableEntry {
     tableId: string
@@ -23,6 +24,7 @@ interface Props {
 
 export default function ActiveSessionsList({ initialEntries, tablesMap, restaurantId }: Props) {
     const [entries, setEntries] = useState<ActiveTableEntry[]>(initialEntries)
+    const money = useCurrency()
 
     useRestaurantTable(restaurantId, 'sessions', (payload) => {
         if (payload.eventType === 'INSERT') {
@@ -88,7 +90,7 @@ export default function ActiveSessionsList({ initialEntries, tablesMap, restaura
                     }
                     trailing={
                         entry.totalAmount > 0 ? (
-                            <span className="text-h3 text-ink tabular">{formatCurrency(entry.totalAmount)}</span>
+                            <span className="text-h3 text-ink tabular">{money(entry.totalAmount)}</span>
                         ) : (
                             <span className="text-caption text-ink-subtle">No orders</span>
                         )

@@ -5,7 +5,8 @@ import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { markCashPaid } from '@/app/(staff)/waiter/order-actions'
 import { Banknote, CheckCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import { formatCurrency, timeAgo } from '@/lib/utils'
+import { timeAgo } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import { FeedSection, OrderCard, Button } from '@/components/ui'
 
 export interface UnpaidOrder {
@@ -24,6 +25,7 @@ export default function CashPaymentFeed({
     restaurantId: string
 }) {
     const [orders, setOrders] = useState<UnpaidOrder[]>(initialOrders)
+    const money = useCurrency()
     const [processingId, setProcessingId] = useState<string | null>(null)
 
     // Remove from local list when an order gets paid via any path (realtime)
@@ -68,7 +70,7 @@ export default function CashPaymentFeed({
                         meta={order.delivered_at ? <span>Delivered {timeAgo(order.delivered_at)}</span> : undefined}
                         trailing={
                             <div className="flex flex-col items-end gap-2">
-                                <span className="text-h3 text-ink tabular">{formatCurrency(order.total_amount)}</span>
+                                <span className="text-h3 text-ink tabular">{money(order.total_amount)}</span>
                                 <Button size="sm" icon={CheckCircle} loading={isProcessing} onClick={() => handleCashPaid(order.id)}>
                                     Cash Received
                                 </Button>

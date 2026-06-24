@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { completeTakeoutOrder, getTakeoutOrders } from '@/app/api/takeout/actions'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import type { TakeoutOrder } from '@/types/database'
 import { Phone, User, Clock, CreditCard, Package } from 'lucide-react'
 import { playOrderReady } from '@/lib/audio'
@@ -16,6 +16,7 @@ interface Props {
 
 export default function WaiterTakeoutFeed({ initialOrders, restaurantId }: Props) {
     const [orders, setOrders] = useState<TakeoutOrder[]>(initialOrders)
+    const money = useCurrency()
     const [loading, setLoading] = useState<string | null>(null)
 
     // Takeout lives in the unified `orders` table. Refetch the ready-for-pickup
@@ -84,7 +85,7 @@ export default function WaiterTakeoutFeed({ initialOrders, restaurantId }: Props
 
                             <div className="flex items-center justify-between gap-3">
                                 <span className="text-h3 text-ink tabular">
-                                    {formatCurrency(order.total_amount)}
+                                    {money(order.total_amount)}
                                 </span>
                                 <Button
                                     size="sm"

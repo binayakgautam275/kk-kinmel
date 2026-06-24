@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { playNewOrder } from '@/lib/audio'
 import { toast } from 'react-hot-toast'
-import { formatCurrency, timeAgo } from '@/lib/utils'
+import { timeAgo } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import { Clock, ChefHat, CheckCircle2, CheckSquare, ListOrdered, Printer, LayoutPanelLeft } from 'lucide-react'
 import type { OrderStatus, Order, OrderItem, OrderItemModifier, MenuItem, Session, Table } from '@/types/database'
 import { updateOrderStatus } from '@/app/(staff)/kitchen/actions'
@@ -36,6 +37,7 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
     comboItems?: any[]
 }) {
     const [orders, setOrders] = useState<KitchenOrder[]>(initialOrders)
+    const money = useCurrency()
     const supabaseRef = useRef(createClient())
 
     // Live order changes via the shared per-restaurant channel.
@@ -65,7 +67,7 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
                     <span className="text-xl mt-0.5">🔔</span>
                     <div>
                         <p className="font-bold text-sm text-yellow-400">New Order!</p>
-                        <p className="text-xs text-dark-muted mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {formatCurrency(order.total_amount)}</p>
+                        <p className="text-xs text-dark-muted mt-0.5">{tbl ? `Table ${tbl}` : 'Takeout'} · {money(order.total_amount)}</p>
                     </div>
                 </div>
             ), { duration: 6000, position: 'top-right' })
@@ -85,7 +87,12 @@ export default function OrderQueue({ initialOrders, restaurantId, comboItems = [
         else if (currentStatus === 'preparing') nextStatus = 'ready'
         else return
         setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: nextStatus } : o))
-        await updateOrderStatus(orderId, nextStatus)
+        const res = await updateOrderStatus(orderId, nextStatus)
+        if (res?.error) {
+            // Roll back the optimistic bump; realtime delivers the true state.
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: currentStatus as OrderStatus } : o))
+            toast.error(res.conflict ? 'Order was just updated by someone else' : 'Could not update order')
+        }
     }
 
     const { newOrders, preparingOrders, readyOrders } = useMemo(() => {

@@ -6,7 +6,7 @@ import Image from 'next/image'
 import type { MenuItem, CartItemModifier } from '@/types/database'
 import { useCartStore, getCartItemKey } from '@/lib/stores/cart'
 import { useHydratedStore } from '@/lib/stores/useHydratedStore'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import { useTranslation } from '@/lib/contexts/TranslationContext'
 
 interface ItemDetailViewProps {
@@ -37,6 +37,7 @@ export default function ItemDetailView({
     onSaveEdit,
 }: ItemDetailViewProps) {
     const { t } = useTranslation()
+    const money = useCurrency()
     const displayName = t('menu_item_name', item.id, item.name)
     const displayDesc = item.description ? t('menu_item_description', item.id, item.description) : null
 
@@ -130,8 +131,8 @@ export default function ItemDetailView({
     // Display price: variation total or standard total
     const displayTotal = hasVariations ? variationTotal : totalPrice
     const displayPriceRange = hasVariations && item.variations!.length > 0
-        ? `${formatCurrency(Math.min(...item.variations!.map(v => v.price)))} – ${formatCurrency(Math.max(...item.variations!.map(v => v.price)))}`
-        : formatCurrency(unitPrice)
+        ? `${money(Math.min(...item.variations!.map(v => v.price)))} – ${money(Math.max(...item.variations!.map(v => v.price)))}`
+        : money(unitPrice)
 
     const toggleModifier = (groupId: string, modId: string, maxSelections: number) => {
         setSelectedMods((prev) => {
@@ -395,7 +396,7 @@ export default function ItemDetailView({
 
                                             <div className="flex items-center gap-3">
                                                 <span className={`text-xs font-bold tabular-nums ${isSelected ? 'text-[var(--color-primary)]' : 'text-gray-950'}`}>
-                                                    {formatCurrency(variation.price)}
+                                                    {money(variation.price)}
                                                 </span>
                                                 
                                                 <div className={`w-4.5 h-4.5 rounded border-2 flex items-center justify-center transition-all ${
@@ -443,7 +444,7 @@ export default function ItemDetailView({
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-xs font-bold text-gray-950">
                                                                 {mod.price_adjustment > 0
-                                                                    ? `+${formatCurrency(mod.price_adjustment)}`
+                                                                    ? `+${money(mod.price_adjustment)}`
                                                                     : 'Free'
                                                                 }
                                                             </span>
@@ -558,12 +559,12 @@ export default function ItemDetailView({
                         className="flex-1 bg-[var(--color-primary)] text-white font-bold rounded-xl py-2.5 px-3 text-center text-xs active:scale-95 transition-all shadow-md shadow-orange-600/10 disabled:opacity-40 disabled:pointer-events-none"
                     >
                         {onSaveEdit 
-                            ? `Save Changes ${formatCurrency(displayTotal)}` 
+                            ? `Save Changes ${money(displayTotal)}` 
                             : hasVariations
                                 ? variationItemCount > 0
-                                    ? `Add ${variationItemCount} item${variationItemCount > 1 ? 's' : ''} ${formatCurrency(variationTotal)}`
+                                    ? `Add ${variationItemCount} item${variationItemCount > 1 ? 's' : ''} ${money(variationTotal)}`
                                     : 'Select a variant'
-                                : `Add to Cart ${formatCurrency(totalPrice)}`
+                                : `Add to Cart ${money(totalPrice)}`
                         }
                     </button>
                 </div>

@@ -54,8 +54,12 @@ export default async function AdminDashboardPage() {
         adminSupabase.from('ingredients').select('id, name, stock_quantity, reorder_level, unit').eq('restaurant_id', restaurantId).eq('is_active', true).not('reorder_level', 'is', null),
         adminSupabase.from('promo_codes').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId).eq('is_active', true),
         adminSupabase.from('users').select('id', { count: 'exact', head: true }).eq('restaurant_id', restaurantId),
-        adminSupabase.from('settings').select('business_hours').eq('restaurant_id', restaurantId).maybeSingle(),
+        adminSupabase.from('settings').select('business_hours, features_v2').eq('restaurant_id', restaurantId).maybeSingle(),
     ])
+
+    // Format all amounts in the restaurant's configured currency.
+    const currencyFeatures = restaurantSettings?.features_v2 as { currency?: string; currencySymbol?: string | null } | null
+    const money = (amount: number) => formatCurrency(amount, currencyFeatures?.currency, currencyFeatures?.currencySymbol)
 
     const totalRevenueToday = (todayOrders || []).filter(o => o.status === 'delivered').reduce((s, o) => s + (o.total_amount || 0), 0)
     const totalRevenueMonth = (monthOrders || []).reduce((s, o) => s + (o.total_amount || 0), 0)
@@ -187,10 +191,10 @@ export default async function AdminDashboardPage() {
 
             {/* KPI cards */}
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                <StatCard icon={TrendingUp} tone="brand"   label="Revenue Today"      value={formatCurrency(totalRevenueToday)} />
+                <StatCard icon={TrendingUp} tone="brand"   label="Revenue Today"      value={money(totalRevenueToday)} />
                 <StatCard icon={ShoppingBag} tone="info"    label="Orders Today"       value={String(totalOrdersToday || 0)} />
                 <StatCard icon={Users}       tone="success" label="Active Tables"      value={String(activeSessionCount || 0)} />
-                <StatCard icon={TrendingUp}  tone="neutral" label="Revenue This Month" value={formatCurrency(totalRevenueMonth)} />
+                <StatCard icon={TrendingUp}  tone="neutral" label="Revenue This Month" value={money(totalRevenueMonth)} />
                 <StatCard icon={UserCheck}   tone="neutral" label="Staff On Shift"     value={String(shifts.length)} />
                 <StatCard icon={lowStock.length > 0 ? AlertTriangle : Package} tone={lowStock.length > 0 ? 'warning' : 'neutral'} label="Low Stock Items" value={String(lowStock.length)} />
             </div>
@@ -302,7 +306,7 @@ export default async function AdminDashboardPage() {
                                     <td className="px-5 font-mono text-caption font-semibold text-ink">{order.id.substring(0, 8).toUpperCase()}</td>
                                     <td className="px-5 text-caption text-ink-subtle tabular">{new Date(order.placed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
                                     <td className="px-5"><StatusBadge status={order.status} /></td>
-                                    <td className="px-5 text-right text-small font-semibold text-ink tabular">{formatCurrency(order.total_amount)}</td>
+                                    <td className="px-5 text-right text-small font-semibold text-ink tabular">{money(order.total_amount)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -319,7 +323,7 @@ export default async function AdminDashboardPage() {
                                 <p className="text-caption text-ink-subtle mt-0.5 tabular">{new Date(order.placed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                             </div>
                             <StatusBadge status={order.status} />
-                            <p className="font-bold text-ink tabular shrink-0">{formatCurrency(order.total_amount)}</p>
+                            <p className="font-bold text-ink tabular shrink-0">{money(order.total_amount)}</p>
                         </div>
                     ))}
                     {(!recentOrders || recentOrders.length === 0) && (

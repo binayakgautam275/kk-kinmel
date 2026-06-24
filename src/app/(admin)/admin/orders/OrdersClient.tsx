@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { ShoppingBag, Search, X } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import RefundOrderButton from './RefundOrderButton'
 
 export type AdminOrder = {
@@ -39,6 +39,7 @@ const selectClass = 'h-10 rounded-lg border border-gray-200 px-3 text-sm bg-whit
 
 export default function OrdersClient({ orders, canRefund }: { orders: AdminOrder[]; canRefund: boolean }) {
     const [search, setSearch] = useState('')
+    const money = useCurrency()
     const [status, setStatus] = useState('all')
     const [payment, setPayment] = useState('all')
     const [dateRange, setDateRange] = useState('all')
@@ -82,7 +83,7 @@ export default function OrdersClient({ orders, canRefund }: { orders: AdminOrder
                     <span className="text-sm font-normal text-gray-400">({filtered.length}{filtered.length !== orders.length ? ` of ${orders.length}` : ''})</span>
                 </h3>
                 <div className="text-sm text-gray-500">
-                    Total: <strong className="text-gray-900">{formatCurrency(revenue)}</strong>
+                    Total: <strong className="text-gray-900">{money(revenue)}</strong>
                 </div>
             </div>
 
@@ -167,7 +168,7 @@ export default function OrdersClient({ orders, canRefund }: { orders: AdminOrder
                                     </td>
                                     <td className="px-6 py-4 text-right font-bold text-gray-900 whitespace-nowrap">
                                         <span className={order.payment_status === 'refunded' ? 'line-through text-gray-400' : ''}>
-                                            {formatCurrency(order.total_amount ?? 0)}
+                                            {money(order.total_amount ?? 0)}
                                         </span>
                                     </td>
                                     {canRefund && (
@@ -212,7 +213,7 @@ export default function OrdersClient({ orders, canRefund }: { orders: AdminOrder
                             <div className="flex items-center justify-between text-sm">
                                 <span className="text-gray-500">Table {tableLabel}</span>
                                 <span className={`font-bold ${order.payment_status === 'refunded' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                                    {formatCurrency(order.total_amount ?? 0)}
+                                    {money(order.total_amount ?? 0)}
                                 </span>
                             </div>
                             {itemNames && <p className="text-xs text-gray-400 truncate">{itemNames}</p>}

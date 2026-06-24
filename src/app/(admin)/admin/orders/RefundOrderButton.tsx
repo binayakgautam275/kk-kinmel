@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { RotateCcw, Loader2 } from 'lucide-react'
 import { refundOrderAction } from './actions'
 import { toast } from 'react-hot-toast'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 
 export default function RefundOrderButton({
     orderId,
@@ -18,6 +18,7 @@ export default function RefundOrderButton({
     refundedAmount?: number
 }) {
     const [open, setOpen] = useState(false)
+    const money = useCurrency()
     const [reason, setReason] = useState('')
     const [loading, setLoading] = useState(false)
     const [amountStr, setAmountStr] = useState('')
@@ -39,7 +40,7 @@ export default function RefundOrderButton({
         if (res.error) {
             toast.error(res.error)
         } else {
-            toast.success(res.partial ? `Partial refund of ${formatCurrency(parsedAmount)} recorded` : `Order ${label.toLowerCase()}ed`)
+            toast.success(res.partial ? `Partial refund of ${money(parsedAmount)} recorded` : `Order ${label.toLowerCase()}ed`)
             setOpen(false)
             setReason('')
             setAmountStr('')
@@ -65,14 +66,14 @@ export default function RefundOrderButton({
 
                         {refundedAmount > 0 && (
                             <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                {formatCurrency(refundedAmount)} already refunded. Remaining: {formatCurrency(maxRefundable)}
+                                {money(refundedAmount)} already refunded. Remaining: {money(maxRefundable)}
                             </p>
                         )}
 
                         {paymentStatus === 'paid' && (
                             <div>
                                 <label className="block text-xs font-medium text-gray-600 mb-1">
-                                    Refund amount <span className="text-gray-400">(max {formatCurrency(maxRefundable)})</span>
+                                    Refund amount <span className="text-gray-400">(max {money(maxRefundable)})</span>
                                 </label>
                                 <input
                                     type="number"

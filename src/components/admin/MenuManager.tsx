@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, Edit2, Trash2, GripVertical, Check, X, Tag, Loader2, Image as ImageIcon, Globe, Upload, Link } from 'lucide-react'
+import { Plus, Edit2, Trash2, GripVertical, Check, X, Tag, Loader2, Image as ImageIcon, Globe, Upload, Link, Search } from 'lucide-react'
 import type { MenuCategory, MenuItem } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -10,7 +10,7 @@ import {
     addItemAction, updateItemAction, deleteItemAction
 } from '@/app/(admin)/admin/menu/actions'
 import { getRestaurantTranslationConfig } from '@/app/(admin)/admin/menu/translation-actions'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import { toast } from 'react-hot-toast'
 import { useConfirmStore } from '@/lib/stores/confirm'
 import TranslationModal from '@/components/admin/TranslationModal'
@@ -31,9 +31,20 @@ export default function MenuManager({
     restaurantId: string
 }) {
     const [categories, setCategories] = useState<MenuCategory[]>(initialCategories)
+    const money = useCurrency()
     const [items, setItems] = useState<MenuItem[]>(initialItems)
     const [activeTab, setActiveTab] = useState<'categories' | 'items'>('items')
     const { confirm } = useConfirmStore()
+
+    const [searchQuery, setSearchQuery] = useState('')
+    const [categoryFilter, setCategoryFilter] = useState('all')
+
+    const filteredItems = items.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                              (item.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+        const matchesCategory = categoryFilter === 'all' || item.category_id === categoryFilter
+        return matchesSearch && matchesCategory
+    })
 
     // Category Modal State
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false)
@@ -371,9 +382,34 @@ export default function MenuManager({
                             </div>
                         )}
 
+                        {categories.length > 0 && (
+                            <div className="flex flex-col sm:flex-row gap-3 mb-6 bg-gray-50/50 p-3 rounded-xl border border-gray-100">
+                                <div className="relative flex-1">
+                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search menu items..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-9 pr-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all bg-white"
+                                    />
+                                </div>
+                                <select
+                                    value={categoryFilter}
+                                    onChange={(e) => setCategoryFilter(e.target.value)}
+                                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 sm:w-48"
+                                >
+                                    <option value="all">All Categories</option>
+                                    {categories.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
                         <div className="space-y-8">
-                            {categories.map(cat => {
-                                const catItems = items.filter(i => i.category_id === cat.id)
+                            {categories.filter(c => categoryFilter === 'all' || c.id === categoryFilter).map(cat => {
+                                const catItems = filteredItems.filter(i => i.category_id === cat.id)
                                 if (catItems.length === 0) return null
 
                                 return (
@@ -400,7 +436,7 @@ export default function MenuManager({
                                                                     {item.variations.length} Options
                                                                 </span>
                                                             ) : (
-                                                                <span className="font-bold text-[var(--color-primary)] shrink-0">{formatCurrency(item.price)}</span>
+                                                                <span className="font-bold text-[var(--color-primary)] shrink-0">{money(item.price)}</span>
                                                             )}
                                                         </div>
                                                         <p className="text-sm text-gray-500 line-clamp-2 mt-1 leading-snug">{item.description}</p>
@@ -414,7 +450,7 @@ export default function MenuManager({
                                                                         ) : (
                                                                             <span className="pl-2" />
                                                                         )}
-                                                                        <span className="py-0.5">{v.name}: <strong className="text-gray-900">{formatCurrency(v.price)}</strong></span>
+                                                                        <span className="py-0.5">{v.name}: <strong className="text-gray-900">{money(v.price)}</strong></span>
                                                                     </span>
                                                                 ))}
                                                             </div>

@@ -1,0 +1,74 @@
+import 'server-only'
+import { randomBytes } from 'crypto'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+type ActiveSession = { id: string; session_token: string }
+
+/**
+ * Returns the table's active (non-expired) dining session, creating one on the
+ * fly if none exists. This powers self-service ordering: a guest scans the table
+ * QR and can order immediately — no waiter needs to "open" the table first.
+ * Access is gated upstream by the WiFi/IP restriction, so the caller must only
+ * invoke this once the client IP has been allowed.
+ *
+ * Must be called with a service-role (admin) Supabase client.
+ */
+export async function getOrCreateActiveSession(
+    admin: SupabaseClient,
+    tableId: string,
+    restaurantId: string,
+): Promise<ActiveSession | null> {
+    // 1. Reuse an existing active, non-expired session if there is one.
+    const existing = await findActiveSession(admin, tableId)
+    if (existing) return existing
+
+    // 2. Expire any stale active sessions that passed expires_at but were never
+    //    cleaned up — otherwise the unique-active-per-table index blocks the insert.
+    await admin
+        .from('sessions')
+        .update({ status: 'expired', closed_at: new Date().toISOString() })
+        .eq('table_id', tableId)
+        .eq('status', 'active')
+        .lt('expires_at', new Date().toISOString())
+
+    // 3. Create a fresh guest session. opened_by is null (no waiter involved).
+    //    Token is generated here (URL-safe) rather than relying on the DB default.
+    const sessionToken = randomBytes(32).toString('base64url')
+    const { data, error } = await admin
+        .from('sessions')
+        .insert({
+            table_id: tableId,
+            restaurant_id: restaurantId,
+            opened_by: null,
+            session_token: sessionToken,
+        })
+        .select('id, session_token')
+        .single()
+
+    if (!error && data) return data
+
+    // 4. Race: a concurrent scan created the session first (unique-active index
+    //    violation). Return whatever is active now.
+    if (error?.code === '23505') {
+        return await findActiveSession(admin, tableId)
+    }
+
+    console.error('[getOrCreateActiveSession] insert failed:', error)
+    return null
+}
+
+async function findActiveSession(
+    admin: SupabaseClient,
+    tableId: string,
+): Promise<ActiveSession | null> {
+    const { data } = await admin
+        .from('sessions')
+        .select('id, session_token')
+        .eq('table_id', tableId)
+        .eq('status', 'active')
+        .gt('expires_at', new Date().toISOString())
+        .order('opened_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    return data ?? null
+}

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRestaurantTable } from '@/lib/realtime/useRestaurantTable'
 import { CheckCircle, XCircle, Smartphone, DoorClosed } from 'lucide-react'
 import { verifyPayment, verifyPaymentAndCloseTable } from './payment-verification-actions'
-import { timeAgo, formatCurrency } from '@/lib/utils'
+import { timeAgo } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 import { toast } from 'react-hot-toast'
 import { FeedSection, Card, Button, StatusBadge } from '@/components/ui'
 
@@ -42,6 +43,7 @@ export default function PaymentVerificationFeed({
     onPendingCountChange?: (count: number) => void
 }) {
     const [claims, setClaims] = useState<PaymentClaim[]>(initialClaims)
+    const money = useCurrency()
     const [loading, setLoading] = useState<string | null>(null)
 
     useRestaurantTable(restaurantId, 'payment_verifications', (payload) => {
@@ -54,7 +56,7 @@ export default function PaymentVerificationFeed({
 
     const handleVerify = async (claimId: string, action: 'verified' | 'rejected') => {
         setLoading(claimId)
-        const res = await verifyPayment(claimId, action, userId)
+        const res = await verifyPayment(claimId, action)
         if (!res.error) {
             setClaims((prev) => prev.map((c) => c.id === claimId
                 ? { ...c, staff_verified: action === 'verified', staff_rejected: action === 'rejected', staff_verified_by: userId }
@@ -66,7 +68,7 @@ export default function PaymentVerificationFeed({
 
     const handleVerifyAndClose = async (claimId: string) => {
         setLoading(claimId)
-        const res = await verifyPaymentAndCloseTable(claimId, userId)
+        const res = await verifyPaymentAndCloseTable(claimId)
         if (res.error) {
             toast.error(res.error)
         } else {
@@ -105,7 +107,7 @@ export default function PaymentVerificationFeed({
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-small">
                         <div className="flex items-baseline gap-1.5">
                             <span className="text-caption text-ink-subtle">Amount</span>
-                            <span className="font-bold text-ink tabular">{formatCurrency(claim.amount)}</span>
+                            <span className="font-bold text-ink tabular">{money(claim.amount)}</span>
                         </div>
                         <div className="flex items-baseline gap-1.5">
                             <span className="text-caption text-ink-subtle">Via</span>
@@ -165,7 +167,7 @@ export default function PaymentVerificationFeed({
                             return (
                                 <div key={claim.id} className="rounded-[var(--r-md)] border border-hairline bg-surface-muted/50 px-3 py-2.5 flex items-center justify-between text-small">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-ink tabular">{formatCurrency(claim.amount)}</span>
+                                        <span className="font-semibold text-ink tabular">{money(claim.amount)}</span>
                                         {claim.reference_code && <span className="text-caption text-ink-subtle">· {claim.reference_code}</span>}
                                     </div>
                                     <StatusBadge status={status} dot={false} />

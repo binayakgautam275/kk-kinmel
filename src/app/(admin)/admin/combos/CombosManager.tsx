@@ -6,7 +6,7 @@ import type { MenuItem, MenuCategory } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 import { addComboAction, updateComboAction, deleteComboAction } from './actions'
 import toast from 'react-hot-toast'
-import { formatCurrency } from '@/lib/utils'
+import { useCurrency } from '@/lib/contexts/FeatureContext'
 
 // Monotonic counter for unique upload paths — avoids crypto.randomUUID (unavailable
 // on non-HTTPS LAN origins) and Date.now/Math.random (flagged by react-hooks/purity).
@@ -39,6 +39,7 @@ export default function CombosManager({
     dbError,
 }: CombosManagerProps) {
     const [combos, setCombos] = useState<MenuItem[]>(initialCombos)
+    const money = useCurrency()
     const [comboItems, setComboItems] = useState<ComboItemMapping[]>(initialComboItems)
     const [showForm, setShowForm] = useState(false)
     const [editingCombo, setEditingCombo] = useState<MenuItem | null>(null)
@@ -519,14 +520,14 @@ CREATE POLICY "public_read_combo_items" ON public.combo_items FOR SELECT USING (
                                     <Info className="text-amber-500 shrink-0 mt-0.5" size={16} />
                                     <div className="text-xs text-gray-600 space-y-1">
                                         <p>
-                                            Normal total value of items: <span className="font-bold text-gray-900">{formatCurrency(formNormalTotal)}</span>
+                                            Normal total value of items: <span className="font-bold text-gray-900">{money(formNormalTotal)}</span>
                                         </p>
                                         <p>
-                                            Combo offer price: <span className="font-bold text-gray-900">{formatCurrency(form.price)}</span>
+                                            Combo offer price: <span className="font-bold text-gray-900">{money(form.price)}</span>
                                         </p>
                                         {formSavings > 0 ? (
                                             <p className="text-green-600 font-semibold flex items-center gap-1 mt-1.5 bg-green-50 px-2 py-0.5 rounded-lg w-max border border-green-100">
-                                                <Sparkles size={12} /> Saves customers {formatCurrency(formSavings)} ({formSavingsPercentage}%)!
+                                                <Sparkles size={12} /> Saves customers {money(formSavings)} ({formSavingsPercentage}%)!
                                             </p>
                                         ) : formSavings < 0 ? (
                                             <p className="text-amber-600 font-medium mt-1.5">
@@ -614,7 +615,7 @@ CREATE POLICY "public_read_combo_items" ON public.combo_items FOR SELECT USING (
                                             {category ? category.name : <span className="text-gray-400 italic">None</span>}
                                         </td>
                                         <td className="px-5 py-4 font-bold text-gray-900">
-                                            {formatCurrency(combo.price)}
+                                            {money(combo.price)}
                                         </td>
                                         <td className="px-5 py-4 text-xs text-gray-500 hidden md:table-cell">
                                             <div className="space-y-0.5 max-w-xs">
@@ -638,7 +639,7 @@ CREATE POLICY "public_read_combo_items" ON public.combo_items FOR SELECT USING (
                                             {savingsAmount > 0 ? (
                                                 <div>
                                                     <span className="text-xs font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded-full border border-green-100 inline-block">
-                                                        {formatCurrency(savingsAmount)} ({savingsPct}%)
+                                                        {money(savingsAmount)} ({savingsPct}%)
                                                     </span>
                                                 </div>
                                             ) : (

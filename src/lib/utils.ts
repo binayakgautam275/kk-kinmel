@@ -15,14 +15,29 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Format currency amount for display.
- * Supports NPR with Rs. prefix, falls back to Intl for other currencies.
+ *
+ * The currency is configured per-restaurant in settings (features_v2.currency
+ * and currencySymbol). Prefer the `useCurrency()` hook in client components and
+ * pass the restaurant's currency/symbol in server components so the whole app
+ * reflects a single configured currency instead of a mix of Rs./$.
+ *
+ * - When an explicit `symbol` is provided, it is used as the prefix for any
+ *   currency (e.g. "Rs.", "$", "₹", "€").
+ * - Otherwise NPR falls back to the "Rs." prefix and other ISO codes use Intl.
  */
-export function formatCurrency(amount: number, currency = 'NPR'): string {
+export function formatCurrency(amount: number, currency = 'NPR', symbol?: string | null): string {
+    const value = new Intl.NumberFormat('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(amount)
+
+    const trimmedSymbol = symbol?.trim()
+    if (trimmedSymbol) {
+        return `${trimmedSymbol} ${value}`
+    }
+
     if (currency === 'NPR') {
-        return `Rs. ${new Intl.NumberFormat('en-IN', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(amount)}`
+        return `Rs. ${value}`
     }
     try {
         return new Intl.NumberFormat('en-US', {
