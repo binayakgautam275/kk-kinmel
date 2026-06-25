@@ -46,7 +46,11 @@ export async function deleteCategoryAction(id: string) {
     return { success: true }
 }
 
-export async function addItemAction(item: Record<string, unknown>, variations?: { name: string; price: number; is_available?: boolean; image_url?: string | null }[]) {
+export async function addItemAction(
+    item: Record<string, unknown>,
+    variations?: { name: string; price: number; is_available?: boolean; image_url?: string | null }[],
+    recipe?: { ingredient_id: string; quantity_needed: number }[]
+) {
     const supabase = await createAdminClient()
 
     // Enforce plan menu item limit
@@ -79,6 +83,23 @@ export async function addItemAction(item: Record<string, unknown>, variations?: 
 
     if (error) return { error: error.message }
 
+    // If recipe is provided, insert it
+    if (recipe && recipe.length > 0) {
+        const recipesToInsert = recipe.map(r => ({
+            menu_item_id: data.id,
+            ingredient_id: r.ingredient_id,
+            quantity_needed: Number(r.quantity_needed)
+        }))
+        const { error: recipeError } = await supabase
+            .from('recipes')
+            .insert(recipesToInsert)
+
+        if (recipeError) {
+            console.error('Failed to save recipe:', recipeError)
+            return { error: `Item saved, but recipe failed: ${recipeError.message}` }
+        }
+    }
+
     // If variations are provided, insert them
     if (variations && variations.length > 0) {
         const variationsToInsert = variations.map(v => ({
@@ -102,7 +123,12 @@ export async function addItemAction(item: Record<string, unknown>, variations?: 
     return { data }
 }
 
-export async function updateItemAction(id: string, updates: Record<string, unknown>, variations?: { id?: string; name: string; price: number; is_available?: boolean; image_url?: string | null }[]) {
+export async function updateItemAction(
+    id: string,
+    updates: Record<string, unknown>,
+    variations?: { id?: string; name: string; price: number; is_available?: boolean; image_url?: string | null }[],
+    recipe?: { ingredient_id: string; quantity_needed: number }[]
+) {
     const supabase = await createAdminClient()
     
     // Exclude variations from updates object if present
@@ -114,6 +140,29 @@ export async function updateItemAction(id: string, updates: Record<string, unkno
         .eq('id', id)
 
     if (error) return { error: error.message }
+
+    // If recipe is provided, sync it
+    if (recipe) {
+        await supabase
+            .from('recipes')
+            .delete()
+            .eq('menu_item_id', id)
+
+        if (recipe.length > 0) {
+            const recipesToInsert = recipe.map(r => ({
+                menu_item_id: id,
+                ingredient_id: r.ingredient_id,
+                quantity_needed: Number(r.quantity_needed)
+            }))
+            const { error: recipeError } = await supabase
+                .from('recipes')
+                .insert(recipesToInsert)
+            if (recipeError) {
+                console.error('Failed to save recipe:', recipeError)
+                return { error: `Item updated, but recipe failed: ${recipeError.message}` }
+            }
+        }
+    }
 
     // If variations are provided, sync them
     if (variations) {
@@ -168,6 +217,16 @@ export async function updateItemAction(id: string, updates: Record<string, unkno
 
     revalidatePath('/admin/menu')
     return { success: true }
+}
+
+export async function getItemRecipeAction(menuItemId: string) {
+    const supabase = await createAdminClient()
+    const { data, error } = await supabase
+        .from('recipes')
+        .select('ingredient_id, quantity_needed, ingredients(name, unit)')
+        .eq('menu_item_id', menuItemId)
+    if (error) return { error: error.message }
+    return { data }
 }
 
 export async function deleteItemAction(id: string) {
