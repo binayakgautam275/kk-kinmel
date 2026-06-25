@@ -22,30 +22,37 @@ const TIER_FEATURES: Record<Tier, {
     dynamicPricingEnabled: boolean
     ingredientTrackingEnabled: boolean
     staffShiftsEnabled: boolean
+    // When true, a waiter must open a table session before guests can order.
+    // When false (default), sessions auto-open on QR scan (self-service ordering).
+    waiterSessionEnabled: boolean
 }> = {
     free: {
         loyaltyEnabled: false, promosEnabled: true, takeoutEnabled: false,
         multiLanguageEnabled: false, serviceRequestsEnabled: true,
         splitBillingEnabled: true, dynamicPricingEnabled: false,
         ingredientTrackingEnabled: false, staffShiftsEnabled: false,
+        waiterSessionEnabled: false,
     },
     basic: {
         loyaltyEnabled: false, promosEnabled: true, takeoutEnabled: true,
         multiLanguageEnabled: false, serviceRequestsEnabled: true,
         splitBillingEnabled: true, dynamicPricingEnabled: false,
         ingredientTrackingEnabled: false, staffShiftsEnabled: false,
+        waiterSessionEnabled: false,
     },
     pro: {
         loyaltyEnabled: true, promosEnabled: true, takeoutEnabled: true,
         multiLanguageEnabled: false, serviceRequestsEnabled: true,
         splitBillingEnabled: true, dynamicPricingEnabled: true,
         ingredientTrackingEnabled: true, staffShiftsEnabled: true,
+        waiterSessionEnabled: false,
     },
     enterprise: {
         loyaltyEnabled: true, promosEnabled: true, takeoutEnabled: true,
         multiLanguageEnabled: true, serviceRequestsEnabled: true,
         splitBillingEnabled: true, dynamicPricingEnabled: true,
         ingredientTrackingEnabled: true, staffShiftsEnabled: true,
+        waiterSessionEnabled: false,
     },
 }
 

@@ -680,7 +680,8 @@ export default function SettingsManager({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {([
                         { key: 'serviceRequestsEnabled' as const, label: 'Service Requests', desc: 'Customers can call waiter, request bill, etc.' },
-                        { key: 'selfOrderRequestEnabled' as const, label: 'Ring for Service', desc: 'Customers can request a waiter to open their table session' },
+                        { key: 'waiterSessionEnabled' as const, label: 'Waiter-Managed Sessions', desc: 'Require a waiter to open a table before guests can order. Off = guests scan & order instantly' },
+                        { key: 'selfOrderRequestEnabled' as const, label: 'Ring for Service', desc: 'When waiter-managed sessions are on, let customers ring to request the table be opened' },
                         { key: 'splitBillingEnabled' as const, label: 'Split Billing', desc: 'Allow customers to split bills at checkout' },
                         { key: 'promosEnabled' as const, label: 'Promo Codes', desc: 'Allow promo/discount codes at checkout' },
                         { key: 'loyaltyEnabled' as const, label: 'Loyalty Program', desc: 'Points-based loyalty rewards for repeat customers' },

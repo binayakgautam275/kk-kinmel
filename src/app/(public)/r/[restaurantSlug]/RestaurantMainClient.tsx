@@ -4,9 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
-import { requestSessionOpen } from '@/app/api/service-requests/actions'
-import { UtensilsCrossed, ArrowRight, Loader2, Check, ShoppingBag } from 'lucide-react'
-import { toast } from 'react-hot-toast'
+import { UtensilsCrossed, ArrowRight, Loader2, ShoppingBag } from 'lucide-react'
 
 interface RestaurantMainClientProps {
     restaurant: {
@@ -26,27 +24,18 @@ interface RestaurantMainClientProps {
 export default function RestaurantMainClient({ restaurant, tables, restaurantSlug }: RestaurantMainClientProps) {
     const [selectedTableId, setSelectedTableId] = useState('')
     const [loading, setLoading] = useState(false)
-    const [success, setSuccess] = useState(false)
     const router = useRouter()
 
-    const handleRequestSession = async () => {
+    const handleStartOrdering = () => {
         if (!selectedTableId) return
-        
+
         const table = tables.find(t => t.id === selectedTableId)
         if (!table) return
 
         setLoading(true)
-        
-        const res = await requestSessionOpen(selectedTableId, restaurant.id)
-        
-        if (res.success || res.error?.includes('already')) {
-            setSuccess(true)
-            // Redirect to the table page where they will see the "Waiting for session" state
-            router.push(`/t/${table.qr_token}`)
-        } else {
-            toast.error(res.error || 'Failed to request session. Please try again.')
-            setLoading(false)
-        }
+        // The table page handles session start for both modes: self-service auto-opens
+        // a session on load, and waiter-managed mode shows the "waiting for waiter" gate.
+        router.push(`/t/${table.qr_token}`)
     }
 
     return (
@@ -89,14 +78,12 @@ export default function RestaurantMainClient({ restaurant, tables, restaurantSlu
                         </div>
 
                         <button
-                            onClick={handleRequestSession}
-                            disabled={!selectedTableId || loading || success}
+                            onClick={handleStartOrdering}
+                            disabled={!selectedTableId || loading}
                             className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-50"
                         >
-                            {loading ? <Loader2 size={18} className="animate-spin" /> : 
-                             success ? <Check size={18} /> : 
-                             <ArrowRight size={18} />}
-                            {success ? 'Redirecting...' : 'Request Order Session'}
+                            {loading ? <Loader2 size={18} className="animate-spin" /> : <ArrowRight size={18} />}
+                            {loading ? 'Opening menu...' : 'Start Ordering'}
                         </button>
                     </div>
                 </div>

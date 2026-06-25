@@ -160,7 +160,7 @@ export interface Session {
     id: string
     table_id: string
     restaurant_id: string
-    opened_by: string
+    opened_by: string | null
     session_token: string
     status: SessionStatus
     opened_at: string
@@ -268,6 +268,9 @@ export interface Settings {
         feedbackEnabled: boolean
         // Customers can request a waiter to open their table session (Phase 3)
         selfOrderRequestEnabled?: boolean
+        // When true, a waiter must open a table session before guests can order.
+        // When false/undefined (default), sessions auto-open on QR scan (self-service).
+        waiterSessionEnabled?: boolean
         defaultTaxRate: number
         currency: string
         currencySymbol: string

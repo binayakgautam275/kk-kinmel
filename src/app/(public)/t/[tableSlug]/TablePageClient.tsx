@@ -10,7 +10,6 @@ import CartSummary from '@/components/customer/CartSummary'
 import Logo from '@/components/shared/Logo'
 import PhysicalMenuGallery from '@/components/customer/PhysicalMenuGallery'
 import { TranslationProvider } from '@/lib/contexts/TranslationContext'
-import LanguageSwitcher from '@/components/customer/LanguageSwitcher'
 import { UtensilsCrossed, RefreshCw, Bell, Check, Loader2, Home, X, ShoppingBag } from 'lucide-react'
 import { useCartStore } from '@/lib/stores/cart'
 import { requestSessionOpen } from '@/app/api/service-requests/actions'
@@ -32,6 +31,10 @@ interface TablePageClientProps {
     sessionUUID: string | undefined
     isValidSession: boolean
     serviceRequestsEnabled: boolean
+    // When true, a waiter must open the table session before guests can order.
+    // When false (default), the session is auto-opened server-side on QR scan.
+    waiterSessionEnabled?: boolean
+    // Only relevant when waiterSessionEnabled: lets guests ring for the waiter to open it.
     selfOrderRequestEnabled?: boolean
     multiLanguageEnabled: boolean
     menuLayout?: 'grid' | 'list'
@@ -47,16 +50,17 @@ export default function TablePageClient({
     comboItems,
     sessionToken,
     sessionUUID,
-    isValidSession,
     serviceRequestsEnabled,
+    waiterSessionEnabled = false,
     selfOrderRequestEnabled = true,
-    multiLanguageEnabled,
     menuLayout = 'grid',
     translations,
     supportedLanguages,
     isIpRestricted = false,
 }: TablePageClientProps) {
-    // Live session state — updated by Supabase realtime if a waiter opens a session
+    // Live session state. In self-service mode the session is auto-opened server-side
+    // and arrives via props. In waiter-managed mode it may arrive later (the waiter
+    // opens it), so we poll and update this reactively.
     const [liveSessionToken, setLiveSessionToken] = useState(sessionToken)
     const [liveSessionUUID, setLiveSessionUUID] = useState(sessionUUID)
     const hasSession = !!liveSessionToken
@@ -64,6 +68,9 @@ export default function TablePageClient({
     const [showMenu, setShowMenu] = useState(true)
     const [requestSent, setRequestSent] = useState(false)
     const [requestLoading, setRequestLoading] = useState(false)
+    // Customers can dismiss the "waiting for waiter" popup to browse the menu in
+    // view-only mode; a floating button brings it back to ring for service.
+    const [popupDismissed, setPopupDismissed] = useState(false)
     // WiFi IP restriction states
     const [isRestricted, setIsRestricted] = useState(isIpRestricted)
     const [verifyingIp, setVerifyingIp] = useState(false)
@@ -77,10 +84,15 @@ export default function TablePageClient({
             })
             if (res.ok) {
                 const data = await res.json()
-                setIsRestricted(!data.allowed)
-                if (data.clientIp) {
-                    setCurrentIp(data.clientIp)
+                if (data.clientIp) setCurrentIp(data.clientIp)
+                // Self-service: the IP just became allowed but no session exists yet
+                // (none was opened during the restricted SSR pass). Reload so the
+                // server can auto-open the dining session and enable ordering.
+                if (data.allowed && isRestricted && !waiterSessionEnabled && !hasSession) {
+                    window.location.reload()
+                    return
                 }
+                setIsRestricted(!data.allowed)
             }
         } catch {
             // Keep existing state if check fails
@@ -96,13 +108,8 @@ export default function TablePageClient({
         }
     }, [isIpRestricted])
 
-    // Customers can dismiss the "open session" popup to browse the menu in
-    // view-only mode; a floating button lets them bring it back to ring for service.
-    const [popupDismissed, setPopupDismissed] = useState(false)
-
-    // Keep the Zustand cart store in sync with the live session so checkout
-    // always sees a non-null sessionId regardless of how the session arrived
-    // (SSR prop vs Realtime INSERT vs race-condition one-shot fetch).
+    // Keep the Zustand cart store in sync with the live session so checkout always
+    // sees a non-null sessionId regardless of how the session arrived.
     useEffect(() => {
         if (liveSessionToken) {
             useCartStore.getState().setSession(
@@ -113,16 +120,12 @@ export default function TablePageClient({
         }
     }, [liveSessionToken, tableData.qr_token, tableData.restaurant_id])
 
-    // Helper — shared by Realtime handler, one-shot fetch, and polling
     const applySession = (token: string, uuid: string) => {
         setLiveSessionToken(token)
         setLiveSessionUUID(uuid)
     }
 
     // Fetch the active session for this table via a qr_token-gated server endpoint.
-    // Customers can no longer read `sessions` directly (that policy exposed every
-    // session_token globally) — the endpoint only returns this table's session and
-    // requires the table's qr_token as proof of access.
     const fetchActiveSession = async () => {
         try {
             const res = await fetch(
@@ -141,45 +144,24 @@ export default function TablePageClient({
         return false
     }
 
-    // Handle service requests: Waiters scan QR, but customers can also "Ring for Service"
-    // to ask for waiter/bill/etc. Requires active session UUID.
-    const handleServiceRequest = async (type: 'call_waiter' | 'request_bill') => {
-        if (!liveSessionUUID) return
-        setRequestLoading(true)
-        const success = await requestSessionOpen(liveSessionUUID, type)
-        setRequestLoading(false)
-        if (success) {
-            setRequestSent(true)
-            setTimeout(() => setRequestSent(false), 5000)
-        }
-    }
-
-    // Listen to Supabase Realtime for session updates. If waiter opens/closes a session
-    // from staff panel, the client updates reactively within seconds.
+    // Waiter-managed mode only: poll every 3s while no session is detected, so the
+    // page enables ordering within ~3s of a waiter opening the session (no refresh).
+    // In self-service mode the session always arrives via props, so this never runs.
     useEffect(() => {
-        const fetchAndSubscribe = async () => {
-            const hasActive = await fetchActiveSession()
-            if (hasActive) return
-        }
-        fetchAndSubscribe()
-    }, [tableData.id, tableData.qr_token])
-
-    // Polling — runs every 3 s while no session is detected, so the page enables
-    // ordering within ~3 s of a waiter opening a session (no refresh needed). This
-    // replaces the former anon Realtime subscription on `sessions`, which required
-    // the global read policy we removed for security.
-    useEffect(() => {
-        if (hasSession) return
-        // Immediate check first, then poll
+        if (!waiterSessionEnabled || hasSession) return
         fetchActiveSession()
         const timer = setInterval(fetchActiveSession, 3000)
         return () => clearInterval(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tableData.id, hasSession])
+    }, [tableData.id, hasSession, waiterSessionEnabled])
 
     const restaurantName = tableData.restaurants?.name || 'Restaurant'
     const logoUrl = tableData.restaurants?.logo_url
     const restaurantSlug = tableData.restaurants?.slug
+
+    // The blurred "waiting for waiter" gate is only shown in waiter-managed mode
+    // when there is no active session yet.
+    const showWaiterGate = waiterSessionEnabled && !hasSession
 
     const menuContent = (onBackToHome: (() => void) | null) => (
         <div className="min-h-screen bg-gray-50 pb-28">
@@ -228,9 +210,9 @@ export default function TablePageClient({
             </header>
 
             <main className="max-w-2xl mx-auto px-4 pt-4">
-                {/* Blurred fullscreen modal shown when there's no active session.
-                    Dismissable so the guest can browse the menu in view-only mode. */}
-                {!hasSession && !popupDismissed && (
+                {/* Waiter-managed mode: blurred fullscreen gate shown when there's no
+                    active session. Dismissable so the guest can browse view-only. */}
+                {showWaiterGate && !popupDismissed && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A1006]/40 backdrop-blur-md animate-fade-in">
                         <div className="relative bg-white p-6 rounded-3xl max-w-sm w-full border border-[#EDD9C8] shadow-2xl text-center flex flex-col items-center animate-scale-in">
                             <button
@@ -288,9 +270,8 @@ export default function TablePageClient({
                                 </div>
                             )}
 
-                            {/* Takeout / pickup escape hatch — lets a guest who
-                                scanned the table QR self-order for pickup instead of
-                                waiting for a dine-in session. Single QR, two flows. */}
+                            {/* Takeout / pickup escape hatch — lets a guest who scanned
+                                the table QR self-order for pickup instead of waiting. */}
                             {restaurantSlug && (
                                 <div className="w-full mt-5 pt-5 border-t border-[#EDD9C8]">
                                     <p className="text-[#C4A882] text-[11px] font-bold mb-3">Not dining in?</p>
@@ -308,8 +289,8 @@ export default function TablePageClient({
                 )}
 
                 {/* Floating re-summon button — shown after the guest dismisses the
-                    popup but still has no session, so they can ring for service. */}
-                {!hasSession && popupDismissed && (
+                    waiter gate but still has no session. */}
+                {showWaiterGate && popupDismissed && (
                     <button
                         onClick={() => setPopupDismissed(false)}
                         className="fixed bottom-24 right-4 z-40 flex items-center gap-2 bg-[#FB6303] text-white text-sm font-black pl-4 pr-5 py-3 rounded-full shadow-lg shadow-[#FB6303]/30 active:scale-95 transition animate-scale-in"
@@ -330,16 +311,14 @@ export default function TablePageClient({
                     layout={menuLayout}
                 />
 
-                <PhysicalMenuGallery 
-                    images={tableData.restaurants?.physical_menu_urls || []} 
-                    restaurantName={restaurantName} 
+                <PhysicalMenuGallery
+                    images={tableData.restaurants?.physical_menu_urls || []}
+                    restaurantName={restaurantName}
                 />
             </main>
 
-
-
             {/* Floating service-request panel — lets seated guests ring for water,
-                a clean table, the bill, etc. once a session is open (no order required). */}
+                a clean table, the bill, etc. once a session exists (no order required). */}
             {hasSession && liveSessionUUID && serviceRequestsEnabled && (
                 <ServiceRequestPanel
                     sessionId={liveSessionUUID}
@@ -361,7 +340,6 @@ export default function TablePageClient({
             <HomepageGate
                 restaurantId={tableData.restaurant_id}
                 onProceed={() => setShowMenu(true)}
-                takeoutHref={restaurantSlug ? `/takeout/${restaurantSlug}` : null}
             >
                 {({ backToHome }) => (
                     <>

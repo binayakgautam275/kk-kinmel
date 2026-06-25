@@ -106,9 +106,12 @@ export default async function CustomerMenuPage(props: {
 
     const isIpRestricted = !isIpAllowed
 
-    // Self-service ordering: if there's no active session yet and the guest's IP
-    // is allowed, auto-open one so they can order immediately — no waiter needed.
-    if (!sessionToken && isIpAllowed) {
+    // Optional "Waiter-Managed Sessions" feature (manager-toggleable, package-gated):
+    //  • ON  → a waiter must open the table session before guests can order.
+    //  • OFF → self-service: auto-open a session on QR scan so guests order instantly.
+    const waiterSessionEnabled = features?.waiterSessionEnabled === true
+
+    if (!sessionToken && isIpAllowed && !waiterSessionEnabled) {
         const session = await getOrCreateActiveSession(supabase, tableData.id, restaurantId)
         if (session) {
             sessionToken = session.session_token
@@ -143,6 +146,7 @@ export default async function CustomerMenuPage(props: {
             sessionUUID={sessionUUID}
             isValidSession={isValidSession}
             serviceRequestsEnabled={features?.serviceRequestsEnabled !== false}
+            waiterSessionEnabled={waiterSessionEnabled}
             selfOrderRequestEnabled={(features as { selfOrderRequestEnabled?: boolean } | null)?.selfOrderRequestEnabled !== false}
             multiLanguageEnabled={features?.multiLanguageEnabled === true}
             menuLayout={menuLayout}
